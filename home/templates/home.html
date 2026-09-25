@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    Accueil | Ma Boutique
+{% endblock %}
+
+{% block extra_css %}
+    <link
+        rel="stylesheet"
+        href="{% static 'css/home.css' %}"
+    >
+{% endblock %}
+
+{% block content %}
+
+<header class="site-header">
+
+    <div class="container header-inner">
+
+        <a
+            href="{% url 'home:home' %}"
+            class="logo"
+            aria-label="Ma Boutique - Accueil"
+        >
+            MA BOUTIQUE
+        </a>
+
+        <button
+            class="menu-toggle"
+            type="button"
+            aria-label="Ouvrir le menu"
+            aria-expanded="false"
+            aria-controls="main-navigation"
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav
+            class="main-navigation"
+            id="main-navigation"
+            aria-label="Navigation principale"
+        >
+            <a href="#nouveautes">Nouveautés</a>
+            <a href="#categories">Catégories</a>
+            <a href="#selection">Notre sélection</a>
+            <a href="#about">À propos</a>
+        </nav>
+
+        <div class="header-actions">
+
+            <button
+                class="header-action"
+                type="button"
+                aria-label="Rechercher"
+                data-action="search"
+            >
+                Recherche
+            </button>
+
+            <button
+                class="header-action"
+                type="button"
+                aria-label="Voir le panier"
+            >
+                Panier
+                <span class="cart-count">0</span>
+            </button>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<main>
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+        <div class="container hero-content">
+
+            <div class="hero-text">
+
+                <p class="eyebrow">
+                    Nouvelle collection
+                </p>
+
+                <h1>
+                    L'élégance<br>
+                    au quotidien.
+                </h1>
+
+                <p class="hero-description">
+                    Découvrez une sélection pensée pour celles et ceux
+                    qui recherchent simplicité, qualité et élégance.
+                </p>
+
+                <a
+                    href="#selection"
+                    class="button button-primary"
+                >
+                    Découvrir la collection
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- CATEGORIES -->
+
+    <section
+        class="section categories-section"
+        id="categories"
+    >
+
+        <div class="container">
+
+            <div class="section-header">
+
+                <div>
+                    <p class="eyebrow">
+                        Explorer
+                    </p>
+
+                    <h2>
+                        Nos catégories
+                    </h2>
+                </div>
+
+                <p class="section-description">
+                    Découvrez nos différentes collections.
+                </p>
+
+            </div>
+
+
+            <div class="categories-grid">
+
+                <a
+                    href="#"
+                    class="category-card"
+                >
+
+                    <div class="category-image">
+                        <span>Mode</span>
+                    </div>
+
+                    <div class="category-content">
+                        <h3>Mode</h3>
+                        <span>Découvrir →</span>
+                    </div>
+
+                </a>
+
+
+                <a
+                    href="#"
+                    class="category-card"
+                >
+
+                    <div class="category-image">
+                        <span>Accessoires</span>
+                    </div>
+
+                    <div class="category-content">
+                        <h3>Accessoires</h3>
+                        <span>Découvrir →</span>
+                    </div>
+
+                </a>
+
+
+                <a
+                    href="#"
+                    class="category-card"
+                >
+
+                    <div class="category-image">
+                        <span>Nouveautés</span>
+                    </div>
+
+                    <div class="category-content">
+                        <h3>Nouveautés</h3>
+                        <span>Découvrir →</span>
+                    </div>
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- NOUVEAUTES -->
+
+    <section
+        class="section products-section"
+        id="nouveautes"
+    >
+
+        <div class="container">
+
+            <div class="section-header">
+
+                <div>
+
+                    <p class="eyebrow">
+                        À découvrir
+                    </p>
+
+                    <h2>
+                        Nos nouveautés
+                    </h2>
+
+                </div>
+
+                <a
+                    href="#"
+                    class="text-link"
+                >
+                    Voir tout →
+                </a>
+
+            </div>
+
+
+            <div class="products-grid">
+
+                <article class="product-card">
+
+                    <a
+                        href="#"
+                        class="product-image"
+                        aria-label="Voir le produit"
+                    >
+                        <span>Nouveau</span>
+                    </a>
+
+                    <div class="product-info">
+
+                        <h3>
+                            Produit Exemple 01
+                        </h3>
+
+                        <p class="product-category">
+                            Collection
+                        </p>
+
+                        <p class="product-price">
+                            49,90 €
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <article class="product-card">
+
+                    <a
+                        href="#"
+                        class="product-image"
+                        aria-label="Voir le produit"
+                    >
+                        <span>Nouveau</span>
+                    </a>
+
+                    <div class="product-info">
+
+                        <h3>
+                            Produit Exemple 02
+                        </h3>
+
+                        <p class="product-category">
+                            Collection
+                        </p>
+
+                        <p class="product-price">
+                            59,90 €
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <article class="product-card">
+
+                    <a
+                        href="#"
+                        class="product-image"
+                        aria-label="Voir le produit"
+                    >
+                        <span>Nouveau</span>
+                    </a>
+
+                    <div class="product-info">
+
+                        <h3>
+                            Produit Exemple 03
+                        </h3>
+
+                        <p class="product-category">
+                            Collection
+                        </p>
+
+                        <p class="product-price">
+                            69,90 €
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <article class="product-card">
+
+                    <a
+                        href="#"
+                        class="product-image"
+                        aria-label="Voir le produit"
+                    >
+                        <span>Nouveau</span>
+                    </a>
+
+                    <div class="product-info">
+
+                        <h3>
+                            Produit Exemple 04
+                        </h3>
+
+                        <p class="product-category">
+                            Collection
+                        </p>
+
+                        <p class="product-price">
+                            79,90 €
+                        </p>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- PROMOTION / BANNER -->
+
+    <section class="featured-section">
+
+        <div class="container">
+
+            <div class="featured-content">
+
+                <div>
+
+                    <p class="eyebrow">
+                        Notre philosophie
+                    </p>
+
+                    <h2>
+                        Des pièces choisies<br>
+                        avec attention.
+                    </h2>
+
+                    <p>
+                        Nous sélectionnons chaque produit avec
+                        attention afin de vous proposer une expérience
+                        simple et agréable.
+                    </p>
+
+                    <a
+                        href="#about"
+                        class="button button-secondary"
+                    >
+                        En savoir plus
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- A PROPOS -->
+
+    <section
+        class="section about-section"
+        id="about"
+    >
+
+        <div class="container about-grid">
+
+            <div>
+
+                <p class="eyebrow">
+                    À propos
+                </p>
+
+                <h2>
+                    Une boutique pensée
+                    simplement.
+                </h2>
+
+            </div>
+
+            <div>
+
+                <p>
+                    Notre objectif est de proposer une expérience
+                    d'achat simple, agréable et transparente.
+                </p>
+
+                <p>
+                    Chaque détail est pensé pour vous permettre
+                    de trouver facilement les produits qui vous
+                    correspondent.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- NEWSLETTER -->
+
+    <section class="newsletter-section">
+
+        <div class="container">
+
+            <div class="newsletter-content">
+
+                <p class="eyebrow">
+                    Newsletter
+                </p>
+
+                <h2>
+                    Restez informé.
+                </h2>
+
+                <p>
+                    Inscrivez-vous pour recevoir nos nouveautés
+                    et actualités.
+                </p>
+
+
+                <form
+                    class="newsletter-form"
+                    method="post"
+                    action="#"
+                >
+
+                    {% csrf_token %}
+
+                    <label
+                        for="newsletter-email"
+                        class="visually-hidden"
+                    >
+                        Votre adresse email
+                    </label>
+
+                    <input
+                        id="newsletter-email"
+                        name="email"
+                        type="email"
+                        placeholder="Votre adresse email"
+                        autocomplete="email"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="button button-primary"
+                    >
+                        S'inscrire
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer class="site-footer">
+
+    <div class="container">
+
+        <div class="footer-grid">
+
+            <div>
+
+                <a
+                    href="{% url 'home:home' %}"
+                    class="logo footer-logo"
+                >
+                    MA BOUTIQUE
+                </a>
+
+                <p>
+                    Une boutique pensée pour vous.
+                </p>
+
+            </div>
+
+
+            <div>
+
+                <h3>
+                    Boutique
+                </h3>
+
+                <ul>
+                    <li>
+                        <a href="#nouveautes">
+                            Nouveautés
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#categories">
+                            Catégories
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#selection">
+                            Sélection
+                        </a>
+                    </li>
+                </ul>
+
+            </div>
+
+
+            <div>
+
+                <h3>
+                    Informations
+                </h3>
+
+                <ul>
+                    <li>
+                        <a href="#">
+                            Livraison
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#">
+                            Retours
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#">
+                            Contact
+                        </a>
+                    </li>
+                </ul>
+
+            </div>
+
+
+            <div>
+
+                <h3>
+                    Légal
+                </h3>
+
+                <ul>
+                    <li>
+                        <a href="#">
+                            Mentions légales
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#">
+                            Politique de confidentialité
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#">
+                            CGV
+                        </a>
+                    </li>
+                </ul>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer-bottom">
+
+            <p>
+                © 2026 Ma Boutique. Tous droits réservés.
+            </p>
+
+        </div>
+
+    </div>
+
+</footer>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script
+    src="{% static 'js/home.js' %}"
+    defer
+></script>
+
+{% endblock %}
