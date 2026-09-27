@@ -6,8 +6,6 @@
 {% endblock %}
 
 {% block extra_css %}
-    <!-- Le carrousel 3D est chargé AVANT home.css pour laisser la main au design global -->
-    <link rel="stylesheet" href="{% static 'css/test.css' %}">
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
 {% endblock %}
 
@@ -298,7 +296,7 @@
 
 
     <!-- ============================================================
-         ⭐ SECTION SIGNATURE — CARROUSEL 3D (structure exacte conservée)
+         SECTION SIGNATURE — CARROUSEL 3D (structure exacte conservée)
          ============================================================ -->
     <section class="featured-section" id="selection">
 
@@ -323,24 +321,40 @@
                 <div class="carousel-scene">
                     <div class="carousel" id="carousel">
 
+                        
                         <article class="card">
-                            <img src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=800&q=80" alt="Sac cabas cuir camel">
+                            <img
+                                src="{% static 'images/sac1.png' %}"
+                                alt="Sac 1"
+                            >
                         </article>
 
                         <article class="card">
-                            <img src="https://images.unsplash.com/photo-1548863227-3af567fc3b27?auto=format&fit=crop&w=800&q=80" alt="Sac bandoulière noir">
+                            <img
+                                src="{% static 'images/sac2.png' %}"
+                                alt="Sac 2"
+                            >
                         </article>
 
                         <article class="card">
-                            <img src="https://images.unsplash.com/photo-1591344395067-98c9a56b1a1a?auto=format&fit=crop&w=800&q=80" alt="Portefeuille beige">
+                            <img
+                                src="{% static 'images/sac3.png' %}"
+                                alt="Sac 3"
+                            >
                         </article>
 
                         <article class="card">
-                            <img src="https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=800&q=80" alt="Foulard en soie">
+                            <img
+                                src="{% static 'images/sac1.png' %}"
+                                alt="Sac 1"
+                            >
                         </article>
 
                         <article class="card">
-                            <img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80" alt="Sac à main élégant">
+                            <img
+                                src="{% static 'images/sac2.png' %}"
+                                alt="Sac 2"
+                            >
                         </article>
 
                     </div>
@@ -831,5 +845,4 @@
 
 {% block extra_js %}
 <script src="{% static 'js/home.js' %}" defer></script>
-<script src="{% static 'js/test.js' %}" defer></script>
 {% endblock %}
