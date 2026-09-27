@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Carrousel 3D</title>
+
+    <link rel="stylesheet" href="test.css">
+</head>
+
+<body>
+
+    <main class="page">
+
+        <section class="carousel-section">
+
+            <div class="carousel-wrapper">
+
+                <!-- Zone 3D -->
+                <div class="carousel-scene">
+
+                    <div class="carousel" id="carousel">
+
+                        <!--
+                            Tu peux remplacer les URLs ci-dessous
+                            par tes propres images.
+                        -->
+
+                        <article class="card">
+                            <img
+                                src="sac2.png"
+                                alt="Paysage 1"
+                            >
+                        </article>
+
+                        <article class="card">
+                            <img
+                                src="sac3.png"
+                                alt="Paysage 2"
+                            >
+                        </article>
+
+                        <article class="card">
+                            <img
+                                src="sac1.png"
+                                alt="Paysage 3"
+                            >
+                        </article>
+
+                        <article class="card">
+                            <img
+                                src="sac2.png"
+                                alt="Paysage 4"
+                            >
+                        </article>
+                        
+                        <article class="card">
+                            <img
+                                src="sac1.png"
+                                alt="Paysage 3"
+                            >
+                        </article>
+
+                    </div>
+
+                </div>
+
+                <!-- Bouton précédent -->
+                <button
+                    class="carousel-button carousel-button--prev"
+                    id="prevButton"
+                    aria-label="Image précédente"
+                >
+                    <span>‹</span>
+                </button>
+
+                <!-- Bouton suivant -->
+                <button
+                    class="carousel-button carousel-button--next"
+                    id="nextButton"
+                    aria-label="Image suivante"
+                >
+                    <span>›</span>
+                </button>
+
+            </div>
+
+
+        </section>
+
+    </main>
+
+    <script src="test.js"></script>
+
+</body>
+</html>

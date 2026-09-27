@@ -1,7 +1,7 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-lang="fr">
 <head>
     <meta charset="UTF-8">
 
@@ -12,10 +12,23 @@
 
     <meta
         name="description"
-        content="Découvrez notre boutique en ligne et notre sélection de produits."
+        content="Sacs et accessoires pour femmes — collections élégantes et intemporelles."
     >
 
+    <meta name="theme-color" content="#241f1c">
+    <meta name="color-scheme" content="light">
+
+    <!-- Referrer / hardening : n'expose jamais l'URL complète aux liens externes -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
     <title>{% block title %}Ma Boutique{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet"
+    >
 
     {% block extra_css %}{% endblock %}
 </head>

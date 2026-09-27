@@ -1,0 +1,482 @@
+```css
+/* =========================================================
+   RESET
+   ========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    width: 100%;
+    min-height: 100vh;
+
+    overflow-x: hidden;
+
+    /* BACKGROUND BLANC */
+    background: #ffffff;
+
+    color: #111111;
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.page {
+    min-height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 50px 20px;
+}
+
+
+/* =========================================================
+   CAROUSEL SECTION
+   ========================================================= */
+
+.carousel-section {
+    width: 100%;
+    max-width: 1250px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+/* =========================================================
+   CAROUSEL WRAPPER
+   ========================================================= */
+
+.carousel-wrapper {
+    position: relative;
+
+    width: 100%;
+    height: 650px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* =========================================================
+   3D SCENE
+   ========================================================= */
+
+.carousel-scene {
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    perspective: 1200px;
+
+    overflow: hidden;
+
+    /*
+        Fondu léger sur les extrémités.
+    */
+    mask-image:
+        linear-gradient(
+            to right,
+            transparent 0%,
+            black 13%,
+            black 87%,
+            transparent 100%
+        );
+
+    -webkit-mask-image:
+        linear-gradient(
+            to right,
+            transparent 0%,
+            black 13%,
+            black 87%,
+            transparent 100%
+        );
+}
+
+
+/* =========================================================
+   CAROUSEL
+   ========================================================= */
+
+.carousel {
+    position: relative;
+
+    /*
+        Taille desktop
+    */
+    width: 330px;
+    height: 480px;
+
+    transform-style: preserve-3d;
+
+    user-select: none;
+
+    cursor: grab;
+
+    touch-action: pan-y;
+
+    will-change: transform;
+}
+
+.carousel.is-dragging {
+    cursor: grabbing;
+}
+
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.card {
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    /*
+        Taille de base desktop
+    */
+    width: 330px;
+    height: 480px;
+
+    aspect-ratio: 330 / 480;
+
+    transform-style: preserve-3d;
+
+    transform:
+        translate(-50%, -50%)
+        translateX(0)
+        translateZ(0)
+        rotateY(0deg)
+        scale(1);
+
+    /*
+        IMPORTANT :
+        carte totalement transparente.
+    */
+    background: transparent;
+
+    /*
+        Bordure présente mais invisible.
+    */
+    border: 1px solid transparent;
+
+    /*
+        Aucun contour rectangulaire.
+    */
+    box-shadow: none;
+
+    /*
+        Pas de découpe rectangulaire.
+    */
+    border-radius: 0;
+
+    overflow: visible;
+
+    transition:
+        transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+        filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    will-change:
+        transform,
+        opacity,
+        filter;
+
+    backface-visibility: hidden;
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   IMAGE
+   ========================================================= */
+
+.card img {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    /*
+        IMPORTANT :
+        contain permet de garder tout le produit visible.
+    */
+    object-fit: contain;
+
+    pointer-events: none;
+
+    user-select: none;
+
+    /*
+        Ombre suivant la silhouette du produit
+        au lieu de créer une ombre rectangulaire.
+    */
+    filter:
+        drop-shadow(
+            0 22px 18px rgba(0, 0, 0, 0.16)
+        );
+}
+
+/* =========================================================
+   FLECHES
+   ========================================================= */
+
+.carousel-button {
+    position: absolute;
+
+    top: 50%;
+
+    width: 40px;
+    height: 60px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transform: translateY(-50%);
+
+    /*
+        Aucun cercle
+    */
+    border: none;
+
+    background: transparent;
+
+    /*
+        Flèche noire légèrement grisée
+    */
+    color: rgba(0, 0, 0, 0.45);
+
+    padding: 0;
+
+    cursor: pointer;
+
+    z-index: 100;
+
+    /*
+        Pas de blur, pas de fond,
+        pas d'effet de bouton.
+    */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    transition:
+        color 180ms ease,
+        transform 180ms ease;
+}
+
+
+/* =========================================================
+   SYMBOLE DE LA FLECHE
+   ========================================================= */
+
+.carousel-button span {
+    position: relative;
+
+    top: -2px;
+
+    font-size: 42px;
+
+    font-weight: 200;
+
+    line-height: 1;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.carousel-button:hover {
+    background: transparent;
+
+    color: rgba(0, 0, 0, 0.75);
+}
+
+
+/* =========================================================
+   ACTIVE
+   ========================================================= */
+
+.carousel-button:active {
+    transform:
+        translateY(-50%)
+        scale(0.90);
+}
+
+
+/* =========================================================
+   POSITION
+   ========================================================= */
+
+.carousel-button--prev {
+    left: 30px;
+}
+
+.carousel-button--next {
+    right: 30px;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .carousel-wrapper {
+        height: 580px;
+    }
+
+    .carousel {
+        /*
+            Réduction proportionnelle
+        */
+        width: min(34vw, 290px);
+
+        height: auto;
+
+        aspect-ratio: 330 / 480;
+    }
+
+    .card {
+        width: min(34vw, 290px);
+
+        height: auto;
+
+        aspect-ratio: 330 / 480;
+    }
+
+    .carousel-button--prev {
+        left: 10px;
+    }
+
+    .carousel-button--next {
+        right: 10px;
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .carousel-wrapper {
+        height: 400px;
+    }
+
+    .carousel {
+        /*
+            Carte très petite sur téléphone
+        */
+        width: min(28vw, 135px);
+
+        height: auto;
+
+        aspect-ratio: 330 / 480;
+    }
+
+    .card {
+        width: min(28vw, 135px);
+
+        height: auto;
+
+        aspect-ratio: 330 / 480;
+
+        border-radius: 0;
+    }
+
+    .carousel-button {
+        width: 38px;
+        height: 38px;
+    }
+
+    .carousel-button span {
+        font-size: 34px;
+    }
+
+    .carousel-button--prev {
+        left: 2px;
+    }
+
+    .carousel-button--next {
+        right: 2px;
+    }
+}
+
+
+/* =========================================================
+   TRÈS PETITS TÉLÉPHONES
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .carousel-wrapper {
+        height: 350px;
+    }
+
+    .carousel {
+        width: 30vw;
+    }
+
+    .card {
+        width: 30vw;
+    }
+
+    .carousel-button {
+        width: 25px;
+        height: 45px;
+    }
+
+    .carousel-button span {
+        font-size: 30px;
+    }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .card {
+        transition-duration: 0.01ms;
+    }
+
+    .carousel-button {
+        transition-duration: 0.01ms;
+    }
+}
+```
