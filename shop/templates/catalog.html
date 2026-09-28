@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Boutique | Ma Boutique — Sacs & Accessoires{% endblock %}
+{% block meta_description %}Tous nos sacs à main, sacs bandoulière, portefeuilles et accessoires. Livraison offerte dès 80 €, retours gratuits sous 30 jours.{% endblock %}
+{% block body_class %}page-shop{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/shop.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<section class="shop-head">
+    <div class="container">
+        <nav class="breadcrumb" aria-label="Fil d'Ariane">
+            <a href="{% url 'home:home' %}" data-shop-i18n="bc_home">Accueil</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" data-shop-i18n="bc_shop">Boutique</span>
+        </nav>
+        <h1 data-shop-i18n="title">Notre boutique</h1>
+        <p class="shop-head__desc" data-shop-i18n="subtitle">Sacs et accessoires en cuir, choisis pour durer. Livraison offerte dès 80 €, retours gratuits sous 30 jours.</p>
+
+        <ul class="category-pills" id="category-pills" aria-label="Catégories"></ul>
+    </div>
+</section>
+
+<div class="container shop-layout">
+
+    <!-- ===== Filtres : colonne sur desktop, tiroir sur mobile ===== -->
+    <div class="filters-backdrop" id="filters-backdrop"></div>
+    <aside class="filters" id="filters" aria-label="Filtres" aria-hidden="true">
+        <div class="filters__header">
+            <h2 data-shop-i18n="filters">Filtres</h2>
+            <button type="button" class="icon-btn" data-action="close-filters" aria-label="Fermer les filtres">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="6" y1="18" x2="18" y2="6"></line></svg>
+            </button>
+        </div>
+
+        <div class="filters__body">
+            <fieldset class="filter-group">
+                <legend data-shop-i18n="f_category">Catégorie</legend>
+                <label class="check"><input type="checkbox" name="cat" value="handbags"><span data-shop-i18n="cat_handbags">Sacs à main</span></label>
+                <label class="check"><input type="checkbox" name="cat" value="shoulder"><span data-shop-i18n="cat_shoulder">Sacs bandoulière</span></label>
+                <label class="check"><input type="checkbox" name="cat" value="wallets"><span data-shop-i18n="cat_wallets">Portefeuilles</span></label>
+                <label class="check"><input type="checkbox" name="cat" value="accessories"><span data-shop-i18n="cat_accessories">Accessoires</span></label>
+            </fieldset>
+
+            <fieldset class="filter-group">
+                <legend data-shop-i18n="f_price">Prix (€)</legend>
+                <div class="price-range">
+                    <input type="number" id="price-min" inputmode="numeric" min="0" max="500" placeholder="Min" aria-label="Prix minimum">
+                    <span aria-hidden="true">–</span>
+                    <input type="number" id="price-max" inputmode="numeric" min="0" max="500" placeholder="Max" aria-label="Prix maximum">
+                </div>
+                <div class="price-quick">
+                    <button type="button" data-price="0-50">&lt; 50 €</button>
+                    <button type="button" data-price="50-100">50–100 €</button>
+                    <button type="button" data-price="100-">&gt; 100 €</button>
+                </div>
+            </fieldset>
+
+            <fieldset class="filter-group">
+                <legend data-shop-i18n="f_color">Couleur</legend>
+                <div class="swatch-list" id="color-filters"></div>
+            </fieldset>
+
+            <fieldset class="filter-group">
+                <legend data-shop-i18n="f_more">Autres</legend>
+                <label class="check"><input type="checkbox" id="filter-sale"><span data-shop-i18n="f_sale">En promotion</span></label>
+                <label class="check"><input type="checkbox" id="filter-stock"><span data-shop-i18n="f_lowstock">Derniers exemplaires</span></label>
+            </fieldset>
+        </div>
+
+        <div class="filters__footer">
+            <button type="button" class="button button-outline" id="filters-reset" data-shop-i18n="reset">Réinitialiser</button>
+            <button type="button" class="button button-primary" id="filters-apply" data-action="close-filters">
+                <span data-shop-i18n="show">Voir</span>&nbsp;<span id="filters-count">0</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- ===== Résultats ===== -->
+    <section class="results" aria-labelledby="results-title">
+        <h2 id="results-title" class="visually-hidden">Produits</h2>
+
+        <div class="toolbar">
+            <button type="button" class="toolbar__filters" data-action="open-filters">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="9" cy="7" r="2.2" fill="var(--color-surface)"></circle><circle cx="15" cy="17" r="2.2" fill="var(--color-surface)"></circle></svg>
+                <span data-shop-i18n="filters">Filtres</span>
+                <span class="toolbar__badge" id="filters-badge" hidden>0</span>
+            </button>
+
+            <p class="toolbar__count" id="results-count" role="status" aria-live="polite"></p>
+
+            <label class="toolbar__sort">
+                <span class="visually-hidden" data-shop-i18n="sort_label">Trier par</span>
+                <select id="sort" name="sort"></select>
+            </label>
+        </div>
+
+        <div class="chips" id="active-chips" aria-label="Filtres actifs"></div>
+
+        <div class="pgrid" id="product-grid" aria-busy="true"></div>
+
+        <div class="empty" id="empty-state" hidden>
+            <svg class="icon" viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <h3 data-shop-i18n="empty_title">Aucun produit ne correspond</h3>
+            <p data-shop-i18n="empty_text">Essayez d'élargir vos critères ou de retirer un filtre.</p>
+            <button type="button" class="button button-primary" id="empty-reset" data-shop-i18n="reset">Réinitialiser</button>
+        </div>
+
+        <div class="more" id="more-wrap" hidden>
+            <p class="more__progress" id="more-progress"></p>
+            <div class="more__bar"><span id="more-fill"></span></div>
+            <button type="button" class="button button-outline" id="load-more" data-shop-i18n="load_more">Voir plus de produits</button>
+        </div>
+    </section>
+</div>
+
+<!-- Réassurance -->
+<section class="reassure">
+    <div class="container reassure__inner">
+        <p><strong data-shop-i18n="ra_ship">Livraison offerte dès 80 €</strong><span data-shop-i18n="ra_ship_s">Expédition sous 24 h</span></p>
+        <p><strong data-shop-i18n="ra_ret">Retours gratuits 30 jours</strong><span data-shop-i18n="ra_ret_s">Sans condition</span></p>
+        <p><strong data-shop-i18n="ra_pay">Paiement sécurisé</strong><span data-shop-i18n="ra_pay_s">SSL &amp; 3D Secure</span></p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block after_main %}
+<!-- Barre panier collante (mobile) : rappelle le panier et mène à la commande -->
+<div class="cart-bar" id="cart-bar" hidden>
+    <button type="button" class="cart-bar__btn" data-action="open-cart-bar">
+        <span class="cart-bar__info">
+            <strong id="cart-bar-count">0</strong>
+            <span id="cart-bar-label">article</span>
+        </span>
+        <span class="cart-bar__ship" id="cart-bar-ship"></span>
+        <span class="cart-bar__total" id="cart-bar-total">0,00 €</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/shop.js' %}" defer></script>
+{% endblock %}

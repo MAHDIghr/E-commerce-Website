@@ -1,0 +1,43 @@
+<div class="cart-backdrop" id="cart-backdrop"></div>
+
+<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier">
+    <div class="cart-drawer__header">
+        <h2 data-i18n="cart_title">Votre panier</h2>
+        <button type="button" class="cart-drawer__close" data-action="close-cart" aria-label="Fermer le panier">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+                <line x1="6" y1="18" x2="18" y2="6"></line>
+            </svg>
+        </button>
+    </div>
+
+    <div class="shipping-progress">
+        <div class="shipping-progress__track">
+            <div class="shipping-progress__fill" id="shipping-fill"></div>
+        </div>
+        <p class="shipping-progress__text" id="shipping-text">
+            Plus que <strong>80,00 €</strong> pour la livraison gratuite
+        </p>
+    </div>
+
+    <ul class="cart-drawer__items" id="cart-items"></ul>
+
+    <div class="cart-drawer__empty" id="cart-empty">
+        <svg class="icon" viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+            <path d="M6 6h15l-1.5 9h-12z"></path>
+            <path d="M6 6 4.5 3H2"></path>
+            <circle cx="9" cy="20" r="1"></circle>
+            <circle cx="18" cy="20" r="1"></circle>
+        </svg>
+        <p style="margin:0; font-weight:600;" data-i18n="cart_empty_title">Votre panier est vide</p>
+        <p style="margin:0;" data-i18n="cart_empty_text">Parcourez nos collections pour trouver votre prochain sac.</p>
+    </div>
+
+    <div class="cart-drawer__footer" id="cart-footer" hidden>
+        <div class="cart-drawer__subtotal">
+            <span data-i18n="cart_subtotal">Sous-total</span>
+            <span id="cart-subtotal">0,00 €</span>
+        </div>
+        <a href="#" class="button button-primary button-block" data-i18n="cart_checkout">Commander</a>
+    </div>
+</aside>

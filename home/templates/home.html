@@ -11,26 +11,6 @@
 
 {% block content %}
 
-<a href="#main-content" class="skip-link">Aller au contenu principal</a>
-
-<!-- ============================================================
-     BANDE PROMOTIONNELLE
-     ============================================================ -->
-<div class="promo-bar" role="note" aria-label="Offres en cours">
-    <div class="promo-bar__track">
-        <div class="promo-bar__group">
-            <span class="promo-bar__item" data-i18n="promo_1">Livraison gratuite dès 80€ d'achat</span>
-            <span class="promo-bar__item" data-i18n="promo_2">— 15% sur votre première commande avec le code BIENVENUE</span>
-            <span class="promo-bar__item" data-i18n="promo_3">Nouvelle collection disponible dès maintenant</span>
-        </div>
-        <div class="promo-bar__group" aria-hidden="true">
-            <span class="promo-bar__item" data-i18n="promo_1">Livraison gratuite dès 80€ d'achat</span>
-            <span class="promo-bar__item" data-i18n="promo_2">— 15% sur votre première commande avec le code BIENVENUE</span>
-            <span class="promo-bar__item" data-i18n="promo_3">Nouvelle collection disponible dès maintenant</span>
-        </div>
-    </div>
-</div>
-
 <!-- VENTE FLASH -->
 <div class="flash-sale" id="flash-sale" data-duration-hours="6">
     <div class="container">
@@ -43,138 +23,6 @@
         <a href="#nouveautes" class="button button-secondary" data-i18n="flash_sale_cta">J'en profite</a>
     </div>
 </div>
-
-<!-- ============================================================
-     HEADER
-     ============================================================ -->
-<header class="site-header">
-    <div class="container header-inner">
-
-        <a href="{% url 'home:home' %}" class="logo" aria-label="Ma Boutique - Accueil">
-            <span class="logo__mark">M</span>
-            <span class="logo__text">MA BOUTIQUE</span>
-        </a>
-
-        <button
-            class="menu-toggle"
-            type="button"
-            aria-label="Ouvrir le menu"
-            aria-expanded="false"
-            aria-controls="main-navigation"
-        >
-            <span></span><span></span><span></span>
-        </button>
-
-        <nav class="main-navigation" id="main-navigation" aria-label="Navigation principale">
-            <a href="#nouveautes" data-i18n="nav_new">Nouveautés</a>
-            <a href="#categories" data-i18n="nav_bags">Sacs</a>
-            <a href="#categories" data-i18n="nav_accessories">Accessoires</a>
-            <a href="#selection" data-i18n="nav_collections">Collections</a>
-            <a href="#about" data-i18n="nav_about">À propos</a>
-        </nav>
-
-        <div class="header-actions">
-            <button class="header-action lang-switch" type="button" id="lang-switch" aria-label="Changer de langue / Switch language">
-                <span data-lang-label>EN</span>
-            </button>
-
-            <button class="header-action" type="button" aria-label="Rechercher" data-action="open-search">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-            </button>
-
-            <button class="header-action" type="button" aria-label="Voir le panier" data-action="open-cart">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M6 6h15l-1.5 9h-12z"></path>
-                    <path d="M6 6 4.5 3H2"></path>
-                    <circle cx="9" cy="20" r="1"></circle>
-                    <circle cx="18" cy="20" r="1"></circle>
-                </svg>
-                <span class="cart-count" hidden>0</span>
-            </button>
-        </div>
-    </div>
-</header>
-
-
-<!-- ============================================================
-     RECHERCHE
-     ============================================================ -->
-<div class="search-overlay" id="search-overlay" aria-hidden="true">
-    <div class="search-overlay__panel">
-        <form class="search-overlay__form" id="search-form" role="search">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="7"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <label for="search-input" class="visually-hidden">Rechercher</label>
-            <input type="search" id="search-input" name="q"
-                data-i18n-placeholder="search_placeholder"
-                placeholder="Rechercher un sac, un accessoire…"
-                autocomplete="off">
-            <button type="button" class="search-overlay__close" data-action="close-search" aria-label="Fermer la recherche">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                    <line x1="6" y1="18" x2="18" y2="6"></line>
-                </svg>
-            </button>
-        </form>
-        <p class="search-overlay__hint" data-i18n="search_hint">La recherche sera bientôt disponible.</p>
-    </div>
-</div>
-
-
-<!-- ============================================================
-     PANIER
-     ============================================================ -->
-<div class="cart-backdrop" id="cart-backdrop"></div>
-
-<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier">
-    <div class="cart-drawer__header">
-        <h2 data-i18n="cart_title">Votre panier</h2>
-        <button type="button" class="cart-drawer__close" data-action="close-cart" aria-label="Fermer le panier">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-                <line x1="6" y1="18" x2="18" y2="6"></line>
-            </svg>
-        </button>
-    </div>
-
-    <div class="shipping-progress">
-        <div class="shipping-progress__track">
-            <div class="shipping-progress__fill" id="shipping-fill"></div>
-        </div>
-        <p class="shipping-progress__text" id="shipping-text">
-            Plus que <strong>80,00 €</strong> pour la livraison gratuite
-        </p>
-    </div>
-
-    <ul class="cart-drawer__items" id="cart-items"></ul>
-
-    <div class="cart-drawer__empty" id="cart-empty">
-        <svg class="icon" viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
-            <path d="M6 6h15l-1.5 9h-12z"></path>
-            <path d="M6 6 4.5 3H2"></path>
-            <circle cx="9" cy="20" r="1"></circle>
-            <circle cx="18" cy="20" r="1"></circle>
-        </svg>
-        <p style="margin:0; font-weight:600;" data-i18n="cart_empty_title">Votre panier est vide</p>
-        <p style="margin:0;" data-i18n="cart_empty_text">Parcourez nos collections pour trouver votre prochain sac.</p>
-    </div>
-
-    <div class="cart-drawer__footer" id="cart-footer" hidden>
-        <div class="cart-drawer__subtotal">
-            <span data-i18n="cart_subtotal">Sous-total</span>
-            <span id="cart-subtotal">0,00 €</span>
-        </div>
-        <a href="#" class="button button-primary button-block" data-i18n="cart_checkout">Commander</a>
-    </div>
-</aside>
-
-
-<main id="main-content">
 
     <!-- ============================================================
          HERO — effet WOW à l'ouverture
@@ -719,81 +567,10 @@
         </div>
     </section>
 
-</main>
+{% endblock %}
 
 
-<!-- ============================================================
-     FOOTER
-     ============================================================ -->
-<footer class="site-footer">
-    <div class="container">
-        <div class="footer-grid">
-            <div>
-                <a href="{% url 'home:home' %}" class="footer-logo">
-                    <span class="logo__mark">M</span>
-                    <span class="logo__text">MA BOUTIQUE</span>
-                </a>
-                <p data-i18n="footer_tagline">Sacs et accessoires pensés pour l'élégance au quotidien.</p>
-                <div class="footer-social">
-                    <a href="#" aria-label="Instagram" rel="noopener noreferrer">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="3" y="3" width="18" height="18" rx="5"></rect>
-                            <circle cx="12" cy="12" r="4"></circle>
-                            <circle cx="17.5" cy="6.5" r="1"></circle>
-                        </svg>
-                    </a>
-                    <a href="#" aria-label="Facebook" rel="noopener noreferrer">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M14 9h3V6h-3c-2 0-3 1.2-3 3v2H8v3h3v7h3v-7h3l1-3h-4v-1.5C14 9.4 14.4 9 14 9z"></path>
-                        </svg>
-                    </a>
-                    <a href="#" aria-label="Pinterest" rel="noopener noreferrer">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"></circle>
-                            <path d="M9 17c1-2 1.6-4.4 2-6.5 0 0 .5 1.5 2 1.5 2 0 3-2 3-4 0-2-1.6-3.5-4-3.5-3 0-4.5 2-4.5 4 0 1 .3 1.7.8 2.3"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            <div>
-                <h3 data-i18n="footer_shop">Boutique</h3>
-                <ul>
-                    <li><a href="#nouveautes" data-i18n="nav_new">Nouveautés</a></li>
-                    <li><a href="#categories" data-i18n="nav_bags">Sacs</a></li>
-                    <li><a href="#selection" data-i18n="nav_collections">Collections</a></li>
-                </ul>
-            </div>
-
-            <div>
-                <h3 data-i18n="footer_info">Informations</h3>
-                <ul>
-                    <li><a href="#" data-i18n="footer_shipping">Livraison</a></li>
-                    <li><a href="#" data-i18n="footer_returns">Retours</a></li>
-                    <li><a href="#" data-i18n="footer_contact">Contact</a></li>
-                    <li><a href="#" data-i18n="footer_faq">FAQ</a></li>
-                </ul>
-            </div>
-
-            <div>
-                <h3 data-i18n="footer_legal">Légal</h3>
-                <ul>
-                    <li><a href="#" data-i18n="footer_legal_mentions">Mentions légales</a></li>
-                    <li><a href="#" data-i18n="footer_privacy">Politique de confidentialité</a></li>
-                    <li><a href="#" data-i18n="footer_terms">CGV</a></li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>© 2026 Ma Boutique. Tous droits réservés.</p>
-            <div class="footer-payments">
-                <span>Visa</span><span>Mastercard</span><span>PayPal</span>
-            </div>
-        </div>
-    </div>
-</footer>
-
+{% block after_main %}
 
 <!-- POP-UP DE BIENVENUE -->
 <div class="welcome-modal-backdrop" id="welcome-modal-backdrop" aria-hidden="true">
@@ -830,15 +607,6 @@
         </svg>
     </button>
 </div>
-
-
-<!-- RETOUR EN HAUT -->
-<button type="button" class="scroll-top" id="scroll-top" aria-label="Retour en haut de page">
-    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-        <line x1="12" y1="19" x2="12" y2="5"></line>
-        <polyline points="5 12 12 5 19 12"></polyline>
-    </svg>
-</button>
 
 {% endblock %}
 
