@@ -696,3 +696,70 @@ if (newsletterForm) {
     startAutoPlay();
 
 })();
+
+/* ==========================================================================
+   Mise à jour v2 — bouton panier des nouveautés + liens front-end uniquement
+   ========================================================================== */
+
+document.querySelectorAll('[data-action="quick-add"]').forEach((button) => {
+    const cartIcon = button.innerHTML;
+    button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const card = button.closest("[data-product-id]");
+        if (!card) return;
+
+        addToCart({
+            id: card.dataset.productId,
+            name: card.dataset.productName,
+            price: parseFloat(card.dataset.productPrice),
+            image: card.dataset.productImage,
+        });
+
+        button.classList.add("is-added");
+        button.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+        window.setTimeout(() => {
+            button.classList.remove("is-added");
+            button.innerHTML = cartIcon;
+        }, 1200);
+    });
+});
+
+/* Liens de démonstration (avis, stories, reels) : pas de redirection pour l'instant.
+   Remplacer href="#" par les vrais liens puis retirer data-frontend-only. */
+document.querySelectorAll("[data-frontend-only]").forEach((link) => {
+    link.addEventListener("click", (event) => event.preventDefault());
+});
+
+
+/* ==========================================================================
+   Glisser à la souris (desktop) pour stories, reels et avis.
+   Sur tactile, le swipe natif (scroll-snap) fonctionne sans script.
+   ========================================================================== */
+
+document.querySelectorAll(".stories, .reels, .testimonials-grid").forEach((el) => {
+    let down = false, moved = false, startX = 0, startLeft = 0;
+
+    el.addEventListener("pointerdown", (event) => {
+        if (event.pointerType !== "mouse") return;
+        down = true; moved = false;
+        startX = event.clientX; startLeft = el.scrollLeft;
+    });
+    window.addEventListener("pointermove", (event) => {
+        if (!down) return;
+        const dx = event.clientX - startX;
+        if (Math.abs(dx) > 4) { moved = true; el.classList.add("is-grabbing"); }
+        el.scrollLeft = startLeft - dx;
+    });
+    window.addEventListener("pointerup", () => {
+        if (!down) return;
+        down = false;
+        el.classList.remove("is-grabbing");
+    });
+    el.addEventListener("click", (event) => {
+        if (!moved) return;
+        event.preventDefault(); event.stopPropagation(); moved = false;
+    }, true);
+    el.addEventListener("dragstart", (event) => event.preventDefault());
+});
