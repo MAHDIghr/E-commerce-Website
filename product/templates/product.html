@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ product.name }} | Ma Boutique{% endblock %}
+{% block meta_description %}{{ product.tagline }}{% endblock %}
+{% block body_class %}page-product{% endblock %}
+{% block extra_css %}
+<link rel="preload" as="image" href="{{ product.media.0.src }}" fetchpriority="high">
+<link rel="stylesheet" href="{% static 'css/product.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="p-wrap">
+  <nav class="p-crumb" aria-label="Fil d'Ariane">
+    <a href="{% url 'home:home' %}">Accueil</a><span aria-hidden="true">/</span>
+    <a href="{% url 'shop:catalog' %}">Boutique</a><span aria-hidden="true">/</span>
+    <span aria-current="page">{{ product.name }}</span>
+  </nav>
+
+  <div class="p-top">
+    <!-- GALERIE : fonctionne sans JS (scroll-snap), le JS ajoute compteur, vignettes, lightbox -->
+    <section class="gal" aria-roledescription="carrousel" aria-label="Photos et vidéos du produit">
+      <div class="gal__stage">
+        <ul class="gal__track" tabindex="0">
+          {% for m in product.media %}
+          <li class="gal__slide" aria-label="{{ forloop.counter }} sur {{ product.media|length }}">
+            {% if m.type == "video" %}
+            <button type="button" class="gal__media gal__video" data-video="{{ m.src }}" aria-label="Lire la vidéo : {{ m.alt }}">
+              <img src="{{ m.poster }}" alt="" width="900" height="1125" loading="lazy" decoding="async"><span class="gal__play" aria-hidden="true"></span>
+            </button>
+            {% else %}
+            <button type="button" class="gal__media" data-zoom aria-label="Agrandir : {{ m.alt }}">
+              <img src="{{ m.src }}" alt="{{ m.alt }}" width="900" height="1125" decoding="async" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+            </button>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="gal__count" id="gal-count" aria-live="polite">1 / {{ product.media|length }}</p>
+        <button type="button" class="gal__nav gal__nav--prev" data-nav="-1" aria-label="Média précédent">‹</button>
+        <button type="button" class="gal__nav gal__nav--next" data-nav="1" aria-label="Média suivant">›</button>
+      </div>
+      <ul class="gal__thumbs">
+        {% for m in product.media %}
+        <li><button type="button" class="gal__thumb" data-go="{{ forloop.counter0 }}" aria-label="Voir : {{ m.alt }}"><img src="{{ m.thumb }}" alt="" width="64" height="80" loading="lazy"></button></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <!-- BUY BOX -->
+    <section class="buy" aria-labelledby="p-title">
+      <p class="buy__line">{{ product.brand_line }}</p>
+      <h1 id="p-title">{{ product.name }}</h1>
+      <p class="buy__tag">{{ product.tagline }}</p>
+      <a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">★★★★★</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>
+
+      <p class="price">
+        <strong id="price-now">{{ product.selected.price_label }}</strong>
+        <del id="price-old"><span class="visually-hidden">Prix avant remise </span>{{ product.selected.old_label }}</del>
+        <span class="price__off" id="price-off">-{{ product.selected.off }} %</span>
+      </p>
+
+      <fieldset class="opt">
+        <legend>Couleur : <span id="color-label">{{ product.colors.0.label }}</span></legend>
+        <div class="swatches">
+          {% for c in product.colors %}
+          <label class="sw"><input type="radio" name="color" value="{{ c.id }}" data-label="{{ c.label }}" {% if forloop.first %}checked{% endif %}><span style="background:{{ c.hex }}"></span><span class="visually-hidden">{{ c.label }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <fieldset class="offers">
+        <legend>Choisissez votre offre</legend>
+        {% for o in product.offers %}
+        <label class="offer{% if o.featured %} offer--featured{% endif %}">
+          <input type="radio" name="offer" value="{{ o.id }}" data-name="{{ o.title }}" data-price="{{ o.price|stringformat:'.2f' }}" data-label="{{ o.price_label }}" data-old="{{ o.old_label }}" data-off="{{ o.off }}" {% if o.featured %}checked{% endif %}>
+          <span class="offer__card">
+            <span class="offer__dot" aria-hidden="true"></span>
+            <span class="offer__body"><strong>{{ o.title }}</strong><span>{{ o.items }}</span><em>{{ o.ship }}</em></span>
+            <span class="offer__price"><strong>{{ o.price_label }}</strong><del>{{ o.old_label }}</del></span>
+          </span>
+          <span class="offer__badge">{{ o.badge }}</span>
+        </label>
+        {% endfor %}
+      </fieldset>
+
+      <button type="button" class="button button-primary button-block cta js-add" id="cta">Ajouter au panier</button>
+      <ul class="trust">
+        <li>Paiement sécurisé</li><li>Retours gratuits sous 30 jours</li><li>Service client 7j/7</li><li>Expédition sous 24 h</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<section class="p-sec p-sec--alt"><div class="p-wrap">
+  <h2 class="p-rv">Pourquoi ce sac</h2>
+  <ul class="grid grid--4">
+    {% for b in product.benefits %}<li class="tile p-rv"><h3>{{ b.t }}</h3><p>{{ b.d }}</p></li>{% endfor %}
+  </ul>
+</div></section>
+
+<section class="p-sec"><div class="p-wrap">
+  <h2 class="p-rv">Ce qui rentre dedans</h2>
+  <ul class="fits p-rv">
+    {% for name, ok in product.fits %}<li class="{% if ok %}is-ok{% else %}is-no{% endif %}">{{ name }}<span class="visually-hidden">{% if ok %} : rentre{% else %} : ne rentre pas{% endif %}</span></li>{% endfor %}
+  </ul>
+  <div class="dim p-rv">
+    <div class="dim__box" style="aspect-ratio: {{ product.dims.w }} / {{ product.dims.h }}"><span class="dim__w">{{ product.dims.w }} cm</span><span class="dim__h">{{ product.dims.h }} cm</span></div>
+    <dl>
+      <div><dt>Largeur</dt><dd>{{ product.dims.w }} cm</dd></div><div><dt>Hauteur</dt><dd>{{ product.dims.h }} cm</dd></div>
+      <div><dt>Profondeur</dt><dd>{{ product.dims.d }} cm</dd></div><div><dt>Poids</dt><dd>{{ product.dims.weight }}</dd></div>
+      <div><dt>Capacité</dt><dd>{{ product.dims.volume }}</dd></div>
+    </dl>
+  </div>
+</div></section>
+
+<section class="p-sec p-sec--alt"><div class="p-wrap">
+  <h2 class="p-rv">Les détails de fabrication</h2>
+  <ul class="grid grid--4">
+    {% for c in product.craft %}<li class="tile tile--img p-rv"><img src="{{ c.img }}" alt="" width="600" height="450" loading="lazy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></li>{% endfor %}
+  </ul>
+</div></section>
+
+<section class="p-sec"><div class="p-wrap">
+  <h2 class="p-rv">Un sac, cinq journées</h2>
+  <ul class="strip">
+    {% for label, pid in product.lifestyle %}<li><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><span>{{ label }}</span></li>{% endfor %}
+  </ul>
+</div></section>
+
+<section class="p-sec p-sec--alt" id="avis"><div class="p-wrap">
+  <h2 class="p-rv">Avis clients</h2>
+  <div class="rev">
+    <div class="rev__sum">
+      <p class="rev__score">{{ product.rating }}<small> / 5</small></p>
+      <p><span class="stars" aria-hidden="true">★★★★★</span> {{ product.reviews_count }} avis</p>
+      <ul>{% for r in product.dist %}<li><span>{{ r.n }} ★</span><i class="bar" style="--w: {{ r.pct }}%"></i><span>{{ r.pct }} %</span></li>{% endfor %}</ul>
+    </div>
+    <ul class="rev__list">
+      {% for r in product.reviews %}<li class="tile"><p class="stars" role="img" aria-label="{{ r.stars }} sur 5">{% if r.stars == 5 %}★★★★★{% else %}★★★★☆{% endif %}</p><p>{{ r.t }}</p><p class="rev__who">{{ r.who }}</p></li>{% endfor %}
+    </ul>
+  </div>
+</div></section>
+
+<section class="p-sec"><div class="p-wrap p-wrap--narrow">
+  <h2 class="p-rv">Questions fréquentes</h2>
+  {% for q, a in product.faq %}<details class="faq" name="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
+</div></section>
+
+<section class="p-sec p-sec--alt"><div class="p-wrap">
+  <h2 class="p-rv">Vous aimerez aussi</h2>
+  <ul class="grid grid--4">
+    {% for name, price, pid in product.related %}<li><a class="rel" href="{% url 'shop:catalog' %}"><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><strong>{{ name }}</strong><span>{{ price }}</span></a></li>{% endfor %}
+  </ul>
+</div></section>
+
+<section class="final"><div class="p-wrap">
+  <h2>Prêt à l'adopter ?</h2>
+  <p>Retours gratuits sous 30 jours.</p>
+  <button type="button" class="button button-secondary js-add" id="cta-final">Ajouter au panier</button>
+</div></section>
+{% endblock %}
+
+{% block after_main %}
+<div class="sbar" id="sbar" aria-label="Achat rapide" inert>
+  <p><strong id="sbar-price">{{ product.selected.price_label }}</strong><span id="sbar-offer">{{ product.selected.title }}</span></p>
+  <button type="button" class="button button-primary js-add">Ajouter au panier</button>
+</div>
+<dialog class="lb" id="lb" aria-label="Galerie en plein écran">
+  <p class="lb__n"></p>
+  <button type="button" class="lb__btn lb__close" aria-label="Fermer">×</button>
+  <button type="button" class="lb__btn lb__prev" aria-label="Précédent">‹</button>
+  <div class="lb__stage"></div>
+  <button type="button" class="lb__btn lb__next" aria-label="Suivant">›</button>
+</dialog>
+{{ product|json_script:"product-data" }}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/product.js' %}" defer></script>{% endblock %}

@@ -12,6 +12,9 @@
     const grid = document.getElementById("product-grid");
     if (!grid) return;
 
+    /* URL de base de la page produit (fournie par Django via data-product-url) */
+    const PRODUCT_URL = grid.dataset.productUrl || "#";
+
     /* ---------- Données d'exemple (images Unsplash temporaires) ---------- */
     const IMG = (id) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=700&q=80`;
 
@@ -169,7 +172,7 @@
         card.style.setProperty("--i", String(Math.min(index, 8)));
 
         const media = el("a", "pcard__media");
-        media.href = "#";
+        media.href = `${PRODUCT_URL}${p.id}/`;
         media.setAttribute("aria-label", p.name);
 
         const img = document.createElement("img");
@@ -219,7 +222,7 @@
 
         const h3 = el("h3", "pcard__name");
         const link = el("a", "", p.name);
-        link.href = "#";
+        link.href = `${PRODUCT_URL}${p.id}/`;
         h3.appendChild(link);
         body.appendChild(h3);
 

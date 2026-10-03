@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 
     "home",
     "shop",
+    "product",
 ]
 
 
