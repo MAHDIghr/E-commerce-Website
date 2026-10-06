@@ -1,43 +1,38 @@
 <header class="site-header">
     <div class="container header-inner">
+        <div class="header-navigation">
+            <button class="menu-toggle" type="button" aria-label="Ouvrir le menu"
+                    aria-expanded="false" aria-controls="main-navigation">
+                <span></span><span></span><span></span>
+            </button>
+            <nav class="main-navigation" id="main-navigation" aria-label="Navigation principale">
+                <a href="{% url 'shop:catalog' %}?sort=new" data-i18n="nav_new">Nouveautés</a>
+                <a href="{% url 'shop:catalog' %}?cat=handbags,shoulder" data-i18n="nav_bags">Sacs</a>
+                <a href="{% url 'shop:catalog' %}?cat=wallets,accessories" data-i18n="nav_accessories">Accessoires</a>
+                <a href="{% url 'shop:catalog' %}" data-i18n="nav_collections">Collections</a>
+                <a href="{% url 'home:home' %}#about" data-i18n="nav_about">À propos</a>
+            </nav>
+        </div>
 
         <a href="{% url 'home:home' %}" class="logo" aria-label="Ma Boutique - Accueil">
             <span class="logo__mark">M</span>
             <span class="logo__text">MA BOUTIQUE</span>
         </a>
 
-        <button class="menu-toggle" type="button" aria-label="Ouvrir le menu"
-                aria-expanded="false" aria-controls="main-navigation">
-            <span></span><span></span><span></span>
-        </button>
-
-        <nav class="main-navigation" id="main-navigation" aria-label="Navigation principale">
-            <a href="{% url 'shop:catalog' %}?sort=new" data-i18n="nav_new">Nouveautés</a>
-            <a href="{% url 'shop:catalog' %}?cat=handbags,shoulder" data-i18n="nav_bags">Sacs</a>
-            <a href="{% url 'shop:catalog' %}?cat=wallets,accessories" data-i18n="nav_accessories">Accessoires</a>
-            <a href="{% url 'shop:catalog' %}" data-i18n="nav_collections">Collections</a>
-            <a href="{% url 'home:home' %}#about" data-i18n="nav_about">À propos</a>
-        </nav>
-
         <div class="header-actions">
             <button class="header-action lang-switch" type="button" id="lang-switch"
                     aria-label="Changer de langue / Switch language">
                 <span data-lang-label>EN</span>
             </button>
-
             <button class="header-action" type="button" aria-label="Rechercher" data-action="open-search">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
             </button>
-
             <button class="header-action" type="button" aria-label="Voir le panier" data-action="open-cart">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M6 6h15l-1.5 9h-12z"></path>
-                    <path d="M6 6 4.5 3H2"></path>
-                    <circle cx="9" cy="20" r="1"></circle>
-                    <circle cx="18" cy="20" r="1"></circle>
+                    <path d="M6 6h15l-1.5 9h-12z"></path><path d="M6 6 4.5 3H2"></path>
+                    <circle cx="9" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle>
                 </svg>
                 <span class="cart-count" hidden>0</span>
             </button>
