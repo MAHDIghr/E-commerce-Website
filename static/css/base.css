@@ -810,3 +810,54 @@ h3 { font-size: 1.05rem; font-weight: 500; }
         scroll-behavior: auto !important;
     }
 }
+/* ==========================================================================
+   HOME UI REFRESH — navigation centrée et responsive
+   ========================================================================== */
+:root { --header-height: 70px; }
+
+.site-header .header-inner {
+    min-height: var(--header-height);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+}
+.header-navigation { min-width: 0; display: flex; align-items: center; }
+.header-navigation .main-navigation { justify-content: flex-start; gap: clamp(1rem, 2vw, 2rem); }
+.site-header .logo { justify-self: center; max-width: min(240px, 28vw); min-width: 0; }
+.site-header .logo__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.site-header .header-actions { justify-self: end; }
+.site-header .menu-toggle { flex-shrink: 0; }
+
+@media (max-width: 760px) {
+    :root { --header-height: 62px; }
+    .site-header .header-inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: .45rem; }
+    .header-navigation { min-width: 42px; }
+    .menu-toggle { display: block; }
+    .main-navigation {
+        position: absolute;
+        top: var(--header-height);
+        left: 0; right: 0;
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        padding: .65rem 1rem 1rem;
+        border-bottom: 1px solid var(--color-line);
+        background: rgba(250,247,244,.98);
+        box-shadow: 0 14px 30px rgb(36 31 28 / 8%);
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+    .main-navigation.is-open { display: flex; }
+    .main-navigation a { padding: .72rem .2rem; border-bottom: 1px solid var(--color-line); }
+    .main-navigation a:last-child { border-bottom: 0; }
+    .site-header .logo { justify-self: center; max-width: min(190px, 48vw); }
+    .site-header .logo__text { font-size: .68rem; letter-spacing: .1em; }
+    .site-header .logo__mark { width: 30px; height: 30px; font-size: .9rem; }
+    .header-actions { gap: .1rem; }
+    .header-action { width: 36px; height: 36px; }
+    .lang-switch { height: 30px; padding-inline: .65rem; font-size: .68rem; }
+}
+@media (max-width: 500px) {
+    .site-header .logo { max-width: 45vw; }
+    .site-header .logo__text { display: inline; }
+}
