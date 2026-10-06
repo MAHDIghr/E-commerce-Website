@@ -1434,3 +1434,168 @@
 
 /* Explicitly disable the previous signature-card arrows. */
 .card__more { display: none !important; }
+
+/* ==========================================================================
+   COMMUNITY MEDIA — implementation propre
+   ========================================================================== */
+
+/* Les aperçus restent strictement dans leur conteneur. */
+.story__ring {
+    position: relative;
+    overflow: hidden;
+    flex: 0 0 auto;
+}
+
+.story__ring img,
+.story__ring video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    border: 3px solid var(--color-bg);
+}
+
+.reel {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    aspect-ratio: 9 / 16;
+}
+
+.reel img,
+.reel video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: cover;
+    object-position: center;
+}
+
+.reel video {
+    pointer-events: none;
+}
+
+.reel__play {
+    display: none;
+}
+
+/* Desktop : les 5 reels tiennent dans une seule ligne. */
+@media (min-width: 1100px) {
+    .reels {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-inline: 0;
+        padding-inline: 0;
+        overflow: visible;
+    }
+
+    .reel {
+        width: 100%;
+        min-width: 0;
+        flex: none;
+    }
+}
+
+/* Tablette/mobile : les cartes restent nettes sans provoquer de débordement.
+   Le conteneur peut défiler horizontalement si l'écran est trop étroit. */
+@media (max-width: 1099px) {
+    .reels {
+        display: flex;
+        align-items: stretch;
+        gap: 0.75rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .reel {
+        flex: 0 0 clamp(150px, 42vw, 230px);
+    }
+}
+
+/* Les stories restent rondes, centrées tant qu'elles tiennent.
+   Si elles deviennent trop nombreuses, le scroll horizontal prend le relais. */
+.stories {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+@media (max-width: 899px) {
+    .stories {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .story {
+        width: 68px;
+    }
+
+    .story__ring {
+        width: 66px;
+        height: 66px;
+    }
+
+    .reel {
+        flex-basis: min(62vw, 220px);
+    }
+}
+
+/* Popup : uniquement une grande vidéo, sans contenu qui pousse la fenêtre. */
+.community-modal-backdrop {
+    padding: 1rem;
+    overflow: auto;
+}
+
+.community-modal {
+    width: min(92vw, 430px);
+    max-height: 92vh;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #000;
+}
+
+.community-modal__media {
+    width: 100%;
+    height: min(82vh, 760px);
+    aspect-ratio: 9 / 16;
+    background: #000;
+}
+
+.community-modal__media img,
+.community-modal__media video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.community-modal__body {
+    display: none;
+}
+
+.community-modal__close {
+    top: 0.75rem;
+    right: 0.75rem;
+}
+
+@media (max-width: 600px) {
+    .community-modal {
+        width: min(88vw, 360px);
+        max-height: 88vh;
+    }
+
+    .community-modal__media {
+        height: auto;
+        max-height: 88vh;
+    }
+}
