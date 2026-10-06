@@ -1411,7 +1411,7 @@
         flex: 1 1 auto;
         width: 0;
         min-width: 0;
-        height: 40px;
+        height: 46px;
         padding-inline: .65rem;
         font-size: 16px;
     }
@@ -1419,7 +1419,7 @@
         flex: 0 0 auto;
         width: auto;
         min-width: 0;
-        min-height: 40px;
+        min-height: 46px;
         padding-inline: .68rem;
         font-size: .56rem;
         white-space: nowrap;
@@ -1428,8 +1428,8 @@
 }
 @media (max-width: 380px) {
     .newsletter-form { gap: .1rem; padding: .18rem; }
-    .newsletter-form input { height: 37px; padding-inline: .5rem; }
-    .newsletter-form .button { min-height: 37px; padding-inline: .55rem; font-size: .5rem; }
+    .newsletter-form input { height: 43px; padding-inline: .5rem; }
+    .newsletter-form .button { min-height: 43px; padding-inline: .55rem; font-size: .5rem; }
 }
 
 /* Explicitly disable the previous signature-card arrows. */
