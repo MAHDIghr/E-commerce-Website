@@ -606,8 +606,7 @@ function applyLanguage(lang) {
 
 function detectDefaultLanguage() {
     const stored = readStorage(LANG_KEY, null);
-    if (stored === "fr" || stored === "en") return stored;
-    return navigator.language && navigator.language.toLowerCase().startsWith("en") ? "en" : "fr";
+    return stored === "en" ? "en" : "fr";
 }
 
 let currentLang = detectDefaultLanguage();
