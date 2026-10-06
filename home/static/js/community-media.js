@@ -1,7 +1,8 @@
 /* ==========================================================================
    COMMUNITY MEDIA
-   Stories + Reels : aperçu vidéo automatique, muet, en boucle.
-   Le clic ouvre la modale communautaire existante.
+   Stories + Reels : chargement progressif et lecture automatique visible.
+   Les mêmes vidéos publiques sont conservées ; seules la stratégie de
+   chargement et la gestion de lecture sont optimisées.
    ========================================================================== */
 
 (() => {
@@ -35,16 +36,18 @@
         const poster = item.querySelector("img");
         const video = document.createElement("video");
 
-        video.src = source;
-        video.autoplay = true;
+        video.preload = "metadata";
+        video.loading = "lazy";
         video.muted = true;
         video.defaultMuted = true;
         video.loop = true;
         video.playsInline = true;
-        video.preload = "auto";
+        video.autoplay = true;
+
         video.setAttribute("autoplay", "");
         video.setAttribute("muted", "");
         video.setAttribute("playsinline", "");
+        video.setAttribute("loading", "lazy");
         video.setAttribute("aria-hidden", "true");
 
         if (poster) {
@@ -54,27 +57,92 @@
             item.prepend(video);
         }
 
-        const start = () => {
-            video.play().catch(() => {
-                /* Le navigateur peut refuser l'autoplay selon ses réglages. */
-            });
-        };
+        video.src = source;
+        item.dataset.communityVideoLoaded = "true";
 
-        video.addEventListener("loadeddata", start, { once: true });
-        video.addEventListener("canplay", start, { once: true });
-        start();
-
+        video.play().catch(() => {});
         return video;
     }
 
+    function loadAndPlay(item) {
+        const source = item.dataset.communityVideo;
+        if (!source) return;
+
+        const video = createVideo(item, source);
+        video.play().catch(() => {});
+    }
+
+    function updatePlayback(item, isVisible) {
+        const video = item.querySelector("video");
+
+        if (!video) {
+            if (isVisible) loadAndPlay(item);
+            return;
+        }
+
+        if (isVisible && !document.hidden) {
+            video.play().catch(() => {});
+        } else {
+            video.pause();
+        }
+    }
+
     function initCommunityVideos() {
-        document.querySelectorAll(".story, .reel").forEach((item) => {
+        const items = Array.from(document.querySelectorAll(".story, .reel"));
+
+        items.forEach((item) => {
             const key = getVideoKey(item);
             const source = VIDEO_SOURCES[key];
-            if (!source) return;
+            if (source) item.dataset.communityVideo = source;
+        });
 
-            item.dataset.communityVideo = source;
-            createVideo(item, source);
+        if (items.length === 0) return;
+
+        if (!("IntersectionObserver" in window)) {
+            items.forEach((item) => loadAndPlay(item));
+            return;
+        }
+
+        /*
+         * Le chargement commence quand la communauté approche du viewport.
+         * Sur desktop, les 5 reels visibles sont donc chargés et joués
+         * ensemble. Sur mobile, seuls les reels visibles/à proximité
+         * sont activés, ce qui réduit la charge simultanée.
+         */
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    updatePlayback(entry.target, entry.isIntersecting);
+                });
+            },
+            {
+                root: null,
+                rootMargin: "300px 0px",
+                threshold: 0.2,
+            }
+        );
+
+        items.forEach((item) => observer.observe(item));
+
+        document.addEventListener("visibilitychange", () => {
+            items.forEach((item) => {
+                const video = item.querySelector("video");
+                if (!video) return;
+
+                if (document.hidden) {
+                    video.pause();
+                    return;
+                }
+
+                const rect = item.getBoundingClientRect();
+                const visible =
+                    rect.bottom > -100 &&
+                    rect.top < window.innerHeight + 100 &&
+                    rect.right > -100 &&
+                    rect.left < window.innerWidth + 100;
+
+                if (visible) video.play().catch(() => {});
+            });
         });
     }
 
