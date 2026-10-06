@@ -19,7 +19,7 @@ def media(kind, photo_id, alt, src=None):
 
 def offer(id, title, items, price, old, ship, badge="", featured=False):
     return {"id": id, "title": title, "items": items, "price": price, "old": old, "price_label": eur(price),
-            "old_label": eur(old), "off": round((1 - price / old) * 100), "ship": ship, "badge": badge,
+            "old_label": eur(old), "save_label": eur(old - price), "off": round((1 - price / old) * 100), "ship": ship, "badge": badge,
             "featured": featured}
 
 
@@ -46,6 +46,7 @@ def build_product():
         "colors": [{"id": "camel", "label": "Camel", "hex": "#b07a4a"}, {"id": "noir", "label": "Noir", "hex": "#1c1613"},
                    {"id": "creme", "label": "Crème", "hex": "#e9dcc6"}],
         "offers": offers, "selected": offers[1],
+        "max_off": max(o["off"] for o in offers), "upgrade": eur(offers[2]["price"] - offers[1]["price"]),
         "benefits": [
             {"t": "Tout est à sa place", "d": "Une poche zippée et deux poches plaquées pour retrouver clés et téléphone sans fouiller."},
             {"t": "Confortable toute la journée", "d": "Anses larges pensées pour porter à l'épaule ou à la main."},
@@ -88,4 +89,6 @@ def build_product():
 
 
 def detail(request, slug):
-    return render(request, "product_detail.html", {"product": build_product()})
+    product = build_product()
+    product["slug"] = slug
+    return render(request, "product.html", {"product": product})

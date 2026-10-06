@@ -1,0 +1,350 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="color-scheme" content="light">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
+    <title>Paiement | Ma Boutique</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    {# Tokens, boutons, tiroir panier : partagés avec le reste du site #}
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/checkout.css' %}">
+</head>
+<body class="page-checkout">
+
+    {# Icônes (sprite local, aucune requête externe) #}
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></symbol>
+        <symbol id="i-cart" viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"></path><path d="M6 6 4.5 3H2"></path><circle cx="9" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="7.5" x2="12" y2="13"></line><line x1="12" y1="16.5" x2="12" y2="16.6"></line></symbol>
+        <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"></rect><line x1="2.5" y1="10" x2="21.5" y2="10"></line></symbol>
+        <symbol id="i-truck" viewBox="0 0 24 24"><rect x="1" y="7" width="15" height="10" rx="1"></rect><path d="M16 10h3l3 3v4h-6z"></path><circle cx="6" cy="20" r="1.5"></circle><circle cx="17.5" cy="20" r="1.5"></circle></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="6" y1="18" x2="18" y2="6"></line></symbol>
+    </svg>
+
+    <a href="#checkout-main" class="skip-link">Aller au contenu principal</a>
+
+    <!-- HEADER MINIMAL : logo + panier (réutilise le tiroir panier existant) -->
+    <header class="co-header">
+        <div class="co-wrap co-header__inner">
+            <a href="{% url 'home:home' %}" class="logo" aria-label="Ma Boutique - Retour à l'accueil">
+                <span class="logo__mark">M</span>
+                <span class="logo__text">MA BOUTIQUE</span>
+            </a>
+
+            <p class="co-header__secure">
+                <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+                Paiement sécurisé
+            </p>
+
+            <button class="header-action" type="button" aria-label="Voir le panier" data-action="open-cart">
+                <svg class="icon" aria-hidden="true"><use href="#i-cart"></use></svg>
+                <span class="cart-count" hidden>0</span>
+            </button>
+        </div>
+    </header>
+
+    {% include "partials/_cart_drawer.html" %}
+
+    <main id="checkout-main" class="co-wrap co-main">
+        <h1 class="co-title">Finaliser ma commande</h1>
+
+        <div class="co-layout">
+
+            <!-- ============ 1. RÉSUMÉ DE LA COMMANDE ============ -->
+            <aside class="co-summary" aria-labelledby="summary-title">
+                <h2 id="summary-title" class="co-h2">Résumé de la commande</h2>
+                <p class="co-mock-note" id="mock-note" hidden>Données de démonstration — votre panier est vide.</p>
+
+                <ul class="co-items" id="summary-items"></ul>
+
+                <form class="co-promo" id="promo-form" data-state="idle" novalidate>
+                    <label for="promo-code" class="co-promo__label">Code promo</label>
+                    <div class="co-promo__row">
+                        <input id="promo-code" name="promo" type="text" autocomplete="off" autocapitalize="characters"
+                               spellcheck="false" maxlength="32" placeholder="Entrez votre code promo"
+                               aria-describedby="promo-message">
+                        <button type="submit" class="button button-outline co-promo__btn" id="promo-btn">
+                            <span class="co-spinner" aria-hidden="true"></span>
+                            <span class="co-promo__btn-label">Appliquer</span>
+                        </button>
+                    </div>
+                    <p class="co-promo__message" id="promo-message" role="status" aria-live="polite"></p>
+                </form>
+
+                <dl class="co-totals" id="summary-totals">
+                    <div class="co-totals__row"><dt>Sous-total</dt><dd id="t-subtotal">—</dd></div>
+                    <div class="co-totals__row"><dt>Expédition</dt><dd id="t-shipping">—</dd></div>
+                    <div class="co-totals__row co-totals__row--total">
+                        <dt>Total <span class="co-totals__note" id="t-note"></span></dt>
+                        <dd><span class="co-totals__currency" id="t-currency"></span><span id="t-total">—</span></dd>
+                    </div>
+                </dl>
+            </aside>
+
+            <div class="co-flow">
+
+                <!-- ============ 2. PAIEMENT EXPRESS ============ -->
+                <section class="co-section co-express" aria-labelledby="express-title">
+                    <h2 id="express-title" class="co-h2 co-h2--center">Paiement express</h2>
+                    <div class="co-express__buttons">
+                        {# Représentations textuelles : à remplacer par les boutons officiels des SDK (PayPal, Apple Pay, Google Pay). #}
+                        <button type="button" class="co-express__btn co-express__btn--paypal" data-express="PayPal" aria-label="Payer avec PayPal">PayPal</button>
+                        <button type="button" class="co-express__btn co-express__btn--apple" data-express="Apple Pay" aria-label="Payer avec Apple Pay">Apple Pay</button>
+                        <button type="button" class="co-express__btn co-express__btn--google" data-express="Google Pay" aria-label="Payer avec Google Pay">Google Pay</button>
+                    </div>
+                    <p class="co-express__message" id="express-message" role="status" aria-live="polite"></p>
+                    <p class="co-divider"><span>ou payez par carte</span></p>
+                </section>
+
+                <form id="checkout-form" class="co-form" method="post" action="" novalidate>
+                    {% csrf_token %}
+                    <p class="co-legend-req"><span aria-hidden="true">*</span> Champs obligatoires</p>
+
+                    <!-- ============ 3. CONTACT ============ -->
+                    <section class="co-section" aria-labelledby="contact-title">
+                        <h2 id="contact-title" class="co-h2">Informations de contact</h2>
+                        <div class="co-field" data-field="email">
+                            <label for="email">Adresse e-mail <span class="co-req" aria-hidden="true">*</span></label>
+                            <input id="email" name="email" type="email" autocomplete="email" inputmode="email"
+                                   maxlength="254" required aria-required="true" aria-describedby="email-hint email-error">
+                            <p class="co-hint" id="email-hint">Nous utiliserons cette adresse pour vous envoyer la confirmation de commande.</p>
+                            <p class="co-error" id="email-error" hidden></p>
+                        </div>
+                    </section>
+
+                    <!-- ============ 4. ADRESSE DE LIVRAISON ============ -->
+                    <section class="co-section" aria-labelledby="address-title">
+                        <h2 id="address-title" class="co-h2">Adresse de livraison</h2>
+
+                        <div class="co-field co-search">
+                            <label for="address-search">Rechercher votre adresse</label>
+                            <div class="co-search__box">
+                                <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+                                <input id="address-search" type="text" role="combobox" autocomplete="off"
+                                       aria-autocomplete="list" aria-expanded="false" aria-controls="address-listbox"
+                                       placeholder="Commencez à saisir votre adresse…" maxlength="120">
+                            </div>
+                            <ul class="co-search__list" id="address-listbox" role="listbox" aria-label="Suggestions d'adresses" hidden></ul>
+                            <p class="co-visually-hidden" id="address-live" role="status" aria-live="polite"></p>
+                            <p class="co-hint">Ou remplissez les champs ci-dessous manuellement.</p>
+                        </div>
+
+                        <div class="co-grid">
+                            <div class="co-field" data-field="lastName">
+                                <label for="lastName">Nom <span class="co-req" aria-hidden="true">*</span></label>
+                                <input id="lastName" name="lastName" type="text" autocomplete="family-name" maxlength="80"
+                                       required aria-required="true" aria-describedby="lastName-error">
+                                <p class="co-error" id="lastName-error" hidden></p>
+                            </div>
+                            <div class="co-field" data-field="firstName">
+                                <label for="firstName">Prénom</label>
+                                <input id="firstName" name="firstName" type="text" autocomplete="given-name" maxlength="80">
+                            </div>
+
+                            <div class="co-field co-grid__full" data-field="country">
+                                <label for="country">Pays <span class="co-req" aria-hidden="true">*</span></label>
+                                <select id="country" name="country" autocomplete="country" required aria-required="true"
+                                        aria-describedby="country-error"></select>
+                                <p class="co-error" id="country-error" hidden></p>
+                            </div>
+
+                            <div class="co-field co-field--number" data-field="number">
+                                <label for="number">N°</label>
+                                <input id="number" name="number" type="text" autocomplete="off" maxlength="10" placeholder="12">
+                            </div>
+                            <div class="co-field co-field--street" data-field="street">
+                                <label for="street">Nom de rue <span class="co-req" aria-hidden="true">*</span></label>
+                                <input id="street" name="street" type="text" autocomplete="address-line1" maxlength="120"
+                                       required aria-required="true" placeholder="Rue de Paris" aria-describedby="street-error">
+                                <p class="co-error" id="street-error" hidden></p>
+                            </div>
+
+                            <div class="co-field co-grid__full" data-field="complement">
+                                <label for="complement">Complément d'adresse <span class="co-opt">(facultatif)</span></label>
+                                <input id="complement" name="complement" type="text" autocomplete="address-line2" maxlength="120"
+                                       placeholder="Appartement, bâtiment, étage, etc.">
+                            </div>
+
+                            <div class="co-field" data-field="postalCode">
+                                <label for="postalCode">Code postal <span class="co-req" aria-hidden="true">*</span></label>
+                                <input id="postalCode" name="postalCode" type="text" autocomplete="postal-code" inputmode="numeric"
+                                       maxlength="10" required aria-required="true" aria-describedby="postalCode-error">
+                                <p class="co-error" id="postalCode-error" hidden></p>
+                            </div>
+                            <div class="co-field" data-field="city">
+                                <label for="city">Ville <span class="co-req" aria-hidden="true">*</span></label>
+                                <input id="city" name="city" type="text" autocomplete="address-level2" maxlength="80"
+                                       required aria-required="true" aria-describedby="city-error">
+                                <p class="co-error" id="city-error" hidden></p>
+                            </div>
+
+                            <div class="co-field co-grid__full" data-field="phone">
+                                <label for="phone">Téléphone <span class="co-opt">(facultatif)</span></label>
+                                <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="25">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ============ 5. MÉTHODES DE LIVRAISON (après adresse) ============ -->
+                    <section class="co-section" id="shipping-section" aria-labelledby="shipping-title" hidden>
+                        <fieldset class="co-fieldset" aria-describedby="shipping-error">
+                            <legend id="shipping-title" class="co-h2">Méthodes de livraison</legend>
+                            <div class="co-options" id="shipping-options"></div>
+                            <p class="co-error" id="shipping-error" hidden></p>
+                        </fieldset>
+                    </section>
+
+                    <!-- ============ 6. PAIEMENT ============ -->
+                    <section class="co-section" aria-labelledby="payment-title">
+                        <fieldset class="co-fieldset" aria-describedby="payment-error">
+                            <legend id="payment-title" class="co-h2">Paiement</legend>
+                            <p class="co-hint co-hint--lead">Toutes les transactions sont sécurisées et chiffrées.</p>
+
+                            <div class="co-options" id="payment-options">
+
+                                <div class="co-option-group">
+                                    <label class="co-option">
+                                        <input type="radio" name="payment" value="card" checked>
+                                        <span class="co-option__box">
+                                            <span class="co-option__dot" aria-hidden="true"></span>
+                                            <span class="co-option__text">
+                                                <strong><svg class="icon" aria-hidden="true"><use href="#i-card"></use></svg> Carte bancaire</strong>
+                                            </span>
+                                            <span class="co-brands" aria-label="Visa, Mastercard, CB">
+                                                <span>Visa</span><span>Mastercard</span><span>CB</span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                    <div class="co-panel" id="panel-card">
+                                        {# Point de montage du futur Stripe Payment Element. Aucune saisie réelle ici : pas de <input> carte. #}
+                                        <div id="payment-element" class="co-stripe" data-stripe-mount>
+                                            <div class="co-stripe__mock" data-mock aria-hidden="true">
+                                                <span class="co-stripe__label">Numéro de carte</span>
+                                                <span class="co-stripe__box">1234 1234 1234 1234</span>
+                                                <span class="co-stripe__pair">
+                                                    <span><span class="co-stripe__label">MM/AA</span><span class="co-stripe__box">MM / AA</span></span>
+                                                    <span><span class="co-stripe__label">CVC</span><span class="co-stripe__box">CVC</span></span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p class="co-devnote">Aperçu — les champs de carte sécurisés seront fournis par Stripe à l'étape suivante.</p>
+                                    </div>
+                                </div>
+
+                                <div class="co-option-group">
+                                    <label class="co-option">
+                                        <input type="radio" name="payment" value="paypal">
+                                        <span class="co-option__box">
+                                            <span class="co-option__dot" aria-hidden="true"></span>
+                                            <span class="co-option__text"><strong>PayPal</strong></span>
+                                        </span>
+                                    </label>
+                                    <div class="co-panel" id="panel-paypal" hidden>
+                                        <p>Vous serez redirigé(e) vers PayPal pour finaliser votre paiement en toute sécurité.</p>
+                                    </div>
+                                </div>
+
+                                <div class="co-option-group">
+                                    <label class="co-option">
+                                        <input type="radio" name="payment" value="applepay">
+                                        <span class="co-option__box">
+                                            <span class="co-option__dot" aria-hidden="true"></span>
+                                            <span class="co-option__text"><strong>Apple Pay</strong></span>
+                                        </span>
+                                    </label>
+                                    <div class="co-panel" id="panel-applepay" hidden>
+                                        <p>Disponible sur les appareils et navigateurs compatibles.</p>
+                                    </div>
+                                </div>
+
+                                <div class="co-option-group">
+                                    <label class="co-option">
+                                        <input type="radio" name="payment" value="googlepay">
+                                        <span class="co-option__box">
+                                            <span class="co-option__dot" aria-hidden="true"></span>
+                                            <span class="co-option__text"><strong>Google Pay</strong></span>
+                                        </span>
+                                    </label>
+                                    <div class="co-panel" id="panel-googlepay" hidden>
+                                        <p>Disponible sur les appareils et navigateurs compatibles.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="co-error" id="payment-error" hidden></p>
+                        </fieldset>
+                    </section>
+
+                    <!-- ============ 7. RÉSUMÉ COMPACT AVANT VALIDATION ============ -->
+                    <section class="co-review" id="order-review" aria-label="Récapitulatif avant validation">
+                        <button type="button" class="co-review__toggle" id="review-toggle" aria-expanded="false" aria-controls="review-body">
+                            <span class="co-review__title">Résumé de la commande</span>
+                            <span class="co-review__total" id="review-total">—</span>
+                            <svg class="icon co-review__chevron" aria-hidden="true"><use href="#i-chevron"></use></svg>
+                        </button>
+                        <div class="co-review__body" id="review-body" inert>
+                            <div class="co-review__inner">
+                                <dl class="co-review__lines" id="review-lines"></dl>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ============ 8. BOUTON FINAL ============ -->
+                    <div class="co-submit">
+                        <p class="co-form-status" id="form-status" role="alert" tabindex="-1" hidden></p>
+                        <button type="submit" class="button button-primary button-block co-submit__btn" id="submit-btn">
+                            <span class="co-spinner" aria-hidden="true"></span>
+                            <span class="co-submit__label">Vérifier la commande</span>
+                        </button>
+                        <p class="co-submit__legal">En continuant, vous acceptez nos <a href="#">conditions d'utilisation</a> et notre <a href="#">politique de confidentialité</a>.</p>
+                    </div>
+
+                    <!-- ============ 9. RÉASSURANCE ============ -->
+                    <div class="co-trust">
+                        <p class="co-trust__title">
+                            <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+                            Paiement sécurisé
+                        </p>
+                        <p class="co-trust__text">Vos informations sont protégées.</p>
+                        <ul class="co-trust__list">
+                            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Paiement sécurisé</li>
+                            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Données protégées</li>
+                            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Confirmation par e-mail</li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- LIENS LÉGAUX (pas de footer classique) -->
+    <nav class="co-legal" aria-label="Informations légales">
+        <ul class="co-wrap">
+            <li><a href="#">Politique de remboursement</a></li>
+            <li><a href="#">Expédition</a></li>
+            <li><a href="#">Politique de confidentialité</a></li>
+            <li><a href="#">Conditions d'utilisation</a></li>
+            <li><a href="#">Mentions légales</a></li>
+            <li><a href="#">Contactez-nous</a></li>
+        </ul>
+    </nav>
+
+    {# Données du checkout (MOCK aujourd'hui, serveur plus tard) : lues par checkout.js #}
+    {{ checkout_data|json_script:"checkout-data" }}
+
+    {# base.js : panier partagé (localStorage), tiroir panier, pastille. Chargé avant checkout.js. #}
+    <script src="{% static 'js/base.js' %}" defer></script>
+    <script src="{% static 'js/checkout.js' %}" defer></script>
+</body>
+</html>
