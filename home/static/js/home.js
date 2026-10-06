@@ -845,22 +845,3 @@ document.querySelectorAll(".stories, .reels, .testimonials-grid").forEach((el) =
         if (event.key === "Escape" && backdrop.classList.contains("is-open")) closeModal();
     });
 })();
-
-(function initReelVideos() {
-    document.querySelectorAll(".reel[data-video-src]").forEach((reel) => {
-        const source = reel.dataset.videoSrc;
-        if (!source) return;
-        const poster = reel.querySelector("img");
-        const video = document.createElement("video");
-        video.src = source;
-        video.muted = true;
-        video.loop = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.preload = "metadata";
-        if (poster) video.poster = poster.currentSrc || poster.src;
-        reel.insertBefore(video, reel.firstChild);
-        if (poster) poster.remove();
-        video.play().catch(() => {});
-    });
-})();
