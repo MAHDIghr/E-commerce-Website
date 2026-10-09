@@ -78,7 +78,12 @@ function renderRecentlyViewed() {
 
         const name = document.createElement("h3");
         name.textContent = product.name;
-        info.append(name);
+
+        const price = document.createElement("p");
+        price.className = "product-price";
+        price.textContent = formatPrice(product.price);
+
+        info.append(name, price);
         article.append(link, info);
         grid.appendChild(article);
     });
@@ -758,90 +763,3 @@ document.querySelectorAll(".stories, .reels, .testimonials-grid").forEach((el) =
     }, true);
     el.addEventListener("dragstart", (event) => event.preventDefault());
 });
-
-/* ==========================================================================
-   UI refresh — carte active, stories/reels et modales
-   ========================================================================== */
-
-(function initSignatureActiveCard() {
-    const carousel = document.querySelector("#carousel");
-    if (!carousel) return;
-    const cards = Array.from(carousel.querySelectorAll(".card"));
-    const sync = () => {
-        cards.forEach((card, index) => card.classList.toggle("is-current", index === 0 || card.style.zIndex === "50"));
-    };
-    const observer = new MutationObserver(sync);
-    cards.forEach((card) => observer.observe(card, { attributes: true, attributeFilter: ["style"] }));
-    sync();
-})();
-
-(function initCommunityModal() {
-    const backdrop = document.querySelector("#community-modal-backdrop");
-    const media = document.querySelector("#community-modal-media");
-    const type = document.querySelector("#community-modal-type");
-    const title = document.querySelector("#community-modal-title");
-    const caption = document.querySelector("#community-modal-caption");
-    const close = document.querySelector('[data-action="close-community-modal"]');
-    if (!backdrop || !media) return;
-
-    let lastTrigger = null;
-
-    function closeModal() {
-        backdrop.classList.remove("is-open");
-        backdrop.setAttribute("aria-hidden", "true");
-        media.innerHTML = "";
-        if (lastTrigger) lastTrigger.focus();
-    }
-
-    function openModal(trigger, kind) {
-        lastTrigger = trigger;
-        const image = trigger.querySelector("img");
-        const video = trigger.querySelector("video");
-        const label = trigger.getAttribute("aria-label") || "";
-        const text = trigger.querySelector(".story__caption, .reel__caption");
-        title.textContent = label.replace(/^(Story|Voir la vidéo)s*:s*/i, "") || (text ? text.textContent : "");
-        caption.textContent = text ? text.textContent : "";
-        type.textContent = kind === "story" ? "Story" : "Reel";
-        media.innerHTML = "";
-
-        if (video) {
-            const clone = video.cloneNode(true);
-            clone.controls = true;
-            clone.autoplay = true;
-            clone.muted = true;
-            clone.playsInline = true;
-            media.appendChild(clone);
-            clone.play().catch(() => {});
-        } else if (image) {
-            const clone = image.cloneNode(true);
-            clone.removeAttribute("loading");
-            media.appendChild(clone);
-        }
-
-        backdrop.classList.add("is-open");
-        backdrop.setAttribute("aria-hidden", "false");
-        close && close.focus();
-    }
-
-    document.querySelectorAll(".story").forEach((story) => {
-        story.addEventListener("click", (event) => {
-            event.preventDefault();
-            openModal(story, "story");
-        });
-    });
-
-    document.querySelectorAll(".reel").forEach((reel) => {
-        reel.addEventListener("click", (event) => {
-            event.preventDefault();
-            openModal(reel, "reel");
-        });
-    });
-
-    close && close.addEventListener("click", closeModal);
-    backdrop.addEventListener("click", (event) => {
-        if (event.target === backdrop) closeModal();
-    });
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && backdrop.classList.contains("is-open")) closeModal();
-    });
-})();
