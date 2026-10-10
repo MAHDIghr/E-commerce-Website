@@ -28,6 +28,9 @@
 
     function createPreview(item) {
         if (previewVideos.has(item)) return previewVideos.get(item);
+        // Les stories gardent leur vignette statique : aucune vidéo ne se lance
+        // avant l'ouverture volontaire. Les aperçus animés restent réservés aux reels.
+        if (item.classList.contains("story")) return null;
         const source = item.dataset.videoSrc;
         const poster = item.querySelector("img");
         if (!source) return null;
@@ -51,7 +54,7 @@
     }
 
     function syncPreviewPlayback() {
-        const allowed = new Set(Array.from(visibleItems).slice(0, 2));
+        const allowed = new Set(Array.from(visibleItems).filter((item) => item.classList.contains("reel")).slice(0, 2));
         previewVideos.forEach((video, item) => {
             if (backdrop?.classList.contains("is-open") || document.hidden || !allowed.has(item)) {
                 video.pause();
@@ -131,7 +134,7 @@
                 const item = entry.target;
                 if (entry.isIntersecting) {
                     visibleItems.add(item);
-                    createPreview(item);
+                    if (item.classList.contains("reel")) createPreview(item);
                 } else {
                     visibleItems.delete(item);
                 }
@@ -140,7 +143,7 @@
         }, { rootMargin: "100px 0px", threshold: 0.25 });
         items.forEach((item) => observer.observe(item));
     } else {
-        items.slice(0, 2).forEach((item) => {
+        items.filter((item) => item.classList.contains("reel")).slice(0, 2).forEach((item) => {
             visibleItems.add(item);
             createPreview(item);
         });

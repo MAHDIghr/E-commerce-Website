@@ -1567,3 +1567,53 @@ body.community-modal-open { overflow: hidden; }
     .community-modal-backdrop,
     .community-modal { transition: none; }
 }
+
+
+/* Stories : carrousel horizontal centré lorsqu'il tient, défilant sinon. */
+.community .stories {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start !important;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    cursor: grab;
+}
+.community .stories::-webkit-scrollbar { display: none; }
+.community .story { flex-shrink: 0; scroll-snap-align: center; }
+.community .story__ring { position: relative; }
+.community .story__ring::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 4;
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--color-bg, #fff);
+    border-radius: 50%;
+    background: #ef3340;
+    box-shadow: 0 1px 5px rgb(0 0 0 / 22%);
+    pointer-events: none;
+}
+@media (max-width: 600px) {
+    .community .stories {
+        width: 100%;
+        max-width: 100%;
+        margin-inline: 0;
+        padding-inline: .35rem;
+        gap: .7rem;
+        scroll-padding-inline: .35rem;
+    }
+    .community .story { scroll-snap-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .community .stories { scroll-behavior: auto; }
+}
