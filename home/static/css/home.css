@@ -1609,3 +1609,34 @@
         max-height: 88vh;
     }
 }
+
+/* ==========================================================================
+   COMMUNITY MEDIA — performance
+   ========================================================================== */
+
+.story__ring img,
+.story__ring video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--color-bg);
+}
+
+.reel img,
+.reel video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.reel video {
+    pointer-events: none;
+}
+
+.story video,
+.reel video {
+    outline: none;
+}

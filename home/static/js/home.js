@@ -845,26 +845,3 @@ document.querySelectorAll(".stories, .reels, .testimonials-grid").forEach((el) =
         if (event.key === "Escape" && backdrop.classList.contains("is-open")) closeModal();
     });
 })();
-
-(function initCommunityVideos() {
-    document.querySelectorAll(".story[data-video-src], .reel[data-video-src]").forEach((item) => {
-        const source = item.dataset.videoSrc;
-        const video = item.querySelector("video");
-        if (!source || !video) return;
-
-        video.src = source;
-        video.muted = true;
-        video.loop = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.preload = "metadata";
-
-        const playVideo = () => video.play().catch(() => {});
-        if (video.readyState >= 2) {
-            playVideo();
-        } else {
-            video.addEventListener("loadeddata", playVideo, { once: true });
-        }
-        playVideo();
-    });
-})();
