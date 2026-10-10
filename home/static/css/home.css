@@ -1323,10 +1323,8 @@
     .newsletter-form { padding: 2px; }
 }
 
-
-
 /* ==========================================================================
-   MOBILE REFINEMENT — hero trust + newsletter (aligned with feat/home-ui-refresh-2026-10-06)
+   MOBILE REFINEMENT — hero trust + newsletter
    ========================================================================== */
 @media (max-width: 900px) {
     .hero-trust__inner { grid-template-columns: repeat(4,minmax(0,1fr)); }
@@ -1363,28 +1361,17 @@
     .hero-trust__item span:not(.hero-trust__icon) { font-size: clamp(.37rem,1.2vw,.46rem); }
 
     .newsletter-section { overflow-x: hidden; }
-    .newsletter-content { width: 100%; max-width: 100%; min-width: 0; margin-inline: auto; }
-    .newsletter-section > .container {
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
-        margin-inline: auto;
-        box-sizing: border-box;
-    }
-    .newsletter-content { box-sizing: border-box; padding-inline: 0; }
+    .newsletter-content { width: 100%; max-width: 100%; min-width: 0; }
     .newsletter-form {
         width: 100%;
         max-width: 100%;
-        min-width: 0;
         margin-top: 1rem;
-        margin-inline: auto;
         display: flex;
         align-items: stretch;
         gap: .2rem;
         padding: .22rem;
         overflow: hidden;
         border-radius: 999px;
-        box-sizing: border-box;
     }
     .newsletter-form input#newsletter-email {
         flex: 1 1 auto;
@@ -1412,18 +1399,7 @@
     }
 }
 @media (max-width: 380px) {
-    .hero-trust__item { padding-inline: .04rem; }
-    .hero-trust__item strong { font-size: .45rem; }
-    .hero-trust__item span:not(.hero-trust__icon) { font-size: .38rem; }
     .newsletter-form { gap: .1rem; padding: .18rem; }
-    .newsletter-form input#newsletter-email {
-        height: 50px !important;
-        min-height: 50px !important;
-        padding-inline: .7rem;
-    }
-    .newsletter-form .button {
-        min-height: 50px;
-        padding-inline: .55rem;
-        font-size: .5rem;
-    }
+    .newsletter-form input#newsletter-email { height: 50px !important; min-height: 50px !important; padding-inline: .7rem; }
+    .newsletter-form .button { min-height: 50px; padding-inline: .55rem; font-size: .5rem; }
 }
