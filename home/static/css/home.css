@@ -1292,3 +1292,34 @@
     }
 }
 
+/* Newsletter mobile: integrate the CTA inside the email field container. */
+@media (max-width: 600px) {
+    .newsletter-form {
+        gap: 0;
+        padding: 3px;
+        border: 1px solid var(--color-border, rgb(0 0 0 / 14%));
+        border-radius: 999px;
+        background: var(--color-surface);
+        box-shadow: var(--shadow-soft);
+    }
+    .newsletter-form input#newsletter-email {
+        border: 0;
+        border-radius: 999px 0 0 999px;
+        box-shadow: none;
+        outline: none;
+    }
+    .newsletter-form input#newsletter-email:focus {
+        box-shadow: none;
+    }
+    .newsletter-form .button {
+        align-self: center;
+        margin: 0;
+        border: 0;
+        border-radius: 999px;
+        box-shadow: none;
+    }
+}
+@media (max-width: 380px) {
+    .newsletter-form { padding: 2px; }
+}
+
