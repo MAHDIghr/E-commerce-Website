@@ -1,3 +1,4 @@
+{% load static %}
 <footer class="site-footer">
 
     <!-- Réassurance : lève les derniers freins avant l'achat -->
@@ -56,8 +57,7 @@
         <!-- Marque + réseaux -->
         <div class="footer-brand">
             <a href="{% url 'home:home' %}" class="footer-logo" aria-label="Ma Boutique - Accueil">
-                <span class="logo__mark">M</span>
-                <span class="logo__text">MA BOUTIQUE</span>
+                <img src="{% static 'image/mainLogo.svg' %}" alt="Ma Boutique" class="logo__image">
             </a>
             <p data-i18n="footer_tagline">Sacs et accessoires pensés pour l'élégance au quotidien.</p>
             <div class="footer-social">
