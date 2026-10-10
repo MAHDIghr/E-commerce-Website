@@ -1617,3 +1617,7 @@ body.community-modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .community .stories { scroll-behavior: auto; }
 }
+
+
+/* Les reels gardent une vignette épurée : pas d'icône lecture/pause superposée. */
+.community .reel__play { display: none !important; }
