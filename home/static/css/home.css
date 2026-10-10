@@ -1323,3 +1323,77 @@
     .newsletter-form { padding: 2px; }
 }
 
+
+
+/* MOBILE POLISH — four trust items in one row and centered newsletter */
+@media (max-width: 600px) {
+    /* Keep all four trust benefits on one horizontal row on phones. */
+    .hero-trust,
+    .hero-trust .container,
+    .hero-trust__inner {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .hero-trust__inner {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0;
+    }
+    .hero-trust__item {
+        min-width: 0;
+        padding: .45rem .08rem;
+        gap: .2rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: center;
+    }
+    .hero-trust__item > div {
+        width: 100%;
+        min-width: 0;
+    }
+    .hero-trust__item strong {
+        display: block;
+        font-size: clamp(.46rem, 1.65vw, .58rem);
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+    .hero-trust__item span:not(.hero-trust__icon) {
+        font-size: clamp(.39rem, 1.25vw, .48rem);
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+    }
+
+    /* Keep newsletter copy and signup field centered within the viewport. */
+    .newsletter-section {
+        overflow-x: clip;
+    }
+    .newsletter-section > .container,
+    .newsletter-content {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin-inline: auto;
+        box-sizing: border-box;
+    }
+    .newsletter-content {
+        padding-inline: 0;
+    }
+    .newsletter-form {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin-inline: auto;
+        box-sizing: border-box;
+    }
+    .newsletter-form input#newsletter-email {
+        min-width: 0;
+        box-sizing: border-box;
+    }
+}
+@media (max-width: 380px) {
+    .hero-trust__item { padding-inline: .04rem; }
+    .hero-trust__item strong { font-size: .45rem; }
+    .hero-trust__item span:not(.hero-trust__icon) { font-size: .38rem; }
+}
