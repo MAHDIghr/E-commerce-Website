@@ -1165,27 +1165,27 @@
 }
 @media (max-width: 760px) { .hero-content { padding-block: 3.5rem 2rem; } }
 @media (max-width: 600px) {
-    /* Keep all four trust benefits on one compact row on phones. */
+    /* Four trust benefits in one extra-compact row on phones. */
     .hero-trust__inner { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .hero-trust__item {
         min-width: 0;
         flex-direction: column;
         justify-content: flex-start;
         text-align: center;
-        gap: 0.3rem;
-        padding: 0.55rem 0.15rem;
+        gap: 0.2rem;
+        padding: 0.35rem 0.05rem;
     }
     .hero-trust__item:nth-child(n+3) { border-top: 0; }
-    .hero-trust__icon { width: 24px; height: 24px; }
-    .hero-trust__icon .icon { width: 13px; height: 13px; }
+    .hero-trust__icon { width: 20px; height: 20px; }
+    .hero-trust__icon .icon { width: 11px; height: 11px; }
     .hero-trust__item strong {
-        font-size: clamp(0.48rem, 2.1vw, 0.64rem);
-        line-height: 1.2;
+        font-size: clamp(0.42rem, 1.8vw, 0.56rem);
+        line-height: 1.15;
         overflow-wrap: anywhere;
     }
     .hero-trust__item span:not(.hero-trust__icon) {
-        font-size: clamp(0.42rem, 1.8vw, 0.54rem);
-        line-height: 1.2;
+        font-size: clamp(0.38rem, 1.55vw, 0.48rem);
+        line-height: 1.15;
         overflow-wrap: anywhere;
     }
 }
