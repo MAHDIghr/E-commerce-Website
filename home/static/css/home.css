@@ -1325,75 +1325,105 @@
 
 
 
-/* MOBILE POLISH — four trust items in one row and centered newsletter */
-@media (max-width: 600px) {
-    /* Keep all four trust benefits on one horizontal row on phones. */
-    .hero-trust,
-    .hero-trust .container,
-    .hero-trust__inner {
-        width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
-    }
-    .hero-trust__inner {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0;
-    }
+/* ==========================================================================
+   MOBILE REFINEMENT — hero trust + newsletter (aligned with feat/home-ui-refresh-2026-10-06)
+   ========================================================================== */
+@media (max-width: 900px) {
+    .hero-trust__inner { grid-template-columns: repeat(4,minmax(0,1fr)); }
     .hero-trust__item {
         min-width: 0;
-        padding: .45rem .08rem;
-        gap: .2rem;
         flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
+        gap: .18rem;
+        padding: .42rem .12rem;
         text-align: center;
     }
-    .hero-trust__item > div {
-        width: 100%;
-        min-width: 0;
-    }
+    .hero-trust__item + .hero-trust__item { border-left: 1px solid var(--color-line); }
+    .hero-trust__item:nth-child(n+3) { border-top: 0; }
+    .hero-trust__icon { width: 23px; height: 23px; }
+    .hero-trust__icon .icon { width: 12px; height: 12px; }
     .hero-trust__item strong {
-        display: block;
-        font-size: clamp(.46rem, 1.65vw, .58rem);
-        line-height: 1.15;
-        overflow-wrap: anywhere;
+        max-width: 100%;
+        font-size: clamp(.46rem,1.35vw,.59rem);
+        line-height: 1.05;
+        white-space: normal;
     }
     .hero-trust__item span:not(.hero-trust__icon) {
-        font-size: clamp(.39rem, 1.25vw, .48rem);
-        line-height: 1.1;
-        overflow-wrap: anywhere;
+        max-width: 100%;
+        margin-top: 0;
+        font-size: clamp(.39rem,1.1vw,.5rem);
+        line-height: 1;
+        white-space: normal;
     }
+}
+@media (max-width: 600px) {
+    .hero-trust__item { padding-inline: .05rem; }
+    .hero-trust__icon { width: 20px; height: 20px; }
+    .hero-trust__item strong { font-size: clamp(.43rem,1.5vw,.55rem); }
+    .hero-trust__item span:not(.hero-trust__icon) { font-size: clamp(.37rem,1.2vw,.46rem); }
 
-    /* Keep newsletter copy and signup field centered within the viewport. */
-    .newsletter-section {
-        overflow-x: clip;
-    }
-    .newsletter-section > .container,
-    .newsletter-content {
+    .newsletter-section { overflow-x: hidden; }
+    .newsletter-content { width: 100%; max-width: 100%; min-width: 0; margin-inline: auto; }
+    .newsletter-section > .container {
         width: 100%;
         max-width: 100%;
         min-width: 0;
         margin-inline: auto;
         box-sizing: border-box;
     }
-    .newsletter-content {
-        padding-inline: 0;
-    }
+    .newsletter-content { box-sizing: border-box; padding-inline: 0; }
     .newsletter-form {
         width: 100%;
         max-width: 100%;
         min-width: 0;
+        margin-top: 1rem;
         margin-inline: auto;
+        display: flex;
+        align-items: stretch;
+        gap: .2rem;
+        padding: .22rem;
+        overflow: hidden;
+        border-radius: 999px;
         box-sizing: border-box;
     }
     .newsletter-form input#newsletter-email {
+        flex: 1 1 auto;
+        width: 0;
         min-width: 0;
+        height: 54px !important;
+        min-height: 54px !important;
         box-sizing: border-box;
+        padding-block: 0;
+        padding-inline: .8rem;
+        font-size: 16px;
+        line-height: 1.2;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .newsletter-form .button {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 0;
+        min-height: 46px;
+        padding-inline: .68rem;
+        font-size: .56rem;
+        white-space: nowrap;
+        border-radius: 999px;
     }
 }
 @media (max-width: 380px) {
     .hero-trust__item { padding-inline: .04rem; }
     .hero-trust__item strong { font-size: .45rem; }
     .hero-trust__item span:not(.hero-trust__icon) { font-size: .38rem; }
+    .newsletter-form { gap: .1rem; padding: .18rem; }
+    .newsletter-form input#newsletter-email {
+        height: 50px !important;
+        min-height: 50px !important;
+        padding-inline: .7rem;
+    }
+    .newsletter-form .button {
+        min-height: 50px;
+        padding-inline: .55rem;
+        font-size: .5rem;
+    }
 }
