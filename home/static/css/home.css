@@ -1165,11 +1165,29 @@
 }
 @media (max-width: 760px) { .hero-content { padding-block: 3.5rem 2rem; } }
 @media (max-width: 600px) {
-    .hero-trust__item { gap: 0.5rem; padding: 0.7rem 0.6rem; }
-    .hero-trust__icon { width: 30px; height: 30px; }
-    .hero-trust__icon .icon { width: 15px; height: 15px; }
-    .hero-trust__item strong { font-size: 0.72rem; }
-    .hero-trust__item span:not(.hero-trust__icon) { font-size: 0.62rem; }
+    /* Keep all four trust benefits on one compact row on phones. */
+    .hero-trust__inner { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .hero-trust__item {
+        min-width: 0;
+        flex-direction: column;
+        justify-content: flex-start;
+        text-align: center;
+        gap: 0.3rem;
+        padding: 0.55rem 0.15rem;
+    }
+    .hero-trust__item:nth-child(n+3) { border-top: 0; }
+    .hero-trust__icon { width: 24px; height: 24px; }
+    .hero-trust__icon .icon { width: 13px; height: 13px; }
+    .hero-trust__item strong {
+        font-size: clamp(0.48rem, 2.1vw, 0.64rem);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+    .hero-trust__item span:not(.hero-trust__icon) {
+        font-size: clamp(0.42rem, 1.8vw, 0.54rem);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
 }
 
 /* --- Espacement entre sections réduit --- */
