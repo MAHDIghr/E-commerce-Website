@@ -115,14 +115,14 @@
 
 <section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Les détails de fabrication</h2>
-  <ul class="grid grid--4">
-    {% for c in product.craft %}<li class="tile tile--img p-rv"><img src="{{ c.img }}" alt="" width="600" height="450" loading="lazy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></li>{% endfor %}
+  <ul class="grid grid--4 craft-grid">
+    {% for c in product.craft %}<li class="tile tile--img craft-card p-rv"><img src="{{ c.img }}" alt="" width="600" height="450" loading="lazy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></li>{% endfor %}
   </ul>
 </div></section>
 
 <section class="p-sec"><div class="p-wrap">
   <h2 class="p-rv">Un sac, cinq journées</h2>
-  <ul class="strip">
+  <ul class="strip" tabindex="0" aria-label="Les cinq journées — faites glisser horizontalement pour parcourir les images">
     {% for label, pid in product.lifestyle %}<li><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><span>{{ label }}</span></li>{% endfor %}
   </ul>
 </div></section>
@@ -135,7 +135,7 @@
       <p><span class="stars" aria-hidden="true">★★★★★</span> {{ product.reviews_count }} avis</p>
       <ul>{% for r in product.dist %}<li><span>{{ r.n }} ★</span><i class="bar" style="--w: {{ r.pct }}%"></i><span>{{ r.pct }} %</span></li>{% endfor %}</ul>
     </div>
-    <ul class="rev__list">
+    <ul class="rev__list" tabindex="0" aria-label="Avis clients — faites glisser horizontalement pour parcourir les avis">
       {% for r in product.reviews %}<li class="tile"><p class="stars" role="img" aria-label="{{ r.stars }} sur 5">{% if r.stars == 5 %}★★★★★{% else %}★★★★☆{% endif %}</p><p>{{ r.t }}</p><p class="rev__who">{{ r.who }}</p></li>{% endfor %}
     </ul>
   </div>
