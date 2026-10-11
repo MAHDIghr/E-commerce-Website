@@ -115,8 +115,8 @@
 
 <section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Les détails de fabrication</h2>
-  <ul class="grid grid--4 craft-grid">
-    {% for c in product.craft %}<li class="tile tile--img craft-card p-rv"><img src="{{ c.img }}" alt="" width="600" height="450" loading="lazy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></li>{% endfor %}
+  <ul class="strip craft-strip" tabindex="0" aria-label="Détails de fabrication — faites glisser horizontalement pour parcourir les cartes">
+    {% for c in product.craft %}<li class="craft-strip__card"><img src="{{ c.img }}" alt="" width="600" height="750" loading="lazy"><div class="craft-strip__copy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></div></li>{% endfor %}
   </ul>
 </div></section>
 
