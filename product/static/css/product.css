@@ -81,12 +81,12 @@ legend{padding:0;margin-bottom:.6rem;font-size:.88rem;font-weight:600}
 .tile--img{padding:0;overflow:hidden}
 .tile--img img{width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:.8rem}
 .tile--img h3,.tile--img p{padding-inline:1rem}.tile--img p{padding-bottom:1rem}
-/* Détails de fabrication : cartes compactes et équilibrées sur téléphone */
-.craft-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
-.craft-card{min-width:0;border:1px solid var(--color-line);box-shadow:0 5px 18px rgb(20 15 12/5%)}
-.craft-card img{aspect-ratio:1.28/1;margin-bottom:.6rem}
-.craft-card h3{padding-inline:.75rem;font-size:clamp(.88rem,3.5vw,1rem);line-height:1.25}
-.craft-card p{padding-inline:.75rem;padding-bottom:.85rem;font-size:.8rem;line-height:1.45}
+/* Détails de fabrication : cartes compactes, avec visuels carrés */
+.craft-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.craft-card{min-width:0;align-self:start;border:1px solid var(--color-line);box-shadow:0 5px 18px rgb(20 15 12/5%)}
+.craft-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;margin-bottom:.45rem}
+.craft-card h3{padding-inline:.65rem;margin-bottom:.25rem;font-size:clamp(.82rem,3.2vw,.95rem);line-height:1.2}
+.craft-card p{padding-inline:.65rem;padding-bottom:.65rem;font-size:.76rem;line-height:1.35}
 .fits{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 2rem;padding:0}
 .fits li{padding:.55rem .95rem;border:1px solid var(--color-line);border-radius:999px;background:var(--color-surface);font-size:.88rem}
 .fits .is-ok::before{content:"✓ ";color:var(--color-success);font-weight:700}
@@ -147,7 +147,7 @@ body.page-product .site-footer{padding-bottom:4.5rem}
 .p-js .p-rv{opacity:0;transform:translateY(14px);transition:opacity 600ms ease,transform 600ms ease}
 .p-js .p-rv.in{opacity:1;transform:none}
 
-@media(min-width:640px){.grid{gap:1rem}.craft-grid{gap:1rem}.craft-card img{aspect-ratio:1.45/1}.craft-card h3,.craft-card p{padding-inline:1rem}.strip li{flex-basis:34%}.rev__list .tile{flex-basis:46%}}
+@media(min-width:640px){.grid{gap:1rem}.craft-grid{gap:.8rem}.craft-card h3,.craft-card p{padding-inline:.8rem}.strip li{flex-basis:34%}.rev__list .tile{flex-basis:46%}}
 @media(min-width:960px){
   .p-top{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:3.5rem;align-items:start}
   .gal{position:sticky;top:calc(var(--header-height) + 1rem)}
@@ -156,7 +156,7 @@ body.page-product .site-footer{padding-bottom:4.5rem}
   .gal__nav{position:absolute;top:50%;z-index:2;display:grid;place-items:center;width:48px;height:48px;margin-top:-24px;border-radius:50%;background:rgb(255 255 255/92%);box-shadow:var(--shadow-soft);font-size:1.6rem}
   .gal__nav--prev{left:.75rem}.gal__nav--next{right:.75rem}
   .gal__thumb{width:68px;height:85px}
-  .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}.craft-grid{gap:1rem}.craft-card img{aspect-ratio:1.25/1}
+  .grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}.craft-grid{gap:.9rem}
   .dim{grid-template-columns:1fr 1fr}
   .strip,.rev__list{margin:0;padding-inline:0}.strip li{flex-basis:calc((100% - 3rem)/5)}
   .rev{grid-template-columns:320px 1fr}.rev__list .tile{flex-basis:calc((100% - 1.5rem)/3)}
