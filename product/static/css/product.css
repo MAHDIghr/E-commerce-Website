@@ -81,12 +81,6 @@ legend{padding:0;margin-bottom:.6rem;font-size:.88rem;font-weight:600}
 .tile--img{padding:0;overflow:hidden}
 .tile--img img{width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:.8rem}
 .tile--img h3,.tile--img p{padding-inline:1rem}.tile--img p{padding-bottom:1rem}
-/* Détails de fabrication : cartes compactes, avec visuels carrés */
-.craft-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
-.craft-card{min-width:0;align-self:start;border:1px solid var(--color-line);box-shadow:0 5px 18px rgb(20 15 12/5%)}
-.craft-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;margin-bottom:.45rem}
-.craft-card h3{padding-inline:.65rem;margin-bottom:.25rem;font-size:clamp(.82rem,3.2vw,.95rem);line-height:1.2}
-.craft-card p{padding-inline:.65rem;padding-bottom:.65rem;font-size:.76rem;line-height:1.35}
 .fits{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 2rem;padding:0}
 .fits li{padding:.55rem .95rem;border:1px solid var(--color-line);border-radius:999px;background:var(--color-surface);font-size:.88rem}
 .fits .is-ok::before{content:"✓ ";color:var(--color-success);font-weight:700}
@@ -103,6 +97,11 @@ legend{padding:0;margin-bottom:.6rem;font-size:.88rem;font-weight:600}
 .strip li{position:relative;flex:0 0 min(76%,290px);scroll-snap-align:start;border-radius:var(--p-r);overflow:hidden;aspect-ratio:4/5}
 .strip img{width:100%;height:100%;object-fit:cover}
 .strip span{position:absolute;left:.75rem;bottom:.75rem;padding:.3rem .75rem;border-radius:999px;background:#fff;font-size:.84rem;font-weight:600}
+/* Les détails de fabrication reprennent le carrousel « Un sac, cinq journées ». */
+.craft-strip__card{position:relative}
+.craft-strip__copy{position:absolute;inset:auto 0 0;padding:2.5rem .85rem .9rem;background:linear-gradient(transparent,rgb(20 15 12/84%));color:#fff}
+.craft-strip__copy h3{margin:0 0 .3rem;color:#fff;font-size:1rem;line-height:1.2}
+.craft-strip__copy p{margin:0;color:rgb(255 255 255/90%);font-size:.8rem;line-height:1.35}
 .rev{display:grid;gap:1.5rem}
 .rev__score{margin:0;font-family:var(--font-display);font-size:3.2rem;line-height:1}.rev__score small{font-size:1rem}
 .rev__sum ul{display:grid;gap:.35rem;margin:.8rem 0 0;padding:0;font-size:.8rem}
