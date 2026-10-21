@@ -90,10 +90,11 @@
             </summary>
             <ul>
                 <li><a href="{% url 'shop:catalog' %}?sort=new" data-i18n="nav_new">Nouveautés</a></li>
-                <li><a href="{% url 'shop:catalog' %}?cat=handbags" data-i18n="cat_handbags">Sacs à main</a></li>
-                <li><a href="{% url 'shop:catalog' %}?cat=shoulder" data-i18n="cat_shoulder">Sacs bandoulière</a></li>
-                <li><a href="{% url 'shop:catalog' %}?cat=wallets" data-i18n="cat_wallets">Portefeuilles</a></li>
-                <li><a href="{% url 'shop:catalog' %}?cat=accessories" data-i18n="cat_accessories">Accessoires</a></li>
+                {% for category in catalog_categories %}
+                <li><a href="{% url 'shop:catalog' %}?cat={{ category.slug|urlencode }}">{{ category.name }}</a></li>
+                {% empty %}
+                <li><a href="{% url 'shop:catalog' %}">Découvrir la boutique</a></li>
+                {% endfor %}
                 <li><a href="{% url 'shop:catalog' %}?sale=1" data-i18n="footer_sale">Promotions</a></li>
             </ul>
         </details>
