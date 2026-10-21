@@ -38,9 +38,9 @@ def detail(request, slug):
     media_items = list(product.media_items.all())
     media = [{
         "type": item.media_type,
-        "src": item.source_url,
-        "poster": item.poster_url or item.source_url,
-        "thumb": item.poster_url or item.source_url,
+        "src": item.image.url if item.image else item.source_url,
+        "poster": item.poster_url or (item.image.url if item.image else item.source_url),
+        "thumb": item.poster_url or (item.image.url if item.image else item.source_url),
         "alt": item.alt_text,
         "variant_id": str(item.variant_id) if item.variant_id else "",
     } for item in media_items]
@@ -161,8 +161,8 @@ def detail(request, slug):
         "benefits": [{"t": item.title, "d": item.description} for item in product.reasons.all()],
         "fits": [(item.name, item.fits) for item in product.content_items.all()],
         "dims": dims,
-        "craft": [{"t": item.title, "d": item.description, "img": item.image_url, "alt": item.alt_text} for item in product.craft_details.all()],
-        "lifestyle": [{"title": item.title, "img": item.image_url, "alt": item.alt_text} for item in product.usages.all()],
+        "craft": [{"t": item.title, "d": item.description, "img": item.image.url if item.image else item.image_url, "alt": item.alt_text} for item in product.craft_details.all()],
+        "lifestyle": [{"title": item.title, "img": item.image.url if item.image else item.image_url, "alt": item.alt_text} for item in product.usages.all()],
         "dist": distribution,
         "reviews": [{"who": item.author_name, "stars": item.rating, "stars_display": "★" * item.rating + "☆" * (5 - item.rating), "t": item.comment} for item in reviews],
         "faq": [(item.question, item.answer) for item in product.faqs.all()],
