@@ -10,7 +10,7 @@ def catalog(request):
     categories = list(Category.objects.filter(is_active=True).order_by("position", "name"))
     products = published_products().select_related("category").prefetch_related(
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
-        Prefetch("media_items", queryset=ProductMedia.objects.order_by("position", "pk")),
+        Prefetch("media_items", queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk")),
         Prefetch("reviews", queryset=Review.objects.filter(is_approved=True)),
     ).order_by("-published_at", "-created_at", "name")
 
