@@ -829,3 +829,39 @@ Le conteneur du catalogue reçoit un modèle d'URL produit généré par Django 
 ### 17.6 Périmètre préservé
 
 La section **« Notre sélection signature »** de l'accueil n'a pas été modifiée. Le checkout, les commandes et les paiements réels restent hors périmètre : aucun lien ou comportement de navigation ne doit être interprété comme une preuve qu'un parcours de commande complet est opérationnel.
+
+
+## 18. Diagnostic de publication et vérification de l'administration
+
+### Conditions actuelles pour qu'un produit soit visible
+
+Le sélecteur commun `product.selectors.published_products()` filtre les produits publics. Pour apparaître dans le catalogue et dans les sélections dynamiques qui utilisent ce sélecteur, un produit doit remplir toutes ces conditions :
+
+1. le produit est actif (`is_active = True`) ;
+2. sa catégorie est active ;
+3. sa date `published_at` est vide ou n'est pas dans le futur ;
+4. il possède au moins une variante active ;
+5. il possède un média commun de type **Image**, avec le champ **Variante laissé vide**, et une image téléversée ou une URL de source renseignée.
+
+Le champ `Product.is_active` a par défaut la valeur `False`. Créer un produit dans l'administration ne le publie donc pas automatiquement. De plus, une image uniquement rattachée à une variante ne remplit pas la condition d'image commune utilisée par le sélecteur actuel.
+
+### Diagnostic dans Django Admin
+
+La liste des produits affiche désormais un état **Prêt** ou **À compléter**. La fiche d'administration du produit fournit un diagnostic expliquant les conditions manquantes : activation du produit, catégorie inactive, date future, absence de variante active ou absence d'image commune valide. Le diagnostic est informatif : il ne publie pas automatiquement un produit et ne remplace pas la validation des formulaires.
+
+### Contrôles réalisés dans le code
+
+Le sélecteur public écarte maintenant aussi les médias communs de type Image dont ni le champ de fichier ni l'URL source ne sont renseignés. Des tests couvrent les cas d'un produit sans image commune, sans variante active, et le diagnostic administratif. Ces tests ont été ajoutés au dépôt ; ils ne sont considérés comme validés qu'après exécution dans l'environnement Python/Django du projet.
+
+### Procédure de diagnostic sur un produit existant
+
+Dans **Django Admin → Produits → ouvrir le produit** :
+
+- lire le diagnostic « État catalogue » ;
+- vérifier que le produit et sa catégorie sont actifs ;
+- vérifier la date de publication ;
+- ouvrir la section des variantes et confirmer qu'au moins une variante est active, avec un prix et un stock renseignés ;
+- dans les médias du produit, ajouter une ligne de type **Image**, téléverser le fichier ou renseigner une URL HTTPS, renseigner le texte alternatif, puis laisser **Variante** vide pour une image commune ;
+- enregistrer, puis recharger le catalogue sans cache.
+
+En production, il faut aussi confirmer que l'administration et le site utilisent la même base de données, que les migrations sont appliquées et que le stockage média est accessible. Le dépôt seul ne permet pas de vérifier les valeurs réelles du produit créé dans l'instance en ligne.
