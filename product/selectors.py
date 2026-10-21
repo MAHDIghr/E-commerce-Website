@@ -21,6 +21,8 @@ def published_products():
         variants__is_active=True,
     ).filter(
         Q(published_at__isnull=True) | Q(published_at__lte=now)
+    ).filter(
+        Q(media_items__image__gt="") | Q(media_items__source_url__gt="")
     ).distinct()
 
 
