@@ -12,6 +12,11 @@ class Migration(migrations.Migration):
             name="image",
             field=models.ImageField(blank=True, upload_to="categories/%Y/%m/", verbose_name="Image"),
         ),
+        migrations.AlterField(
+            model_name="category",
+            name="image_url",
+            field=models.URLField(blank=True, help_text="Facultatif si une image est téléversée.", verbose_name="URL externe de l'image"),
+        ),
         migrations.AddField(
             model_name="productmedia",
             name="image",
@@ -31,6 +36,11 @@ class Migration(migrations.Migration):
             model_name="productcraftdetail",
             name="image",
             field=models.ImageField(blank=True, upload_to="products/craft/%Y/%m/", verbose_name="Image téléversée"),
+        ),
+        migrations.AlterField(
+            model_name="productcraftdetail",
+            name="image_url",
+            field=models.URLField(blank=True, max_length=1000, verbose_name="URL externe de l'image"),
         ),
         migrations.AddField(
             model_name="productusage",
