@@ -24,7 +24,8 @@ class Category(models.Model):
     name = models.CharField("Nom", max_length=120)
     slug = models.SlugField("Slug", max_length=140, unique=True)
     description = models.TextField("Description", blank=True)
-    image_url = models.URLField("URL de l'image", blank=True)
+    image = models.ImageField("Image", upload_to="categories/%Y/%m/", blank=True)
+    image_url = models.URLField("URL externe de l'image", blank=True, help_text="Facultatif si une image est téléversée.")
     alt_text = models.CharField("Texte alternatif", max_length=180, blank=True)
     is_active = models.BooleanField("Active", default=True, db_index=True)
     position = models.PositiveIntegerField("Position", default=0, db_index=True)
@@ -169,7 +170,8 @@ class ProductMedia(models.Model):
         help_text="Laisser vide pour un média commun à toutes les variantes.",
     )
     media_type = models.CharField("Type", max_length=10, choices=MEDIA_TYPES, default=IMAGE)
-    source_url = models.URLField("URL du média", max_length=1000)
+    image = models.ImageField("Image téléversée", upload_to="products/%Y/%m/", blank=True)
+    source_url = models.URLField("URL externe du média", max_length=1000, blank=True, help_text="Facultatif pour une image téléversée ; utile pour les vidéos ou les médias externes.")
     poster_url = models.URLField("URL de la vignette vidéo", max_length=1000, blank=True)
     alt_text = models.CharField("Texte alternatif", max_length=240, blank=True)
     is_primary = models.BooleanField("Média principal", default=False)
@@ -199,6 +201,8 @@ class ProductMedia(models.Model):
         _require_https(self.poster_url, "poster_url")
         if self.variant_id and self.product_id and self.variant.product_id != self.product_id:
             raise ValidationError({"variant": "La variante doit appartenir au produit sélectionné."})
+        if self.media_type == self.IMAGE and not (self.image or self.source_url):
+            raise ValidationError({"image": "Téléversez une image ou renseignez une URL externe."})
         if self.media_type == self.IMAGE and not self.alt_text.strip():
             raise ValidationError({"alt_text": "Un texte alternatif est requis pour une image."})
         if self.media_type == self.VIDEO and not self.poster_url:
@@ -242,7 +246,8 @@ class ProductCraftDetail(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="craft_details", verbose_name="Produit")
     title = models.CharField("Titre", max_length=160)
     description = models.TextField("Description", blank=True)
-    image_url = models.URLField("URL de l'image", max_length=1000, blank=True)
+    image = models.ImageField("Image téléversée", upload_to="products/craft/%Y/%m/", blank=True)
+    image_url = models.URLField("URL externe de l'image", max_length=1000, blank=True)
     alt_text = models.CharField("Texte alternatif", max_length=240, blank=True)
     position = models.PositiveIntegerField("Position", default=0)
 
@@ -262,7 +267,8 @@ class ProductCraftDetail(models.Model):
 class ProductUsage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="usages", verbose_name="Produit")
     title = models.CharField("Titre", max_length=120)
-    image_url = models.URLField("URL de l'image", max_length=1000)
+    image = models.ImageField("Image téléversée", upload_to="products/usage/%Y/%m/", blank=True)
+    image_url = models.URLField("URL externe de l'image", max_length=1000, blank=True)
     alt_text = models.CharField("Texte alternatif", max_length=240, blank=True)
     position = models.PositiveIntegerField("Position", default=0)
 
