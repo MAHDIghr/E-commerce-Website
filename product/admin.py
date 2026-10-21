@@ -133,12 +133,21 @@ class ProductAdmin(admin.ModelAdmin):
         """Explique en clair les conditions de visibilité publique manquantes."""
         issues = self._publication_issues(obj)
         if not issues:
-            return format_html("<strong>{}</strong>", "Prêt pour le catalogue")
-        return format_html(
-            "<strong>{}</strong><ul>{}</ul>",
-            "Non visible dans le catalogue",
-            format_html_join("", "<li>{}</li>", ((issue,) for issue in issues)),
-        )
+            status = format_html("<strong>{}</strong>", "Prêt pour le catalogue")
+        else:
+            status = format_html(
+                "<strong>{}</strong><ul>{}</ul>",
+                "Non visible dans le catalogue",
+                format_html_join("", "<li>{}</li>", ((issue,) for issue in issues)),
+            )
+
+        if not obj.pk:
+            return status
+        if not obj.is_new:
+            home_note = "Accueil : cochez « Nouveauté » si ce produit doit apparaître dans la sélection des nouveautés."
+        else:
+            home_note = "Accueil : seules les 4 nouveautés les plus récentes sont affichées ; ce produit peut ne pas être dans cette sélection."
+        return format_html("{}<p>{}</p>", status, home_note)
 
 
 @admin.register(ProductOffer)
