@@ -822,6 +822,10 @@ python manage.py test product --settings=config.settings.development
 
 **État de vérification :** les modifications ont été poussées sur la branche GitHub, mais ces commandes n'ont pas été exécutées dans un environnement Python/Django pendant cet audit à distance. Il faut donc les lancer localement et corriger toute erreur éventuelle avant de considérer la recette comme validée.
 
+### 17.6 Construction des URL de fiches depuis le catalogue
+
+Le conteneur du catalogue reçoit un modèle d'URL produit généré par Django avec `reverse` via `{% url 'product:detail' slug='__product_slug__' %}`. Le JavaScript remplace ensuite uniquement le marqueur `__product_slug__` par le slug du produit encodé avec `encodeURIComponent`. Les deux liens de chaque carte (image et nom) utilisent cette même fonction. Ainsi, le préfixe ne dépend pas d'un chemin écrit en dur ni de la route `product:index`, et le test Django vérifie le modèle d'URL et les données JSON. Les liens sont rendus dans le navigateur ; un test de réponse HTTP Django ne doit pas prétendre qu'ils existent déjà comme éléments HTML dans la réponse initiale.
+
 ### 17.6 Périmètre préservé
 
 La section **« Notre sélection signature »** de l'accueil n'a pas été modifiée. Le checkout, les commandes et les paiements réels restent hors périmètre : aucun lien ou comportement de navigation ne doit être interprété comme une preuve qu'un parcours de commande complet est opérationnel.
