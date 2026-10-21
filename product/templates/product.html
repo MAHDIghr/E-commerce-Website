@@ -67,12 +67,13 @@
           {% endfor %}
         </div>
       </fieldset>
+      <p class="variant-stock-status" id="variant-stock-status" role="status" aria-live="polite"></p>
 
       <fieldset class="offers">
         <legend>Choisissez votre offre</legend>
         {% for o in product.offers %}
         <label class="offer{% if o.featured %} offer--featured{% endif %}">
-          <input type="radio" name="offer" value="{{ o.id }}" data-name="{{ o.title }}" data-price="{{ o.price|stringformat:'.2f' }}" data-label="{{ o.price_label }}" data-old="{{ o.old_label }}" data-off="{{ o.off }}" data-uses-variant-price="{% if o.uses_variant_price %}true{% else %}false{% endif %}" data-reference-total="{{ o.reference_total|default_if_none:'' }}" data-base-variant-price="{{ product.default_variant_price }}" data-includes-selected-variant="{% if o.includes_selected_variant %}true{% else %}false{% endif %}" {% if o.featured %}checked{% endif %}>
+          <input type="radio" name="offer" value="{{ o.id }}" data-name="{{ o.title }}" data-price="{{ o.price|stringformat:'.2f' }}" data-label="{{ o.price_label }}" data-old="{{ o.old_label }}" data-off="{{ o.off }}" data-uses-variant-price="{% if o.uses_variant_price %}true{% else %}false{% endif %}" data-reference-total="{{ o.reference_total|default_if_none:'' }}" data-base-variant-price="{{ product.default_variant_price }}" data-main-quantity="{{ o.main_quantity|default:1 }}" data-includes-selected-variant="{% if o.includes_selected_variant %}true{% else %}false{% endif %}" {% if o.featured %}checked{% endif %}>
           <span class="offer__card">
             <span class="offer__dot" aria-hidden="true"></span>
             <span class="offer__body"><strong>{{ o.title }}</strong><span>{{ o.items }}</span><em>{{ o.ship }}</em></span>
