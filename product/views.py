@@ -172,6 +172,7 @@ def detail(request, slug):
         "slug": product.slug,
         "name": product.name,
         "brand_line": product.brand_line,
+        "usage_section_title": product.usage_section_title,
         "tagline": product.tagline or product.short_description,
         "seo_title": product.seo_title,
         "rating": rating,
