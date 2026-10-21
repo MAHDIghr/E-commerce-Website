@@ -80,9 +80,23 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, "Sacs à main")
 
     def test_home_new_products_are_filtered_by_is_new(self):
+        regular_product = Product.objects.create(
+            category=self.category, name="Portefeuille classique",
+            slug="portefeuille-classique", is_active=True, is_new=False,
+        )
+        ProductVariant.objects.create(
+            product=regular_product, sku="PORTFOLIO-CLASSIQUE",
+            price=Decimal("24.90"), stock_quantity=3,
+        )
+        ProductMedia.objects.create(
+            product=regular_product, media_type=ProductMedia.IMAGE,
+            source_url="https://cdn.example.test/portefeuille-classique.webp",
+            alt_text="Portefeuille classique",
+        )
         response = self.client.get(reverse("home:home"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Cabas camel")
+        self.assertNotContains(response, "Portefeuille classique")
         self.assertContains(response, "Notre sélection signature")
 
     def test_product_detail_uses_published_product(self):
