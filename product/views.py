@@ -14,6 +14,7 @@ def published_products():
     now = timezone.now()
     return Product.objects.filter(
         is_active=True,
+        category__is_active=True,
         media_items__variant__isnull=True,
         media_items__media_type=ProductMedia.IMAGE,
     ).filter(
