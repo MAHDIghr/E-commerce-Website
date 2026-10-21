@@ -70,6 +70,6 @@ def product_card_data(queryset):
             "isNew": bool(product.is_new),
             "pop": 0,
             "best": bool(product.is_best_seller),
-            "img": media.source_url if media else "",
+            "img": (media.image.url if media and media.image else media.source_url) if media else "",
         })
     return products
