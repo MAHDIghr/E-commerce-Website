@@ -273,7 +273,7 @@
                                 {% if variant.compare_at_price and variant.compare_at_price > variant.price %}<del>{{ variant.compare_at_price|floatformat:2 }} €</del>{% endif %}
                                 {{ variant.price|floatformat:2 }} €
                             </p>
-                            <button type="button" class="product-cart" data-action="quick-add" aria-label="Ajouter au panier">
+                            <button type="button" class="product-cart" data-action="quick-add" {% if variant.stock_quantity <= 0 %}disabled aria-label="Indisponible"{% else %}aria-label="Ajouter au panier"{% endif %}>
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"></path><path d="M6 6 4.5 3H2"></path><circle cx="9" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>
                                 <span class="product-cart__label">Ajouter</span>
                             </button>
