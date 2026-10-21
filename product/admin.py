@@ -17,7 +17,7 @@ class ProductVariantInline(admin.TabularInline):
 class ProductMediaInline(admin.TabularInline):
     model = ProductMedia
     extra = 0
-    fields = ("variant", "media_type", "source_url", "poster_url", "alt_text", "is_primary", "position")
+    fields = ("variant", "media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position")
 
 
 class ProductReasonInline(admin.TabularInline):
@@ -33,11 +33,13 @@ class ProductContentItemInline(admin.TabularInline):
 class ProductCraftDetailInline(admin.TabularInline):
     model = ProductCraftDetail
     extra = 0
+    fields = ("title", "description", "image", "image_url", "alt_text", "position")
 
 
 class ProductUsageInline(admin.TabularInline):
     model = ProductUsage
     extra = 0
+    fields = ("title", "image", "image_url", "alt_text", "position")
 
 
 class ProductFAQInline(admin.TabularInline):
@@ -58,6 +60,7 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("position", "name")
+    fields = ("name", "slug", "description", "image", "image_url", "alt_text", "is_active", "position")
 
 
 @admin.register(Product)
