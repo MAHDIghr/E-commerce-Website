@@ -14,15 +14,15 @@ def published_products():
     """Produits actifs, catégorie active, date atteinte, image commune et variante active."""
     now = timezone.now()
     return Product.objects.filter(
-        is_active=True,
-        category__is_active=True,
-        media_items__variant__isnull=True,
-        media_items__media_type=ProductMedia.IMAGE,
-        variants__is_active=True,
-    ).filter(
-        Q(published_at__isnull=True) | Q(published_at__lte=now)
-    ).filter(
-        Q(media_items__image__gt="") | Q(media_items__source_url__gt="")
+        Q(
+            is_active=True,
+            category__is_active=True,
+            media_items__variant__isnull=True,
+            media_items__media_type=ProductMedia.IMAGE,
+            variants__is_active=True,
+        )
+        & (Q(published_at__isnull=True) | Q(published_at__lte=now))
+        & (Q(media_items__image__gt="") | Q(media_items__source_url__gt=""))
     ).distinct()
 
 
