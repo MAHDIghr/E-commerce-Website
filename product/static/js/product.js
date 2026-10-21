@@ -132,11 +132,32 @@
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = color.label;
     };
-    $("input[name=offer]").forEach((i) => i.addEventListener("change", sync));
-    $("input[name=color]").forEach((i) => i.addEventListener("change", () => {
+    const updateAvailability = () => {
+        const stock = Number(colorIn().dataset.stock);
+        const required = Math.max(1, Number(offerIn().dataset.mainQuantity || 1));
+        const available = stock >= required;
+        $$(".js-add").forEach((button) => {
+            button.disabled = !available;
+            button.setAttribute("aria-disabled", String(!available));
+        });
+        const status = $("#variant-stock-status");
+        if (stock <= 0) status.textContent = "Indisponible pour le moment.";
+        else if (!available) status.textContent = "Stock insuffisant pour cette offre.";
+        else if (stock <= 5) status.textContent = `Plus que ${stock} en stock.`;
+        else status.textContent = "En stock.";
+    };
+
+    $$("input[name=offer]").forEach((i) => i.addEventListener("change", () => {
+        sync();
+        updateAvailability();
+    }));
+    $$("input[name=color]").forEach((i) => i.addEventListener("change", () => {
         sync();
         filterGallery(i.value);
+        updateAvailability();
     }));
+    sync();
+    updateAvailability();
 
     /* ---------- Ajout au panier (réutilise addToCart de base.js) ---------- */
     $$(".js-add").forEach((btn) => btn.addEventListener("click", () => {
