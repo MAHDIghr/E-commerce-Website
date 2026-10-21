@@ -116,12 +116,12 @@
 <section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Les détails de fabrication</h2>
   <ul class="strip craft-strip" tabindex="0" aria-label="Détails de fabrication — faites glisser horizontalement pour parcourir les cartes">
-    {% for c in product.craft %}<li class="craft-strip__card"><img src="{{ c.img }}" alt="{{ c.alt|default:c.t }}" width="600" height="750" loading="lazy" decoding="async"><div class="craft-strip__copy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></div></li>{% endfor %}
+    {% for c in product.craft %}<li class="craft-strip__card">{% if c.img %}<img src="{{ c.img }}" alt="{{ c.alt|default:c.t }}" width="600" height="750" loading="lazy" decoding="async">{% endif %}<div class="craft-strip__copy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></div></li>{% endfor %}
   </ul>
 </div></section>
 
 <section class="p-sec"><div class="p-wrap">
-  <h2 class="p-rv">Un sac, cinq journées</h2>
+  <h2 class="p-rv">{{ product.usage_section_title|default:"Un sac, cinq journées" }}</h2>
   <ul class="strip" tabindex="0" aria-label="Les cinq journées — faites glisser horizontalement pour parcourir les images">
     {% for label, pid in product.lifestyle %}<li><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><span>{{ label }}</span></li>{% endfor %}
   </ul>
