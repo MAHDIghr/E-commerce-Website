@@ -32,7 +32,7 @@
             bc_home: "Accueil", bc_shop: "Boutique", title: "Notre boutique",
             subtitle: "Sacs et accessoires en cuir, choisis pour durer. Livraison offerte dès 80 €, retours gratuits sous 30 jours.",
             filters: "Filtres", f_category: "Catégorie", f_price: "Prix (€)", f_color: "Couleur", f_more: "Autres",
-            f_sale: "En promotion", f_lowstock: "Derniers exemplaires", reset: "Réinitialiser", show: "Voir",
+            f_sale: "En promotion", f_lowstock: "Derniers exemplaires", unavailable: "Indisponible", reset: "Réinitialiser", show: "Voir",
             sort_label: "Trier par", empty_title: "Aucun produit ne correspond",
             empty_text: "Essayez d'élargir vos critères ou de retirer un filtre.", load_more: "Voir plus de produits",
             cat_handbags: "Sacs à main", cat_shoulder: "Sacs bandoulière", cat_wallets: "Portefeuilles", cat_accessories: "Accessoires",
@@ -51,7 +51,7 @@
             bc_home: "Home", bc_shop: "Shop", title: "Our shop",
             subtitle: "Leather bags and accessories, chosen to last. Free shipping over €80, free returns within 30 days.",
             filters: "Filters", f_category: "Category", f_price: "Price (€)", f_color: "Colour", f_more: "More",
-            f_sale: "On sale", f_lowstock: "Last few left", reset: "Reset", show: "Show",
+            f_sale: "On sale", f_lowstock: "Last few left", unavailable: "Unavailable", reset: "Reset", show: "Show",
             sort_label: "Sort by", empty_title: "No products match",
             empty_text: "Try widening your criteria or removing a filter.", load_more: "Show more products",
             cat_handbags: "Handbags", cat_shoulder: "Shoulder bags", cat_wallets: "Wallets", cat_accessories: "Accessories",
@@ -108,7 +108,7 @@
         if (state.min !== null && product.price < state.min) return false;
         if (state.max !== null && product.price > state.max) return false;
         if (state.sale && !product.old) return false;
-        if (state.low && product.stock > LOW_STOCK) return false;
+        if (state.low && (product.stock <= 0 || product.stock > LOW_STOCK)) return false;
         return true;
     }
 
@@ -189,7 +189,8 @@
 
         const add = el("button", "pcard__add");
         add.type = "button";
-        add.setAttribute("aria-label", t().add(p.name));
+        add.disabled = p.stock <= 0;
+        add.setAttribute("aria-label", p.stock <= 0 ? t().unavailable : t().add(p.name));
         add.appendChild(svgIcon([PLUS]));
         add.addEventListener("click", () => {
             addToCart({ id: `${p.id}:default:${p.variantId}`, name: p.variantName ? `${p.name} — ${p.variantName}` : p.name, price: p.price, image: p.img });
