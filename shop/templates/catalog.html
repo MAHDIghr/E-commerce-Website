@@ -40,10 +40,11 @@
         <div class="filters__body">
             <fieldset class="filter-group">
                 <legend data-shop-i18n="f_category">Catégorie</legend>
-                <label class="check"><input type="checkbox" name="cat" value="handbags"><span data-shop-i18n="cat_handbags">Sacs à main</span></label>
-                <label class="check"><input type="checkbox" name="cat" value="shoulder"><span data-shop-i18n="cat_shoulder">Sacs bandoulière</span></label>
-                <label class="check"><input type="checkbox" name="cat" value="wallets"><span data-shop-i18n="cat_wallets">Portefeuilles</span></label>
-                <label class="check"><input type="checkbox" name="cat" value="accessories"><span data-shop-i18n="cat_accessories">Accessoires</span></label>
+{% for category in categories %}
+                <label class="check"><input type="checkbox" name="cat" value="{{ category.slug }}"><span>{{ category.name }}</span></label>
+                {% empty %}
+                <p>Aucune catégorie disponible.</p>
+                {% endfor %}
             </fieldset>
 
             <fieldset class="filter-group">
@@ -102,6 +103,7 @@
         <div class="chips" id="active-chips" aria-label="Filtres actifs"></div>
 
         <div class="pgrid" id="product-grid" aria-busy="true" data-product-url="{% url 'product:index' %}"></div>
+        {{ catalog_data|json_script:"catalog-data" }}
 
         <div class="empty" id="empty-state" hidden>
             <svg class="icon" viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
