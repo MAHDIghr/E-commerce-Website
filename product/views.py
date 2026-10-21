@@ -68,7 +68,7 @@ def _eur(value):
 def _detail_queryset():
     return published_products().select_related("category").prefetch_related(
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
-        Prefetch("media_items", queryset=ProductMedia.objects.order_by("position", "pk")),
+        Prefetch("media_items", queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk")),
         "reasons", "content_items", "craft_details", "usages", "faqs",
         Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items__product", "items__variant")),
         Prefetch("reviews", queryset=Review.objects.filter(is_approved=True).order_by("-created_at")),
