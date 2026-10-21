@@ -50,7 +50,7 @@ def detail(request, slug):
         lines = []
         reference_total = Decimal("0.00")
         offer_items = list(offer_obj.items.all())
-        invalid_offer = False
+        invalid_offer = not any(item.use_selected_variant for item in offer_items)
         for item in offer_items:
             if item.use_selected_variant:
                 if (
@@ -98,6 +98,7 @@ def detail(request, slug):
             "badge": offer_obj.badge,
             "featured": offer_obj.is_featured,
             "includes_selected_variant": any(item.use_selected_variant for item in offer_items),
+            "main_quantity": sum(item.quantity for item in offer_items if item.use_selected_variant),
         })
 
     if not offers:
@@ -111,6 +112,7 @@ def detail(request, slug):
             "save_label": _eur(default_variant.compare_at_price - default_variant.price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
             "off": round((1 - default_variant.price / default_variant.compare_at_price) * 100) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else 0,
             "ship": "", "badge": "", "featured": True, "uses_variant_price": True,
+            "main_quantity": 1,
         }]
     selected = next((item for item in offers if item["featured"]), offers[0])
     for offer_data in offers:
