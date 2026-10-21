@@ -3,21 +3,26 @@
    Lit les données depuis #product-data (json_script) : aucun contenu produit en dur ici. */
 (() => {
     const data = JSON.parse(document.getElementById("product-data").textContent);
-    const media = data.media;
+    let media = data.media;
+    const allMedia = data.media;
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => [...r.querySelectorAll(s)];
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     document.body.classList.add("p-js");
 
     /* ---------- Galerie ---------- */
-    const track = $(".gal__track"), slides = $$(".gal__slide"), thumbs = $$(".gal__thumb"), count = $("#gal-count");
+    const track = $(".gal__track"), allSlides = $(".gal__slide"), allThumbs = $(".gal__thumb"), count = $("#gal-count");
+    let slides = allSlides;
+    let thumbs = allThumbs;
     let cur = -1;
     const pad = () => parseFloat(getComputedStyle(track).paddingLeft) || 0;
     const go = (i) => {
+        if (!slides.length) return;
         i = (i + slides.length) % slides.length;
         track.scrollTo({ left: slides[i].offsetLeft - pad(), behavior: reduced ? "auto" : "smooth" });
     };
     const mark = () => {
+        if (!slides.length) { count.textContent = "0 / 0"; cur = -1; return; }
         let best = 0, d = Infinity;
         slides.forEach((s, i) => { const x = Math.abs(s.offsetLeft - pad() - track.scrollLeft); if (x < d) { d = x; best = i; } });
         if (best === cur) return;
@@ -32,9 +37,28 @@
         if (e.key === "ArrowRight") { e.preventDefault(); go(cur + 1); }
         if (e.key === "ArrowLeft") { e.preventDefault(); go(cur - 1); }
     });
-    thumbs.forEach((t) => t.addEventListener("click", () => go(+t.dataset.go)));
+    allThumbs.forEach((t) => t.addEventListener("click", () => go(thumbs.indexOf(t))));
     $$("[data-nav]").forEach((b) => b.addEventListener("click", () => go(cur + +b.dataset.nav)));
-    mark();
+    const filterGallery = (variantId) => {
+        const visible = allMedia.map((item, index) => ({ item, index })).filter(({ item }) =>
+            !item.variant_id || String(item.variant_id) === String(variantId)
+        );
+        const visibleIndexes = new Set(visible.map(({ index }) => index));
+        slides = visible.map(({ index }) => allSlides[index]);
+        thumbs = visible.map(({ index }) => allThumbs[index]);
+        media = visible.map(({ item }) => item);
+        allSlides.forEach((slide, index) => { slide.hidden = !visibleIndexes.has(index); });
+        allThumbs.forEach((thumb, index) => {
+            thumb.hidden = !visibleIndexes.has(index);
+            thumb.removeAttribute("aria-current");
+        });
+        cur = -1;
+        go(0);
+        mark();
+    };
+
+    const initialColor = $('input[name="color"]:checked');
+    filterGallery(initialColor ? initialColor.value : "");
 
     /* Vidéo : chargée au clic, muette, avec repli sur le poster si le fichier est absent */
     $$("[data-video]").forEach((b) => b.addEventListener("click", () => {
@@ -106,7 +130,11 @@
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = color.label;
     };
-    $$("input[name=offer], input[name=color]").forEach((i) => i.addEventListener("change", sync));
+    $("input[name=offer]").forEach((i) => i.addEventListener("change", sync));
+    $("input[name=color]").forEach((i) => i.addEventListener("change", () => {
+        sync();
+        filterGallery(i.value);
+    }));
 
     /* ---------- Ajout au panier (réutilise addToCart de base.js) ---------- */
     $$(".js-add").forEach((btn) => btn.addEventListener("click", () => {
