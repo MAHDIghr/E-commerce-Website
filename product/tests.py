@@ -2,11 +2,13 @@ import base64
 import tempfile
 from decimal import Decimal
 
+from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from .admin import ProductAdmin
 from .models import (
     Category, Product, ProductMedia, ProductOffer, ProductOfferItem,
     ProductVariant, Review,
@@ -97,6 +99,43 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, "Notre sélection signature")
         self.assertContains(response, reverse("shop:catalog") + "?cat=" + self.category.slug)
         self.assertNotContains(response, "?cat=handbags")
+
+    def test_product_without_common_image_is_not_published(self):
+        variant = self.product.variants.first()
+        media = self.product.media_items.get()
+        media.variant = variant
+        media.save(update_fields=["variant"])
+        response = self.client.get(reverse("shop:catalog"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '"id": "cabas-camel"')
+        detail = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(detail.status_code, 404)
+
+    def test_product_without_active_variant_is_not_published(self):
+        variant = self.product.variants.first()
+        variant.is_active = False
+        variant.save(update_fields=["is_active"])
+        response = self.client.get(reverse("shop:catalog"))
+        self.assertNotContains(response, '"id": "cabas-camel"')
+
+    def test_admin_diagnoses_missing_publication_requirements(self):
+        self.product.is_active = False
+        self.product.save(update_fields=["is_active"])
+        self.category.is_active = False
+        self.category.save(update_fields=["is_active"])
+        variant = self.product.variants.first()
+        variant.is_active = False
+        variant.save(update_fields=["is_active"])
+        media = self.product.media_items.get()
+        media.variant = variant
+        media.save(update_fields=["variant"])
+
+        model_admin = ProductAdmin(Product, admin.site)
+        diagnostic = str(model_admin.catalog_publication_diagnostics(self.product))
+        self.assertIn("Produit désactivé", diagnostic)
+        self.assertIn("Catégorie inactive", diagnostic)
+        self.assertIn("Aucune variante active", diagnostic)
+        self.assertIn("Aucune image commune valide", diagnostic)
 
     def test_catalog_provides_a_django_generated_product_url_template(self):
         response = self.client.get(reverse("shop:catalog"))
