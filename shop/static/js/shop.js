@@ -3,8 +3,7 @@
 /* ==========================================================================
    Catalogue — dépend de base.js (readStorage, writeStorage, formatPrice,
    addToCart, getCart, openCart, playAddedFeedback).
-   Les produits ci-dessous sont des EXEMPLES : ils seront remplacés par des
-   données Django (modèle Product) dans la phase back-end.
+   Les produits, catégories, variantes et couleurs sont chargés depuis Django.
    ========================================================================== */
 
 (function initCatalog() {
@@ -173,7 +172,7 @@
         if (p.old) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
         else if (p.isNew) tags.appendChild(el("span", "tag", t().newTag));
         if (p.best) tags.appendChild(el("span", "tag tag--best", t().bestTag));
-        if (p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", t().left(p.stock)));
+        if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", t().left(p.stock)));
         media.appendChild(tags);
 
         const wish = el("button", "pcard__wish");
@@ -193,7 +192,7 @@
         add.setAttribute("aria-label", t().add(p.name));
         add.appendChild(svgIcon([PLUS]));
         add.addEventListener("click", () => {
-            addToCart({ id: p.id, name: p.name, price: p.price, image: p.img });
+            addToCart({ id: `${p.id}:default:${p.variantId}`, name: p.variantName ? `${p.name} — ${p.variantName}` : p.name, price: p.price, image: p.img });
             add.classList.add("is-added");
             add.replaceChildren(svgIcon([CHECK]));
             window.setTimeout(() => {
