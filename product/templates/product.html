@@ -51,7 +51,7 @@
       <p class="buy__line">{{ product.brand_line }}</p>
       <h1 id="p-title">{{ product.name }}</h1>
       <p class="buy__tag">{{ product.tagline }}</p>
-      <a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">★★★★★</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>
+      <a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">{{ product.rating_stars }}</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>
 
       <p class="price">
         <strong id="price-now">{{ product.selected.price_label }}</strong>
@@ -136,7 +136,7 @@
       <ul>{% for r in product.dist %}<li><span>{{ r.n }} ★</span><i class="bar" style="--w: {{ r.pct }}%"></i><span>{{ r.pct }} %</span></li>{% endfor %}</ul>
     </div>
     <ul class="rev__list" tabindex="0" aria-label="Avis clients — faites glisser horizontalement pour parcourir les avis">
-      {% for r in product.reviews %}<li class="tile"><p class="stars" role="img" aria-label="{{ r.stars }} sur 5">{% if r.stars == 5 %}★★★★★{% else %}★★★★☆{% endif %}</p><p>{{ r.t }}</p><p class="rev__who">{{ r.who }}</p></li>{% endfor %}
+      {% for r in product.reviews %}<li class="tile"><p class="stars" role="img" aria-label="{{ r.stars }} sur 5">{{ r.stars_display }}</p><p>{{ r.t }}</p><p class="rev__who">{{ r.who }}</p></li>{% endfor %}
     </ul>
   </div>
 </div></section>
