@@ -515,6 +515,27 @@ Le champ `display_delivery_label` est uniquement une mention éditoriale. Il ne 
 
 Seuls les avis dont `is_approved=True` alimentent la note, la répartition des étoiles et les commentaires publics. L'adresse e-mail de l'auteur n'est pas transmise au template.
 
+## Téléversement des images (développement et production)
+
+Les images du catalogue peuvent être téléversées directement depuis Django Admin. Les fichiers sont enregistrés automatiquement sous `MEDIA_ROOT`, avec des sous-dossiers dédiés :
+- catégories : `media/categories/AAAA/MM/` ;
+- images produit et variantes : `media/products/AAAA/MM/` ;
+- détails de fabrication : `media/products/craft/AAAA/MM/` ;
+- images d'usage : `media/products/usage/AAAA/MM/`.
+
+En développement, `MEDIA_ROOT` pointe par défaut vers le dossier `media/` à la racine du projet. Quand `DEBUG=True`, `config/urls.py` expose les fichiers médias via `/media/` pour faciliter les tests locaux.
+
+En production, `DEBUG=False` : Django ne sert volontairement pas les fichiers médias lui-même. Le serveur web doit rendre le dossier `MEDIA_ROOT` accessible sous le préfixe `MEDIA_URL=/media/`. Sur cPanel/o2switch, vérifier le chemin réel de l'application et configurer le service web pour exposer ce dossier sans rendre accessibles les fichiers privés ou les fichiers de configuration. Ne pas supposer qu'un simple dossier situé dans la racine Python est automatiquement public. Tester une URL d'image après déploiement.
+
+Les champs d'URL externe sont conservés comme solution de repli pour les médias déjà hébergés ailleurs. Pour une image locale, utiliser le champ de téléversement plutôt que saisir une URL. Les fichiers du dossier `media/` sont exclus de Git et doivent être sauvegardés séparément de la base de données.
+
+Pour activer les téléversements d'images, installer les dépendances puis appliquer les migrations :
+
+```bash
+python -m pip install -r requirements.txt
+python manage.py migrate --settings=config.settings.development
+```
+
 ## 3. Administration et ajout des premiers produits
 
 Les modèles sont disponibles dans l'administration Django :
@@ -527,7 +548,7 @@ Pour préparer une fiche :
 1. Créer et activer une catégorie.
 2. Créer le produit avec son slug et sa catégorie. Laisser le produit inactif pendant la préparation.
 3. Créer au moins une variante active avec un SKU unique, un prix et un stock.
-4. Ajouter une image commune HTTPS avec un texte alternatif. Définir le média principal si nécessaire.
+4. Dans la ligne « Médias », téléverser une image depuis l'ordinateur (le fichier sera stocké dans `media/products/`). Renseigner un texte alternatif et définir le média principal si nécessaire. Les URL externes restent facultatives.
 5. Compléter les contenus de la fiche et, si besoin, les offres et leurs lignes.
 6. Renseigner le titre et la description SEO, puis activer le produit et définir sa date de publication si nécessaire.
 7. Vérifier la fiche, le catalogue et la page d'accueil avant de préparer toute mise en production.
@@ -568,7 +589,7 @@ Mesures mises en place dans cette phase :
 - modèles et contraintes de base de données pour les identifiants, montants, stocks et relations pertinentes ;
 - validation des variantes et médias dans les formulaires d'administration ;
 - contrôle défensif des lignes d'offre avant leur affichage ;
-- URL HTTPS pour les médias publics ;
+- URL HTTPS pour les médias externes ;
 - avis en attente exclus des données publiques ;
 - transfert de données vers JavaScript avec `json_script`, sans construire un bloc JavaScript à partir de chaînes interpolées dans le HTML.
 
@@ -602,7 +623,7 @@ Ces commandes doivent être exécutées dans l'environnement local du projet. La
 
 ## 7. Fichiers principaux de cette phase
 
-- `product/models.py` — modèles et règles de validation.
+- `product/models.py` — modèles, téléversements d'images et règles de validation.
 - `product/admin.py` — administration du catalogue.
 - `product/migrations/0001_initial.py` — schéma initial de la base.
 - `product/selectors.py` — règles partagées de publication et sérialisation des cartes catalogue.
@@ -611,4 +632,4 @@ Ces commandes doivent être exécutées dans l'environnement local du projet. La
 - `home/views.py` et `home/templates/home.html` — catégories et nouveautés dynamiques, sans changement de la sélection signature.
 - `shop/views.py`, `shop/templates/catalog.html` et `shop/static/js/shop.js` — catalogue dynamique et filtres fondés sur les catégories configurées.
 - `product/templates/product.html` et `product/static/js/product.js` — liaison de la fiche produit aux variantes et offres réelles.
-- `requirements.txt` — déclaration de `python-dotenv`, déjà importé par les paramètres de développement.
+- `requirements.txt` — dépendances, dont `python-dotenv` et Pillow pour les téléversements d'images.
