@@ -239,7 +239,7 @@
                     <p class="eyebrow" data-i18n="new_eyebrow">À découvrir</p>
                     <h2 data-i18n="new_title">Nos nouveautés</h2>
                 </div>
-                <a href="#" class="text-link" data-i18n="view_all">Voir tout →</a>
+                <a href="{% url 'shop:catalog' %}" class="text-link" data-i18n="view_all">Voir tout →</a>
             </div>
 
             <div class="products-grid">
@@ -286,6 +286,7 @@
                 <p class="empty-catalog">Aucune nouveauté n'est publiée pour le moment.</p>
                 {% endfor %}
             </div>
+        </div>
     </section>
 
 
