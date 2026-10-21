@@ -45,6 +45,8 @@ def product_card_data(queryset):
         old_price = variant.compare_at_price
         products.append({
             "id": product.slug,
+            "variantId": variant.pk,
+            "variantName": variant.color_name,
             "name": product.name,
             "cat": product.category.slug,
             "price": float(variant.price),
