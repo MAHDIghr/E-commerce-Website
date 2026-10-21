@@ -53,12 +53,24 @@ def detail(request, slug):
         invalid_offer = False
         for item in offer_items:
             if item.use_selected_variant:
-                if item.product_id != product.pk or item.variant_id is not None:
+                if (
+                    item.product_id != product.pk
+                    or item.variant_id is not None
+                    or default_variant.stock_quantity < item.quantity
+                ):
                     invalid_offer = True
                     break
                 component_variant = default_variant
             else:
-                if item.product_id == product.pk or not item.variant_id or item.variant.product_id != item.product_id:
+                if (
+                    item.product_id == product.pk
+                    or not item.variant_id
+                    or item.variant.product_id != item.product_id
+                    or not item.variant.is_active
+                    or item.variant.stock_quantity < item.quantity
+                    or not item.product.is_published
+                    or not item.product.category.is_active
+                ):
                     invalid_offer = True
                     break
                 component_variant = item.variant
