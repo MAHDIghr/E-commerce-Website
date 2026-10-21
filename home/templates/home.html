@@ -211,7 +211,9 @@
             <div class="categories-grid">
                 {% for category in categories %}
                 <a href="{% url 'shop:catalog' %}?cat={{ category.slug|urlencode }}" class="category-card reveal">
-                    {% if category.image_url %}
+                    {% if category.image %}
+                    <img src="{{ category.image.url }}" alt="{{ category.alt_text|default:category.name }}" loading="lazy" decoding="async">
+                    {% elif category.image_url %}
                     <img src="{{ category.image_url }}" alt="{{ category.alt_text|default:category.name }}" loading="lazy" decoding="async">
                     {% endif %}
                     <div class="category-content">
@@ -250,7 +252,7 @@
                     data-product-id="{{ product.slug }}:default:{{ variant.pk }}"
                     data-product-name="{{ product.name }}{% if variant.color_name %} — {{ variant.color_name }}{% endif %}"
                     data-product-price="{{ variant.price }}"
-                    data-product-image="{% if media %}{{ media.source_url }}{% endif %}">
+                    data-product-image="{% if media %}{% if media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
                     <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.name }}">
                         <div class="product-badge-stack">
                             {% if product.is_new %}<span class="product-badge">Nouveau</span>{% endif %}
@@ -263,7 +265,7 @@
                                 <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
                             </svg>
                         </button>
-                        {% if media %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}
+                        {% if media %}{% if media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
                     </a>
                     <div class="product-info">
                         <h3>{{ product.name }}</h3>
