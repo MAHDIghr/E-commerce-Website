@@ -98,13 +98,14 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, reverse("shop:catalog") + "?cat=" + self.category.slug)
         self.assertNotContains(response, "?cat=handbags")
 
-    def test_catalog_links_to_the_database_backed_product_detail(self):
+    def test_catalog_provides_a_django_generated_product_url_template(self):
         response = self.client.get(reverse("shop:catalog"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            reverse("product:detail", kwargs={"slug": self.product.slug}),
+            reverse("product:detail", kwargs={"slug": "__product_slug__"}),
         )
+        # Les liens des cartes sont créés côté navigateur à partir de ces données.
         self.assertContains(response, '"id": "cabas-camel"')
 
     def test_home_new_products_are_filtered_by_is_new(self):
