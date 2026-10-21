@@ -124,7 +124,7 @@
 <section class="p-sec"><div class="p-wrap">
   <h2 class="p-rv">{{ product.usage_section_title|default:"Un sac, cinq journées" }}</h2>
   <ul class="strip" tabindex="0" aria-label="Les cinq journées — faites glisser horizontalement pour parcourir les images">
-    {% for label, pid in product.lifestyle %}<li><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><span>{{ label }}</span></li>{% endfor %}
+    {% for label, image_url in product.lifestyle %}<li><img src="{{ image_url }}" alt="" width="500" height="625" loading="lazy" decoding="async"><span>{{ label }}</span></li>{% endfor %}
   </ul>
 </div></section>
 
