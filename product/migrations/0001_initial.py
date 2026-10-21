@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "média produit",
                 "verbose_name_plural": "médias produit",
-                "ordering": ("position", "pk"),
+                "ordering": ("-is_primary", "position", "pk"),
                 "indexes": [models.Index(fields=["product", "variant", "position"], name="media_product_variant_pos_idx")],
                 "constraints": [
                     models.UniqueConstraint(condition=models.Q(("is_primary", True), ("variant__isnull", True)), fields=("product",), name="one_primary_common_media_per_product"),
