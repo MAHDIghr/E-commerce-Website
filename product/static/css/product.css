@@ -172,3 +172,8 @@ body.page-product .site-footer{padding-bottom:4.5rem}
 .gal__thumb[hidden] {
     display: none !important;
 }
+.variant-stock-status {
+    min-height: 1.25rem;
+    margin: .5rem 0 0;
+    font-size: .875rem;
+}
