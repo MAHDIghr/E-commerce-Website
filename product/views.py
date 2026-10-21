@@ -131,6 +131,7 @@ def detail(request, slug):
             "items": " + ".join(lines),
             "price": float(offer_obj.price),
             "old": float(old_price) if old_price else None,
+            "reference_total": float(reference_total),
             "price_label": _eur(offer_obj.price),
             "old_label": _eur(old_price) if old_price else "",
             "save_label": _eur(old_price - offer_obj.price) if old_price else "",
