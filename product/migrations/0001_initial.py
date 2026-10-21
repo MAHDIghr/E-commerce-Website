@@ -85,6 +85,7 @@ class Migration(migrations.Migration):
                 "constraints": [
                     models.CheckConstraint(condition=models.Q(("stock_quantity__gte", 0)), name="variant_stock_nonnegative"),
                     models.CheckConstraint(condition=models.Q(("price__gte", 0)), name="variant_price_nonnegative"),
+                    models.CheckConstraint(condition=models.Q(("compare_at_price__isnull", True)) | models.Q(("compare_at_price__gt", models.F("price")), name="variant_reference_price_gt_sale"),
                 ],
                 "indexes": [models.Index(fields=["product", "is_active", "position"], name="variant_product_active_pos_idx")],
             },
