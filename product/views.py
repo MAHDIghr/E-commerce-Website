@@ -17,6 +17,7 @@ def published_products():
         category__is_active=True,
         media_items__variant__isnull=True,
         media_items__media_type=ProductMedia.IMAGE,
+        variants__is_active=True,
     ).filter(
         Q(published_at__isnull=True) | Q(published_at__lte=now)
     ).distinct()
