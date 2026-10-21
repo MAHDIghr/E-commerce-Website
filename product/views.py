@@ -1,20 +1,20 @@
 """Vues produit : données métier issues de la base, sans catalogue fictif."""
 from decimal import Decimal
 
-from django.db.models import Avg, Count, Prefetch
+from django.db.models import Avg, Count, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import render
 from django.utils import timezone
 
-from .models import Product, ProductMedia, ProductOffer, ProductVariant
+from .models import Product, ProductMedia, ProductOffer, ProductVariant, Review
 
 
 def published_products():
     """Queryset partagé : seuls les produits actifs et déjà publiables sont visibles."""
     now = timezone.now()
     return Product.objects.filter(is_active=True).filter(
-        published_at__isnull=True
-    ) | Product.objects.filter(is_active=True, published_at__lte=now)
+        Q(published_at__isnull=True) | Q(published_at__lte=now)
+    )
 
 
 def product_card_data(queryset):
@@ -24,11 +24,13 @@ def product_card_data(queryset):
         variant = product.default_variant
         if not variant:
             continue
-        media = product.media_items.filter(variant__isnull=True, media_type=ProductMedia.IMAGE).first()
+        media_items = list(product.media_items.all())
+        media = next((item for item in media_items if item.variant_id is None and item.media_type == ProductMedia.IMAGE), None)
         if not media:
-            media = product.media_items.filter(media_type=ProductMedia.IMAGE).first()
-        approved = product.reviews.filter(is_approved=True)
-        aggregate = approved.aggregate(rating=Avg("rating"), reviews=Count("id"))
+            media = next((item for item in media_items if item.media_type == ProductMedia.IMAGE), None)
+        approved = [review for review in product.reviews.all() if review.is_approved]
+        review_count = len(approved)
+        rating = sum(review.rating for review in approved) / review_count if review_count else 0
         colors = [
             {"slug": item.color_slug, "name": item.color_name, "hex": item.color_code}
             for item in product.variants.all()
@@ -43,8 +45,8 @@ def product_card_data(queryset):
             "old": float(old_price) if old_price and old_price > variant.price else None,
             "colors": [color["slug"] for color in colors],
             "color_details": colors,
-            "rating": float(aggregate["rating"] or 0),
-            "reviews": int(aggregate["reviews"] or 0),
+            "rating": round(float(rating), 1),
+            "reviews": review_count,
             "stock": int(variant.stock_quantity),
             "isNew": bool(product.is_new),
             "pop": 0,
@@ -64,7 +66,7 @@ def _detail_queryset():
         Prefetch("media_items", queryset=ProductMedia.objects.order_by("position", "pk")),
         "reasons", "content_items", "craft_details", "usages", "faqs",
         Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items__product", "items__variant")),
-        Prefetch("reviews", queryset=Product.reviews.rel.related_model.objects.filter(is_approved=True).order_by("-created_at")),
+        Prefetch("reviews", queryset=Review.objects.filter(is_approved=True).order_by("-created_at")),
     )
 
 
