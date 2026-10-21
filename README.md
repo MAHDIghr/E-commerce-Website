@@ -751,3 +751,77 @@ Pour cette branche, les sources de vérité sont, dans l'ordre :
 4. ce README pour l'installation, les procédures et les limites connues.
 
 Si le code change, ce document doit être mis à jour pour rester fidèle au comportement réel. Les procédures de production doivent toujours être validées sur l'hébergement cible : en particulier, définir `DJANGO_MEDIA_ROOT` ne suffit pas à rendre les images publiques tant que le serveur web n'est pas configuré pour servir ce répertoire.
+
+
+---
+
+## 17. Audit du raccordement Accueil ↔ Boutique ↔ Fiche produit
+
+Cette section documente les contrôles et corrections effectués lors de l'audit du parcours de navigation de la branche.
+
+### 17.1 Parcours nominal
+
+Le parcours du catalogue est le suivant :
+
+1. **Accueil — `/`** : `home.views.home` charge les catégories actives et les produits marqués comme nouveautés. Les données commerciales proviennent des modèles Django, pas d'un tableau de produits de démonstration ajouté dans la vue.
+2. **Catégorie — lien vers `/boutique/?cat=<slug>`** : les cartes de catégories de l'accueil transmettent le slug réel enregistré en base.
+3. **Boutique — `/boutique/`** : `shop.views.catalog` charge les catégories et les produits publiables, puis sérialise les champs strictement nécessaires à l'interface dans `catalog_data`.
+4. **Cartes du catalogue — `/produit/<slug>/`** : le JavaScript du catalogue construit les liens à partir du préfixe généré par Django (`data-product-url`) et du slug de produit reçu du serveur.
+5. **Fiche produit** : `product.views.detail` recherche le produit par slug via le sélecteur des produits publiés. Un produit absent, inactif ou non publiable ne doit pas être rendu comme une fiche publique.
+
+Les noms d'URL Django (`home:home`, `shop:catalog`, `product:detail`) sont préférables aux chemins codés en dur, car ils gardent les liens cohérents si les routes évoluent.
+
+### 17.2 Catégories dans la navigation commune
+
+Les liens de catégories ne doivent pas supposer que les slugs en base sont toujours `handbags`, `shoulder`, `wallets` ou `accessories`. Les slugs sont des données administrables : un lien basé sur un slug fictif peut ouvrir le catalogue sans appliquer le filtre attendu.
+
+Pour éviter cette divergence :
+
+- les liens principaux « Sacs » et « Accessoires » ouvrent maintenant la boutique sans filtre de catégorie prédéfini ;
+- le pied de page reçoit les catégories actives via `product.context_processors.active_catalog_categories` ;
+- les liens du pied de page utilisent le `slug` réel de chaque catégorie active ;
+- lorsqu'aucune catégorie active n'existe, le pied de page conserve un lien de repli vers la boutique ;
+- l'accueil continue d'utiliser sa liste de catégories issue de sa propre vue. Le contexte partagé est nommé `catalog_categories` afin de ne pas remplacer la variable `categories` propre à l'accueil.
+
+Pour ajouter ou renommer une catégorie, il faut donc mettre à jour ses données dans Django Admin ; il n'est pas nécessaire de modifier les liens du pied de page.
+
+### 17.3 Images des nouveautés de l'accueil
+
+La vue d'accueil précharge désormais uniquement les médias qui sont des images communes au produit (`variant__isnull=True` et `media_type=ProductMedia.IMAGE`). Cela évite qu'une vidéo marquée comme média principal soit utilisée par erreur comme source d'une balise HTML `<img>` dans les cartes de nouveautés.
+
+La sélection publique des produits reste centralisée dans `product.selectors.published_products()`. Elle exige actuellement un produit actif, une catégorie active, une variante active, une date de publication atteinte (ou absente) et au moins une image commune au produit. Si un produit ne s'affiche pas, vérifier ces conditions dans Django Admin avant de modifier le code.
+
+### 17.4 Données dynamiques et frontière de confiance
+
+- Le catalogue reçoit ses données depuis Django via `json_script`, mécanisme qui échappe le contenu JSON pour son insertion dans le HTML.
+- Le JavaScript crée les cartes à partir des données fournies par le serveur ; les filtres de catégorie utilisent les slugs réellement reçus.
+- Les montants et le stock affichés sont informatifs. Le panier actuel côté navigateur ne constitue pas une validation de commande : ne pas considérer ses valeurs comme fiables.
+- Les templates Django doivent continuer à utiliser l'échappement automatique ; ne pas injecter les noms, descriptions ou avis en HTML brut.
+- Les catégories inactives et les produits non publiables ne doivent pas être exposés dans les listes publiques.
+- Les médias externes doivent rester limités à des sources de confiance en HTTPS. En production, la configuration du serveur web doit également empêcher l'exécution de fichiers téléversés.
+
+### 17.5 Tests de non-régression ajoutés
+
+Le fichier `product/tests.py` couvre maintenant notamment :
+
+- le chargement du catalogue depuis la base ;
+- la présence de liens entre l'accueil, la boutique et la fiche produit ;
+- la génération des liens de catégories avec les slugs réels, sans dépendance au slug fictif `handbags` ;
+- le chargement des nouveautés filtrées par `is_new` ;
+- l'accès aux fiches publiées et le refus des produits inactifs ;
+- l'absence d'exposition des avis non approuvés ;
+- le stockage des images téléversées dans les dossiers prévus.
+
+Exécuter les contrôles depuis la racine du dépôt avec l'environnement de développement configuré :
+
+```powershell
+python manage.py check --settings=config.settings.development
+python manage.py makemigrations --check --dry-run --settings=config.settings.development
+python manage.py test product --settings=config.settings.development
+```
+
+**État de vérification :** les modifications ont été poussées sur la branche GitHub, mais ces commandes n'ont pas été exécutées dans un environnement Python/Django pendant cet audit à distance. Il faut donc les lancer localement et corriger toute erreur éventuelle avant de considérer la recette comme validée.
+
+### 17.6 Périmètre préservé
+
+La section **« Notre sélection signature »** de l'accueil n'a pas été modifiée. Le checkout, les commandes et les paiements réels restent hors périmètre : aucun lien ou comportement de navigation ne doit être interprété comme une preuve qu'un parcours de commande complet est opérationnel.
