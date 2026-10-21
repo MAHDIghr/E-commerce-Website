@@ -3,7 +3,7 @@ from django.db.models import Prefetch
 from django.shortcuts import render
 
 from product.models import Category, ProductMedia, ProductVariant
-from product.views import published_products
+from product.selectors import published_products
 
 
 def home(request):
