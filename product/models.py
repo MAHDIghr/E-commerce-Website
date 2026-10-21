@@ -135,7 +135,7 @@ class ProductVariant(models.Model):
             models.CheckConstraint(condition=Q(price__gte=0), name="variant_price_nonnegative"),
             models.CheckConstraint(
                 condition=Q(compare_at_price__isnull=True) | Q(compare_at_price__gt=models.F("price")),
-                name="variant_reference_price_gt_sale",
+                name="variant_ref_price_gt_sale",
             ),
         ]
         indexes = [models.Index(fields=("product", "is_active", "position"), name="variant_product_active_pos_idx")]
@@ -182,7 +182,7 @@ class ProductMedia(models.Model):
             models.UniqueConstraint(
                 fields=("product",),
                 condition=Q(is_primary=True, variant__isnull=True),
-                name="one_primary_common_media_per_product",
+                name="one_primary_common_media",
             ),
             models.UniqueConstraint(
                 fields=("variant",),
@@ -305,7 +305,7 @@ class Review(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
-        indexes = [models.Index(fields=("product", "is_approved", "-created_at"), name="review_product_approved_date_idx")]
+        indexes = [models.Index(fields=("product", "is_approved", "-created_at"), name="review_prod_approved_date_idx")]
         constraints = [models.CheckConstraint(condition=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_to_5")]
         verbose_name = "avis"
         verbose_name_plural = "avis"
