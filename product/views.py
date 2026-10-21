@@ -1,7 +1,7 @@
 """Vues produit : données métier issues de la base, sans catalogue fictif."""
 from decimal import Decimal
 
-from django.db.models import Avg, Count, Prefetch, Q
+from django.db.models import Prefetch, Q
 from django.http import Http404
 from django.shortcuts import render
 from django.utils import timezone
@@ -98,14 +98,26 @@ def detail(request, slug):
     for offer_obj in product.offers.all():
         lines = []
         reference_total = Decimal("0.00")
-        for item in offer_obj.items.all():
+        offer_items = list(offer_obj.items.all())
+        invalid_offer = False
+        for item in offer_items:
+            if item.use_selected_variant:
+                if item.product_id != product.pk or item.variant_id is not None:
+                    invalid_offer = True
+                    break
+                component_variant = default_variant
+            else:
+                if not item.variant_id or item.variant.product_id != item.product_id:
+                    invalid_offer = True
+                    break
+                component_variant = item.variant
             lines.append(f"{item.product.name} × {item.quantity}" if item.quantity > 1 else item.product.name)
-            component_variant = default_variant if item.use_selected_variant else item.variant
-            if component_variant:
-                reference_price = component_variant.compare_at_price or component_variant.price
-                reference_total += reference_price * item.quantity
-        # Une offre sans lignes configurées ne doit pas être affichée comme une offre achetable.
-        if not lines:
+            reference_price = component_variant.compare_at_price
+            if reference_price is None or reference_price <= component_variant.price:
+                reference_price = component_variant.price
+            reference_total += reference_price * item.quantity
+        # Les offres incomplètes ou incohérentes ne sont jamais exposées au client.
+        if not lines or invalid_offer:
             continue
         old_price = reference_total if reference_total > offer_obj.price else None
         off = round((1 - offer_obj.price / old_price) * 100) if old_price else 0
@@ -129,10 +141,10 @@ def detail(request, slug):
         offers = [{
             "id": "default", "title": "À l'unité", "items": product.name,
             "price": float(default_variant.price),
-            "old": float(default_variant.compare_at_price) if default_variant.compare_at_price else None,
+            "old": float(default_variant.compare_at_price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else None,
             "price_label": _eur(default_variant.price),
-            "old_label": _eur(default_variant.compare_at_price) if default_variant.compare_at_price else "",
-            "save_label": _eur(default_variant.compare_at_price - default_variant.price) if default_variant.compare_at_price else "",
+            "old_label": _eur(default_variant.compare_at_price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
+            "save_label": _eur(default_variant.compare_at_price - default_variant.price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
             "off": round((1 - default_variant.price / default_variant.compare_at_price) * 100) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else 0,
             "ship": "", "badge": "", "featured": True,
         }]
