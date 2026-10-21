@@ -6,6 +6,7 @@ Environment-specific settings belong in development.py
 and production.py.
 """
 
+import os
 from pathlib import Path
 
 
@@ -134,7 +135,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # -----------------------------------------------------------------------------
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(os.environ.get("DJANGO_MEDIA_ROOT", str(BASE_DIR / "media"))).resolve()
 
 
 # -----------------------------------------------------------------------------
