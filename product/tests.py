@@ -82,6 +82,29 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, "cabas-camel")
         self.assertContains(response, "Sacs à main")
 
+    def test_home_links_connect_categories_and_products_to_their_destinations(self):
+        response = self.client.get(reverse("home:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("shop:catalog") + "?cat=" + self.category.slug,
+        )
+        self.assertContains(
+            response,
+            reverse("product:detail", kwargs={"slug": self.product.slug}),
+        )
+        # La section signature est volontairement préservée hors du raccordement backend.
+        self.assertContains(response, "Notre sélection signature")
+
+    def test_catalog_links_to_the_database_backed_product_detail(self):
+        response = self.client.get(reverse("shop:catalog"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("product:detail", kwargs={"slug": self.product.slug}),
+        )
+        self.assertContains(response, '"id": "cabas-camel"')
+
     def test_home_new_products_are_filtered_by_is_new(self):
         regular_product = Product.objects.create(
             category=self.category, name="Portefeuille classique",
