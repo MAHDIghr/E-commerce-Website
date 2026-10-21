@@ -247,8 +247,8 @@
                 {% with variant=product.default_variant media=product.media_items.all|first %}
                 {% if variant %}
                 <article class="product-card reveal"
-                    data-product-id="{{ product.slug }}"
-                    data-product-name="{{ product.name }}"
+                    data-product-id="{{ product.slug }}:default:{{ variant.pk }}"
+                    data-product-name="{{ product.name }}{% if variant.color_name %} — {{ variant.color_name }}{% endif %}"
                     data-product-price="{{ variant.price }}"
                     data-product-image="{% if media %}{{ media.source_url }}{% endif %}">
                     <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.name }}">
