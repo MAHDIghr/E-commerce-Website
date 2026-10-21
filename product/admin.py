@@ -1,6 +1,5 @@
 """Administration des données du catalogue."""
 from django.contrib import admin
-from django.db.models import Prefetch
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
@@ -96,7 +95,7 @@ class ProductAdmin(admin.ModelAdmin):
     @staticmethod
     def _publication_issues(obj):
         """Retourne les conditions qui empêchent un produit d'apparaître publiquement."""
-        if obj is None:
+        if obj is None or not obj.pk:
             return ["Enregistrez le produit pour vérifier sa publication."]
 
         issues = []
