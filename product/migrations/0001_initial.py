@@ -83,6 +83,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "variantes",
                 "ordering": ("position", "color_name", "pk"),
                 "constraints": [
+                    models.UniqueConstraint(condition=~models.Q(("color_slug", "")), fields=("product", "color_slug"), name="unique_product_color_slug"),
                     models.CheckConstraint(condition=models.Q(("stock_quantity__gte", 0)), name="variant_stock_nonnegative"),
                     models.CheckConstraint(condition=models.Q(("price__gte", 0)), name="variant_price_nonnegative"),
                     models.CheckConstraint(condition=models.Q(("compare_at_price__isnull", True)) | models.Q(("compare_at_price__gt", models.F("price"))), name="variant_reference_price_gt_sale"),
@@ -108,6 +109,10 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "médias produit",
                 "ordering": ("position", "pk"),
                 "indexes": [models.Index(fields=["product", "variant", "position"], name="media_product_variant_pos_idx")],
+                "constraints": [
+                    models.UniqueConstraint(condition=models.Q(("is_primary", True), ("variant__isnull", True)), fields=("product",), name="one_primary_common_media_per_product"),
+                    models.UniqueConstraint(condition=models.Q(("is_primary", True), ("variant__isnull", False)), fields=("variant",), name="one_primary_variant_media"),
+                ],
             },
         ),
         migrations.CreateModel(
