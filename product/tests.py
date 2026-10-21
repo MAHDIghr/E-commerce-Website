@@ -95,6 +95,8 @@ class CatalogViewTests(TestCase):
         )
         # La section signature est volontairement préservée hors du raccordement backend.
         self.assertContains(response, "Notre sélection signature")
+        self.assertContains(response, reverse("shop:catalog") + "?cat=" + self.category.slug)
+        self.assertNotContains(response, "?cat=handbags")
 
     def test_catalog_links_to_the_database_backed_product_detail(self):
         response = self.client.get(reverse("shop:catalog"))
