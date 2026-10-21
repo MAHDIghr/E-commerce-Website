@@ -125,6 +125,11 @@ class ProductVariant(models.Model):
     class Meta:
         ordering = ("position", "color_name", "pk")
         constraints = [
+            models.UniqueConstraint(
+                fields=("product", "color_slug"),
+                condition=~Q(color_slug=""),
+                name="unique_product_color_slug",
+            ),
             models.CheckConstraint(condition=Q(stock_quantity__gte=0), name="variant_stock_nonnegative"),
             models.CheckConstraint(condition=Q(price__gte=0), name="variant_price_nonnegative"),
             models.CheckConstraint(
@@ -172,6 +177,18 @@ class ProductMedia(models.Model):
     class Meta:
         ordering = ("position", "pk")
         indexes = [models.Index(fields=("product", "variant", "position"), name="media_product_variant_pos_idx")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("product",),
+                condition=Q(is_primary=True, variant__isnull=True),
+                name="one_primary_common_media_per_product",
+            ),
+            models.UniqueConstraint(
+                fields=("variant",),
+                condition=Q(is_primary=True, variant__isnull=False),
+                name="one_primary_variant_media",
+            ),
+        ]
         verbose_name = "média produit"
         verbose_name_plural = "médias produit"
 
