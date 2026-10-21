@@ -65,8 +65,8 @@ class Product(models.Model):
     class Meta:
         ordering = ("-published_at", "-created_at")
         indexes = [
-            models.Index(fields=("is_active", "is_new", "published_at")),
-            models.Index(fields=("is_active", "category", "published_at")),
+            models.Index(fields=("is_active", "is_new", "published_at"), name="product_active_new_pub_idx"),
+            models.Index(fields=("is_active", "category", "published_at"), name="product_active_cat_pub_idx"),
         ]
         verbose_name = "produit"
         verbose_name_plural = "produits"
@@ -118,7 +118,7 @@ class ProductVariant(models.Model):
             models.CheckConstraint(condition=Q(stock_quantity__gte=0), name="variant_stock_nonnegative"),
             models.CheckConstraint(condition=Q(price__gte=0), name="variant_price_nonnegative"),
         ]
-        indexes = [models.Index(fields=("product", "is_active", "position"))]
+        indexes = [models.Index(fields=("product", "is_active", "position"), name="variant_product_active_pos_idx")]
         verbose_name = "variante"
         verbose_name_plural = "variantes"
 
@@ -157,7 +157,7 @@ class ProductMedia(models.Model):
 
     class Meta:
         ordering = ("position", "pk")
-        indexes = [models.Index(fields=("product", "variant", "position"))]
+        indexes = [models.Index(fields=("product", "variant", "position"), name="media_product_variant_pos_idx")]
         verbose_name = "média produit"
         verbose_name_plural = "médias produit"
 
@@ -263,7 +263,7 @@ class Review(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
-        indexes = [models.Index(fields=("product", "is_approved", "-created_at"))]
+        indexes = [models.Index(fields=("product", "is_approved", "-created_at"), name="review_product_approved_date_idx")]
         constraints = [models.CheckConstraint(condition=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_to_5")]
         verbose_name = "avis"
         verbose_name_plural = "avis"
