@@ -30,11 +30,17 @@
     <section class="hero">
 
         <div class="hero-media">
-            <img
-                src="{% static 'images/sac-vedette-accueil.webp' %}"
-                alt="Sac à main de la collection"
-                loading="eager"
-            >
+            <picture class="hero-media__picture">
+                <source
+                    media="(max-width: 767px)"
+                    srcset="{% static 'images/sac-vedette-accueil-mobile.webp' %}"
+                >
+                <img
+                    src="{% static 'images/sac-vedette-accueil.webp' %}"
+                    alt="Sac à main de la collection"
+                    loading="eager"
+                >
+            </picture>
             <div class="hero-media__veil"></div>
         </div>
 
