@@ -116,10 +116,9 @@ def detail(request, slug):
                     break
                 component_variant = item.variant
             lines.append(f"{item.product.name} × {item.quantity}" if item.quantity > 1 else item.product.name)
-            reference_price = component_variant.compare_at_price
-            if reference_price is None or reference_price <= component_variant.price:
-                reference_price = component_variant.price
-            reference_total += reference_price * item.quantity
+            # Le prix de référence du lot est la somme des prix de vente actuels,
+            # pas la somme de prix barrés potentiellement déjà remisés.
+            reference_total += component_variant.price * item.quantity
         # Les offres incomplètes ou incohérentes ne sont jamais exposées au client.
         if not lines or invalid_offer:
             continue
@@ -150,7 +149,7 @@ def detail(request, slug):
             "old_label": _eur(default_variant.compare_at_price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
             "save_label": _eur(default_variant.compare_at_price - default_variant.price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
             "off": round((1 - default_variant.price / default_variant.compare_at_price) * 100) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else 0,
-            "ship": "", "badge": "", "featured": True,
+            "ship": "", "badge": "", "featured": True, "uses_variant_price": True,
         }]
     selected = next((item for item in offers if item["featured"]), offers[0])
     reviews = list(product.reviews.all())
