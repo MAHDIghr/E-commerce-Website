@@ -102,7 +102,7 @@
 
         <div class="chips" id="active-chips" aria-label="Filtres actifs"></div>
 
-        <div class="pgrid" id="product-grid" aria-busy="true" data-product-url="{% url 'product:index' %}"></div>
+        <div class="pgrid" id="product-grid" aria-busy="true" data-product-url="{% url 'product:detail' slug='__product_slug__' %}"></div>
         {{ catalog_data|json_script:"catalog-data" }}
 
         <div class="empty" id="empty-state" hidden>
