@@ -80,7 +80,9 @@
         const o = offerIn().dataset;
         $("#price-now").textContent = o.label;
         $("#price-old").lastChild.textContent = o.old;
-        $("#price-off").textContent = `-${o.off} %`;
+        $("#price-off").textContent = Number(o.off) > 0 ? `-${o.off} %` : "";
+        $("#price-off").hidden = Number(o.off) <= 0;
+        $("#price-old").hidden = !o.old;
         $("#sbar-price").textContent = o.label;
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = colorIn().dataset.label;
