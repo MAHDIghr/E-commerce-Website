@@ -505,7 +505,7 @@ Pour chaque ligne de `ProductOfferItem` :
 - les produits complémentaires doivent avoir une variante fixe appartenant au produit indiqué ;
 - la quantité doit être au moins égale à 1.
 
-Les formulaires d'administration valident ces relations, et la vue de fiche filtre également les offres incohérentes avant de les exposer. Le prix final du lot est celui configuré dans `ProductOffer.price`. La comparaison et le pourcentage d'économie sont calculés à partir des prix de vente actuels des composants, et non de prix barrés qui pourraient déjà intégrer une remise. La référence tient compte de la variante sélectionnée lorsque le lot contient le produit principal.
+Chaque offre publique doit inclure au moins une ligne utilisant la variante choisie sur la fiche. Les formulaires d'administration valident ces relations, et la vue de fiche filtre également les offres incomplètes, incohérentes ou dont un composant ne dispose pas du stock nécessaire avant de les exposer. Le prix final du lot est celui configuré dans `ProductOffer.price`. La comparaison et le pourcentage d'économie sont calculés à partir des prix de vente actuels des composants, et non de prix barrés qui pourraient déjà intégrer une remise. La référence tient compte de la variante sélectionnée lorsque le lot contient le produit principal.
 
 Le champ `display_delivery_label` est uniquement une mention éditoriale. Il ne calcule ni ne garantit des frais de port.
 
