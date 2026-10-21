@@ -10,7 +10,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from urllib.parse import urlparse
 from django.utils.text import slugify
+
+
+def _require_https(value, field_name):
+    if value and urlparse(value).scheme != "https":
+        raise ValidationError({field_name: "Utilisez une URL HTTPS pour les médias publics."})
 
 
 class Category(models.Model):
@@ -26,6 +32,10 @@ class Category(models.Model):
         ordering = ("position", "name")
         verbose_name = "catégorie"
         verbose_name_plural = "catégories"
+
+    def clean(self):
+        super().clean()
+        _require_https(self.image_url, "image_url")
 
     def __str__(self):
         return self.name
@@ -163,6 +173,8 @@ class ProductMedia(models.Model):
 
     def clean(self):
         super().clean()
+        _require_https(self.source_url, "source_url")
+        _require_https(self.poster_url, "poster_url")
         if self.variant_id and self.product_id and self.variant.product_id != self.product_id:
             raise ValidationError({"variant": "La variante doit appartenir au produit sélectionné."})
         if self.media_type == self.IMAGE and not self.alt_text.strip():
@@ -217,6 +229,10 @@ class ProductCraftDetail(models.Model):
         verbose_name = "détail de fabrication"
         verbose_name_plural = "détails de fabrication"
 
+    def clean(self):
+        super().clean()
+        _require_https(self.image_url, "image_url")
+
     def __str__(self):
         return self.title
 
@@ -232,6 +248,10 @@ class ProductUsage(models.Model):
         ordering = ("position", "pk")
         verbose_name = "situation d'usage"
         verbose_name_plural = "situations d'usage"
+
+    def clean(self):
+        super().clean()
+        _require_https(self.image_url, "image_url")
 
     def __str__(self):
         return self.title
