@@ -39,7 +39,7 @@ def product_card_data(queryset):
         colors = [
             {"slug": item.color_slug, "name": item.color_name, "hex": item.color_code}
             for item in product.variants.all()
-            if item.is_active and item.color_slug
+            if item.is_active and item.color_slug and item.color_code
         ]
         old_price = variant.compare_at_price
         products.append({
