@@ -525,7 +525,7 @@ Les images du catalogue peuvent être téléversées directement depuis Django A
 
 En développement, `MEDIA_ROOT` pointe par défaut vers le dossier `media/` à la racine du projet. Quand `DEBUG=True`, `config/urls.py` expose les fichiers médias via `/media/` pour faciliter les tests locaux.
 
-En production, `DEBUG=False` : Django ne sert volontairement pas les fichiers médias lui-même. Le serveur web doit rendre le dossier `MEDIA_ROOT` accessible sous le préfixe `MEDIA_URL=/media/`. Sur cPanel/o2switch, vérifier le chemin réel de l'application et configurer le service web pour exposer ce dossier sans rendre accessibles les fichiers privés ou les fichiers de configuration. Ne pas supposer qu'un simple dossier situé dans la racine Python est automatiquement public. Tester une URL d'image après déploiement.
+En production, `DEBUG=False` : Django ne sert volontairement pas les fichiers médias lui-même. Le serveur web doit rendre le dossier `MEDIA_ROOT` accessible sous le préfixe `MEDIA_URL=/media/`. Le chemin peut être configuré avec la variable d'environnement `DJANGO_MEDIA_ROOT`. Sur cPanel/o2switch, définis-la vers un dossier réellement servi publiquement par le domaine, ou configure un lien/routage web vers ce dossier. Vérifie les permissions et ne rends jamais accessibles les fichiers privés ou les fichiers de configuration. Ne suppose pas qu'un dossier situé dans la racine Python est automatiquement public. Teste une URL d'image après déploiement.
 
 Les champs d'URL externe sont conservés comme solution de repli pour les médias déjà hébergés ailleurs. Pour une image locale, utiliser le champ de téléversement plutôt que saisir une URL. Les fichiers du dossier `media/` sont exclus de Git et doivent être sauvegardés séparément de la base de données.
 
