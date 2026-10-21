@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ product.name }} | Ma Boutique{% endblock %}
-{% block meta_description %}{{ product.tagline }}{% endblock %}
+{% block title %}{{ product.seo_title|default:product.name }} | My Line Collection{% endblock %}
+{% block meta_description %}{{ product.seo_description|default:product.tagline }}{% endblock %}
 {% block body_class %}page-product{% endblock %}
 {% block extra_css %}
-<link rel="preload" as="image" href="{{ product.media.0.src }}" fetchpriority="high">
+{% if product.media %}<link rel="preload" as="image" href="{{ product.media.0.src }}" fetchpriority="high">{% endif %}
 <link rel="stylesheet" href="{% static 'css/product.css' %}">
 {% endblock %}
 
@@ -104,10 +104,10 @@
     {% for name, ok in product.fits %}<li class="{% if ok %}is-ok{% else %}is-no{% endif %}">{{ name }}<span class="visually-hidden">{% if ok %} : rentre{% else %} : ne rentre pas{% endif %}</span></li>{% endfor %}
   </ul>
   <div class="dim p-rv">
-    <div class="dim__box" style="aspect-ratio: {{ product.dims.w }} / {{ product.dims.h }}"><span class="dim__w">{{ product.dims.w }} cm</span><span class="dim__h">{{ product.dims.h }} cm</span></div>
+    <div class="dim__box"{% if product.dims.w and product.dims.h %} style="aspect-ratio: {{ product.dims.w }} / {{ product.dims.h }}"{% endif %}><span class="dim__w">{% if product.dims.w %}{{ product.dims.w }} cm{% else %}—{% endif %}</span><span class="dim__h">{% if product.dims.h %}{{ product.dims.h }} cm{% else %}—{% endif %}</span></div>
     <dl>
-      <div><dt>Largeur</dt><dd>{{ product.dims.w }} cm</dd></div><div><dt>Hauteur</dt><dd>{{ product.dims.h }} cm</dd></div>
-      <div><dt>Profondeur</dt><dd>{{ product.dims.d }} cm</dd></div><div><dt>Poids</dt><dd>{{ product.dims.weight }}</dd></div>
+      <div><dt>Largeur</dt><dd>{% if product.dims.w %}{{ product.dims.w }} cm{% else %}—{% endif %}</dd></div><div><dt>Hauteur</dt><dd>{% if product.dims.h %}{{ product.dims.h }} cm{% else %}—{% endif %}</dd></div>
+      <div><dt>Profondeur</dt><dd>{% if product.dims.d %}{{ product.dims.d }} cm{% else %}—{% endif %}</dd></div><div><dt>Poids</dt><dd>{{ product.dims.weight }}</dd></div>
       <div><dt>Capacité</dt><dd>{{ product.dims.volume }}</dd></div>
     </dl>
   </div>
