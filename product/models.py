@@ -100,6 +100,7 @@ class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants", verbose_name="Produit")
     sku = models.CharField("SKU", max_length=80, unique=True)
     color_name = models.CharField("Couleur", max_length=80, blank=True)
+    color_slug = models.SlugField("Identifiant de couleur", max_length=80, blank=True)
     color_code = models.CharField("Code couleur", max_length=7, blank=True)
     price = models.DecimalField("Prix de vente (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
     compare_at_price = models.DecimalField(
