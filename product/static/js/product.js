@@ -3,21 +3,26 @@
    Lit les données depuis #product-data (json_script) : aucun contenu produit en dur ici. */
 (() => {
     const data = JSON.parse(document.getElementById("product-data").textContent);
-    const media = data.media;
+    let media = data.media;
+    const allMedia = data.media;
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => [...r.querySelectorAll(s)];
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     document.body.classList.add("p-js");
 
     /* ---------- Galerie ---------- */
-    const track = $(".gal__track"), slides = $$(".gal__slide"), thumbs = $$(".gal__thumb"), count = $("#gal-count");
+    const track = $(".gal__track"), allSlides = $$(".gal__slide"), allThumbs = $$(".gal__thumb"), count = $("#gal-count");
+    let slides = allSlides;
+    let thumbs = allThumbs;
     let cur = -1;
     const pad = () => parseFloat(getComputedStyle(track).paddingLeft) || 0;
     const go = (i) => {
+        if (!slides.length) return;
         i = (i + slides.length) % slides.length;
         track.scrollTo({ left: slides[i].offsetLeft - pad(), behavior: reduced ? "auto" : "smooth" });
     };
     const mark = () => {
+        if (!slides.length) { count.textContent = "0 / 0"; cur = -1; return; }
         let best = 0, d = Infinity;
         slides.forEach((s, i) => { const x = Math.abs(s.offsetLeft - pad() - track.scrollLeft); if (x < d) { d = x; best = i; } });
         if (best === cur) return;
@@ -32,9 +37,30 @@
         if (e.key === "ArrowRight") { e.preventDefault(); go(cur + 1); }
         if (e.key === "ArrowLeft") { e.preventDefault(); go(cur - 1); }
     });
-    thumbs.forEach((t) => t.addEventListener("click", () => go(+t.dataset.go)));
+    allThumbs.forEach((t) => t.addEventListener("click", () => go(thumbs.indexOf(t))));
     $$("[data-nav]").forEach((b) => b.addEventListener("click", () => go(cur + +b.dataset.nav)));
-    mark();
+    const filterGallery = (variantId) => {
+        const visible = allMedia.map((item, index) => ({ item, index })).filter(({ item }) =>
+            !item.variant_id || String(item.variant_id) === String(variantId)
+        );
+        const visibleIndexes = new Set(visible.map(({ index }) => index));
+        slides = visible.map(({ index }) => allSlides[index]);
+        thumbs = visible.map(({ index }) => allThumbs[index]);
+        media = visible.map(({ item }) => item);
+        allSlides.forEach((slide, index) => { slide.hidden = !visibleIndexes.has(index); });
+        allThumbs.forEach((thumb, index) => {
+            const visibleThumb = visibleIndexes.has(index);
+            thumb.hidden = !visibleThumb;
+            if (thumb.closest("li")) thumb.closest("li").hidden = !visibleThumb;
+            thumb.removeAttribute("aria-current");
+        });
+        cur = -1;
+        go(0);
+        mark();
+    };
+
+    const initialColor = $('input[name="color"]:checked');
+    filterGallery(initialColor ? initialColor.value : "");
 
     /* Vidéo : chargée au clic, muette, avec repli sur le poster si le fichier est absent */
     $$("[data-video]").forEach((b) => b.addEventListener("click", () => {
@@ -78,21 +104,68 @@
     const colorIn = () => $("input[name=color]:checked");
     const sync = () => {
         const o = offerIn().dataset;
-        $("#price-now").textContent = o.label;
-        $("#price-old").lastChild.textContent = o.old;
-        $("#price-off").textContent = `-${o.off} %`;
-        $("#sbar-price").textContent = o.label;
+        const color = colorIn().dataset;
+        const usesVariantPrice = o.usesVariantPrice === "true";
+        let priceLabel = usesVariantPrice ? color.priceLabel : o.label;
+        let oldLabel = usesVariantPrice ? color.oldLabel : o.old;
+        let discount = usesVariantPrice ? color.off : o.off;
+
+        // Pour un lot incluant le sac choisi, le prix de référence suit la variante sélectionnée.
+        if (!usesVariantPrice && o.includesSelectedVariant === "true" && o.referenceTotal !== "") {
+            const reference = Number(o.referenceTotal) + Number(color.price) - Number(o.baseVariantPrice);
+            const offerPrice = Number(o.price);
+            if (Number.isFinite(reference) && reference > offerPrice) {
+                oldLabel = reference.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+                discount = Math.round((1 - offerPrice / reference) * 100);
+            } else {
+                oldLabel = "";
+                discount = 0;
+            }
+        }
+
+        $("#price-now").textContent = priceLabel;
+        $("#price-old").lastChild.textContent = oldLabel;
+        $("#price-old").hidden = !oldLabel;
+        $("#price-off").textContent = Number(discount) > 0 ? `-${discount} %` : "";
+        $("#price-off").hidden = Number(discount) <= 0;
+        $("#sbar-price").textContent = priceLabel;
         $("#sbar-offer").textContent = o.name;
-        $("#color-label").textContent = colorIn().dataset.label;
+        $("#color-label").textContent = color.label;
     };
-    $$("input[name=offer], input[name=color]").forEach((i) => i.addEventListener("change", sync));
+    const updateAvailability = () => {
+        const stock = Number(colorIn().dataset.stock);
+        const required = Math.max(1, Number(offerIn().dataset.mainQuantity || 1));
+        const available = stock >= required;
+        $$(".js-add").forEach((button) => {
+            button.disabled = !available;
+            button.setAttribute("aria-disabled", String(!available));
+        });
+        const status = $("#variant-stock-status");
+        if (stock <= 0) status.textContent = "Indisponible pour le moment.";
+        else if (!available) status.textContent = "Stock insuffisant pour cette offre.";
+        else if (stock <= 5) status.textContent = `Plus que ${stock} en stock.`;
+        else status.textContent = "En stock.";
+    };
+
+    $$("input[name=offer]").forEach((i) => i.addEventListener("change", () => {
+        sync();
+        updateAvailability();
+    }));
+    $$("input[name=color]").forEach((i) => i.addEventListener("change", () => {
+        sync();
+        filterGallery(i.value);
+        updateAvailability();
+    }));
+    sync();
+    updateAvailability();
 
     /* ---------- Ajout au panier (réutilise addToCart de base.js) ---------- */
     $$(".js-add").forEach((btn) => btn.addEventListener("click", () => {
         const o = offerIn().dataset, label = btn.textContent;
         btn.disabled = true; btn.textContent = "Ajout…";
         window.setTimeout(() => {
-            addToCart({ id: `${data.slug}:${offerIn().value}:${colorIn().value}`, name: `${data.name} — ${o.name} (${colorIn().dataset.label})`, price: parseFloat(o.price), image: media[0].src });
+            const selectedPrice = o.usesVariantPrice === "true" ? parseFloat(colorIn().dataset.price) : parseFloat(o.price);
+            addToCart({ id: `${data.slug}:${offerIn().value}:${colorIn().value}`, name: `${data.name} — ${o.name} (${colorIn().dataset.label})`, price: selectedPrice, image: media[0].src });
             btn.disabled = false; btn.textContent = "Ajouté ✓"; btn.classList.add("is-done");
             window.setTimeout(() => { btn.textContent = label; btn.classList.remove("is-done"); }, 1400);
         }, reduced ? 0 : 450);

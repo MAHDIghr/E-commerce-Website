@@ -423,3 +423,189 @@ Créer des commits petits et descriptifs. Ne pas pousser de secrets, fichiers de
 ## État du document
 
 Ce README documente le code inspecté dans les branches `main` et `developpement` au moment de sa rédaction. Le code du dépôt reste la source de vérité : si ce document et l'implémentation divergent, inspecter la branche concernée, confirmer les différences et mettre à jour cette documentation.
+
+---
+
+# Backend catalogue — branche `developpement-backend`
+
+Cette section documente la première phase de connexion du catalogue à la base de données. Elle complète le README existant sans remplacer l'historique ni les consignes générales du dépôt.
+
+## 1. Périmètre de cette phase
+
+Le code a été développé dans la branche `developpement-backend`, créée à partir de `developpement`. La branche `developpement` n'est pas modifiée par ce travail.
+
+### Inclus
+- Modèles Django pour les catégories, produits, variantes, médias, contenus de fiche produit, offres groupées et avis.
+- Enregistrement des modèles dans l'administration Django.
+- Chargement serveur des catégories et des nouveautés de la page d'accueil.
+- Alimentation du catalogue par des données issues de la base, transmises au JavaScript avec le filtre Django `json_script`.
+- Chargement de la fiche produit depuis le produit publié demandé par son slug.
+- Tests automatisés de base sur les modèles et les vues publiques.
+- Migration initiale `product/migrations/0001_initial.py`.
+
+### Explicitement non inclus
+- La section **« Notre sélection signature »** de l'accueil : elle a été laissée telle quelle et reste statique dans cette phase.
+- La section de produits associés « Vous aimerez aussi » de la fiche produit : elle reste hors périmètre ; aucune liste de produits fictifs n'est injectée.
+- Les commandes, le panier serveur, le paiement, les promotions globales, les frais de livraison réels et la réservation de stock au moment de la commande.
+- L'envoi de fichiers médias vers le serveur : les modèles stockent actuellement des URL HTTPS. Les fichiers doivent être hébergés sur un CDN ou un stockage adapté.
+- Des données commerciales de démonstration : aucune fiche produit ou catégorie réelle n'est créée automatiquement.
+
+## 2. Modèle de données
+
+Les modèles sont définis dans `product/models.py`.
+
+| Modèle | Rôle |
+|---|---|
+| `Category` | Catégorie visible ou masquée, slug, description, image et ordre d'affichage. |
+| `Product` | Identité, descriptions, catégorie, dimensions, matière, indicateurs éditoriaux, publication et SEO. |
+| `ProductVariant` | SKU, couleur, prix, prix de référence éventuel, stock et activation. |
+| `ProductMedia` | Image ou vidéo commune au produit ou rattachée à une variante, texte alternatif, vignette et ordre. |
+| `ProductReason` | Arguments de vente de la fiche produit. |
+| `ProductContentItem` | Éléments qui peuvent ou non rentrer dans le sac. |
+| `ProductCraftDetail` | Détails de fabrication avec description et image facultative. |
+| `ProductUsage` | Situations d'utilisation avec image et texte alternatif. |
+| `ProductFAQ` | Questions fréquentes et réponses. |
+| `Review` | Avis avec note de 1 à 5, modération et adresse e-mail privée facultative. |
+| `ProductOffer` | Offre groupée affichée sur la fiche principale et son prix final configuré. |
+| `ProductOfferItem` | Produit, variante fixe ou variante choisie sur la fiche, et quantité dans l'offre. |
+
+### Prix et stock
+
+- Le prix et le stock appartiennent à `ProductVariant`, pas à `Product`.
+- Chaque SKU doit être unique.
+- Le prix est un `DecimalField`, pas un flottant.
+- Le prix de référence est facultatif et, s'il est renseigné, doit être supérieur au prix de vente.
+- Les variantes avec stock nul ne doivent pas être considérées comme disponibles pour une future commande. La validation finale du stock devra être réalisée côté serveur lors de l'implémentation des commandes.
+- Les contraintes de base de données protègent les quantités et les montants non négatifs ainsi que certaines unicités.
+
+### Publication publique
+
+Une fiche n'est visible par les vues publiques que si :
+1. le produit est actif ;
+2. sa catégorie est active ;
+3. sa date de publication est vide ou n'est pas dans le futur ;
+4. il existe au moins une variante active ;
+5. il existe au moins une image commune au produit (média de type `image`, sans variante).
+
+Ce dernier point évite de publier un produit sans image de catalogue. Un produit sans variante active ou sans image commune ne sera pas rendu comme fiche publique, même si son indicateur `is_active` est activé.
+
+### Médias
+
+- Les URL de médias publics doivent utiliser HTTPS.
+- Une image exige un texte alternatif ; une vidéo exige une URL de vignette.
+- Une variante associée à un média doit appartenir au même produit.
+- Les contraintes permettent au plus un média principal commun par produit et un média principal par variante.
+- Les médias sont ordonnés avec le média principal en premier.
+- Cette phase utilise des URL et ne gère pas le téléversement de fichiers. Le stockage et l'analyse de fichiers envoyés par des utilisateurs nécessiteront une conception distincte.
+
+### Offres groupées
+
+Pour chaque ligne de `ProductOfferItem` :
+- le produit principal peut utiliser la variante choisie par le client sur la fiche ; dans ce cas, `use_selected_variant=True` et la variante fixe reste vide ;
+- les produits complémentaires doivent avoir une variante fixe appartenant au produit indiqué ;
+- la quantité doit être au moins égale à 1.
+
+Chaque offre publique doit inclure au moins une ligne utilisant la variante choisie sur la fiche. Les formulaires d'administration valident ces relations, et la vue de fiche filtre également les offres incomplètes, incohérentes ou dont un composant ne dispose pas du stock nécessaire avant de les exposer. Le prix final du lot est celui configuré dans `ProductOffer.price`. La comparaison et le pourcentage d'économie sont calculés à partir des prix de vente actuels des composants, et non de prix barrés qui pourraient déjà intégrer une remise. La référence tient compte de la variante sélectionnée lorsque le lot contient le produit principal.
+
+Le champ `display_delivery_label` est uniquement une mention éditoriale. Il ne calcule ni ne garantit des frais de port.
+
+### Avis
+
+Seuls les avis dont `is_approved=True` alimentent la note, la répartition des étoiles et les commentaires publics. L'adresse e-mail de l'auteur n'est pas transmise au template.
+
+## 3. Administration et ajout des premiers produits
+
+Les modèles sont disponibles dans l'administration Django :
+- catégories et produits ;
+- variantes et médias en ligne sur la fiche produit ;
+- arguments, éléments de capacité, détails de fabrication, usages, FAQ et offres en ligne ;
+- lignes d'offres groupées et avis dans leurs écrans d'administration dédiés.
+
+Pour préparer une fiche :
+1. Créer et activer une catégorie.
+2. Créer le produit avec son slug et sa catégorie. Laisser le produit inactif pendant la préparation.
+3. Créer au moins une variante active avec un SKU unique, un prix et un stock.
+4. Ajouter une image commune HTTPS avec un texte alternatif. Définir le média principal si nécessaire.
+5. Compléter les contenus de la fiche et, si besoin, les offres et leurs lignes.
+6. Renseigner le titre et la description SEO, puis activer le produit et définir sa date de publication si nécessaire.
+7. Vérifier la fiche, le catalogue et la page d'accueil avant de préparer toute mise en production.
+
+Un produit est une nouveauté de la page d'accueil uniquement si `is_new=True`. La section « Nos nouveautés » affiche au maximum quatre produits publiables portant cet indicateur. Les catégories de l'accueil et les catégories de filtres du catalogue proviennent des catégories actives.
+
+## 4. Transmission des données au frontend
+
+### Page d'accueil
+
+`home/views.py` transmet :
+- les catégories actives, triées par position puis nom ;
+- les produits publiables avec `is_new=True`, limités aux quatre plus récents, avec variantes actives et médias communs préchargés.
+
+Les boucles Django utilisent les valeurs du modèle : titre, catégorie, prix, prix de référence, stock et image. Les cartes ne sont plus alimentées par les anciennes valeurs de démonstration de la section « Nouveautés ».
+
+La section « Notre sélection signature » n'a pas été reliée à ces données et n'a pas été modifiée.
+
+### Catalogue
+
+`shop/views.py` charge les produits publiables, leur catégorie, leurs variantes actives, leurs médias et leurs avis approuvés. Les catégories et les métadonnées de couleurs sont aussi chargées depuis la base.
+
+Le contexte `catalog_data` est transmis dans `shop/templates/catalog.html` via `json_script`. `shop/static/js/shop.js` lit cet objet au lieu de contenir sa propre liste de produits fictifs. Le JavaScript conserve les filtres, le tri, la pagination d'affichage, les favoris et les interactions visuelles déjà présents. Les filtres par catégorie utilisent désormais les slugs réellement configurés dans l'administration.
+
+### Fiche produit
+
+`product/views.py` retrouve le produit par son slug et charge les variantes, les médias, les arguments, les éléments de capacité, les dimensions, les détails de fabrication, les usages, les FAQ, les offres et les avis approuvés. Un produit inactif, non encore publiable ou introuvable renvoie une réponse 404.
+
+Le template existant `product/templates/product.html` a été conservé comme structure de présentation. Les données fictives de `product/views.py` ont été remplacées par les données de la base. Les prix des variantes sont synchronisés avec le choix de couleur et la galerie filtre les médias selon la variante sélectionnée ; les prix des offres restent ceux configurés sur les offres. Les éléments sans données ne sont pas inventés.
+
+Les données structurées de la fiche sont insérées avec `json_script`, puis lues par `product/static/js/product.js`. Les templates Django conservent leur échappement automatique.
+
+## 5. Sécurité et limites actuelles
+
+Mesures mises en place dans cette phase :
+- accès public limité aux produits publiables ;
+- ORM Django et filtres côté serveur ;
+- modèles et contraintes de base de données pour les identifiants, montants, stocks et relations pertinentes ;
+- validation des variantes et médias dans les formulaires d'administration ;
+- contrôle défensif des lignes d'offre avant leur affichage ;
+- URL HTTPS pour les médias publics ;
+- avis en attente exclus des données publiques ;
+- transfert de données vers JavaScript avec `json_script`, sans construire un bloc JavaScript à partir de chaînes interpolées dans le HTML.
+
+**Limite importante :** le panier reste celui du prototype frontend et utilise toujours le stockage local du navigateur. Le prix affiché ou conservé par le navigateur n'est pas une preuve de prix ni de stock. Lors de la prochaine phase panier/commande, le serveur devra recalculer les montants depuis les variantes en base, revalider les quantités et les offres, vérifier le stock et traiter les mises à jour de stock de manière atomique. Aucun paiement ni commande réelle n'est implémenté ici.
+
+## 6. Migration, contrôles et tests
+
+Après avoir récupéré la branche, installer les dépendances :
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Les paramètres de développement utilisent `DJANGO_SECRET_KEY`. Définir cette variable dans l'environnement local ou dans le fichier `.env` non versionné, puis exécuter :
+
+```bash
+python manage.py check --settings=config.settings.development
+python manage.py makemigrations --check --dry-run --settings=config.settings.development
+python manage.py migrate --settings=config.settings.development
+python manage.py test product --settings=config.settings.development
+```
+
+Pour administrer le catalogue localement :
+
+```bash
+python manage.py createsuperuser --settings=config.settings.development
+python manage.py runserver --settings=config.settings.development
+```
+
+Ces commandes doivent être exécutées dans l'environnement local du projet. La migration initiale a été ajoutée au dépôt, mais elle n'a pas été appliquée à une base de production dans le cadre de cette modification. Les tests ont été ajoutés au dépôt ; ils doivent être exécutés dans un environnement disposant des dépendances du projet avant de considérer la phase comme validée.
+
+## 7. Fichiers principaux de cette phase
+
+- `product/models.py` — modèles et règles de validation.
+- `product/admin.py` — administration du catalogue.
+- `product/migrations/0001_initial.py` — schéma initial de la base.
+- `product/selectors.py` — règles partagées de publication et sérialisation des cartes catalogue.\n- `product/views.py` — données de fiche et exposition des données publiées.
+- `product/tests.py` — tests de modèle et de vues.
+- `home/views.py` et `home/templates/home.html` — catégories et nouveautés dynamiques, sans changement de la sélection signature.
+- `shop/views.py`, `shop/templates/catalog.html` et `shop/static/js/shop.js` — catalogue dynamique et filtres fondés sur les catégories configurées.
+- `product/templates/product.html` et `product/static/js/product.js` — liaison de la fiche produit aux variantes et offres réelles.
+- `requirements.txt` — déclaration de `python-dotenv`, déjà importé par les paramètres de développement.

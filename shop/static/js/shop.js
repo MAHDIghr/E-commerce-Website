@@ -3,8 +3,7 @@
 /* ==========================================================================
    Catalogue — dépend de base.js (readStorage, writeStorage, formatPrice,
    addToCart, getCart, openCart, playAddedFeedback).
-   Les produits ci-dessous sont des EXEMPLES : ils seront remplacés par des
-   données Django (modèle Product) dans la phase back-end.
+   Les produits, catégories, variantes et couleurs sont chargés depuis Django.
    ========================================================================== */
 
 (function initCatalog() {
@@ -15,25 +14,14 @@
     /* URL de base de la page produit (fournie par Django via data-product-url) */
     const PRODUCT_URL = grid.dataset.productUrl || "#";
 
-    /* ---------- Données d'exemple (images Unsplash temporaires) ---------- */
-    const IMG = (id) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=700&q=80`;
-
-    const PRODUCTS = [
-        { id: "sac-cuir-camel",       name: "Sac cabas cuir camel",          cat: "handbags",    price: 129.90, old: null,  colors: ["camel"],           rating: 4.8, reviews: 126, stock: 3,  isNew: true,  pop: 90, img: IMG("1590874103328-eac38a683ce7") },
-        { id: "sac-bandouliere-noir", name: "Sac bandoulière noir matelassé", cat: "shoulder",    price: 89.90,  old: null,  colors: ["noir"],            rating: 4.9, reviews: 214, stock: 24, isNew: false, pop: 100, best: true, img: IMG("1548863227-3af567fc3b27") },
-        { id: "portefeuille-beige",   name: "Portefeuille compact beige",     cat: "wallets",     price: 45.00,  old: 55.00, colors: ["beige"],           rating: 4.7, reviews: 88,  stock: 5,  isNew: false, pop: 70, img: IMG("1591344395067-98c9a56b1a1a") },
-        { id: "foulard-soie",         name: "Foulard imprimé en soie",        cat: "accessories", price: 39.90,  old: null,  colors: ["beige", "rouge"],  rating: 4.6, reviews: 57,  stock: 30, isNew: true,  pop: 60, img: IMG("1601924994987-69e26d50dc26") },
-        { id: "sac-main-creme",       name: "Sac à main structuré crème",     cat: "handbags",    price: 149.00, old: null,  colors: ["creme"],           rating: 4.8, reviews: 63,  stock: 12, isNew: false, pop: 65, img: IMG("1548036328-c9fa89d128fa") },
-        { id: "mini-bandouliere-rouge", name: "Mini sac bandoulière rouge",   cat: "shoulder",    price: 74.90,  old: 94.90, colors: ["rouge", "noir"],   rating: 4.7, reviews: 102, stock: 18, isNew: false, pop: 80, img: IMG("1591561954557-26941169b49e") },
-        { id: "portefeuille-noir",    name: "Portefeuille zippé noir",        cat: "wallets",     price: 49.00,  old: null,  colors: ["noir"],            rating: 4.9, reviews: 141, stock: 40, isNew: false, pop: 95, best: true, img: IMG("1553062407-98eeb64c6a62") },
-        { id: "tote-toile",           name: "Tote bag toile et cuir",         cat: "handbags",    price: 59.90,  old: null,  colors: ["beige", "vert"],   rating: 4.5, reviews: 39,  stock: 22, isNew: true,  pop: 50, img: IMG("1584917865442-de89df76afd3") },
-        { id: "ceinture-cuir",        name: "Ceinture cuir camel",            cat: "accessories", price: 34.90,  old: null,  colors: ["camel", "noir"],   rating: 4.6, reviews: 71,  stock: 35, isNew: false, pop: 55, img: IMG("1594223274512-ad4803739b7c") },
-        { id: "pochette-soiree",      name: "Pochette de soirée verte",       cat: "shoulder",    price: 64.00,  old: 79.00, colors: ["vert"],            rating: 4.4, reviews: 28,  stock: 9,  isNew: false, pop: 40, img: IMG("1607344645866-009c320c5ab8") },
-        { id: "porte-cartes-noir",    name: "Porte-cartes cuir noir",         cat: "wallets",     price: 24.90,  old: null,  colors: ["noir", "camel"],   rating: 4.8, reviews: 190, stock: 60, isNew: false, pop: 92, best: true, img: IMG("1591344395067-98c9a56b1a1a") },
-        { id: "bandouliere-camel",    name: "Sac bandoulière camel",          cat: "shoulder",    price: 99.00,  old: null,  colors: ["camel"],           rating: 4.7, reviews: 77,  stock: 4,  isNew: true,  pop: 75, img: IMG("1548863227-3af567fc3b27") },
-    ];
-
-    const COLORS = { camel: "#b07a4a", noir: "#1c1613", beige: "#d8c3a5", creme: "#f3ead8", rouge: "#a3372f", vert: "#3f5d4b" };
+    /* Données rendues par Django via json_script. */
+    const catalogDataNode = document.getElementById("catalog-data");
+    const catalogData = catalogDataNode ? JSON.parse(catalogDataNode.textContent) : { products: [], categories: [], colors: {} };
+    const PRODUCTS = Array.isArray(catalogData.products) ? catalogData.products : [];
+    const CATEGORIES = Array.isArray(catalogData.categories) ? catalogData.categories : [];
+    const COLORS = Object.fromEntries(Object.entries(catalogData.colors || {}).map(([slug, details]) => [slug, details.hex]));
+    const COLOR_NAMES = Object.fromEntries(Object.entries(catalogData.colors || {}).map(([slug, details]) => [slug, details.name || slug]));
+    const categoryLabel = (slug) => CATEGORIES.find((category) => category.slug === slug)?.name || t()["cat_" + slug] || slug;
     const PAGE_SIZE = 8;
     const LOW_STOCK = 5;
     const WISH_KEY = "wishlist_v1";
@@ -44,7 +32,7 @@
             bc_home: "Accueil", bc_shop: "Boutique", title: "Notre boutique",
             subtitle: "Sacs et accessoires en cuir, choisis pour durer. Livraison offerte dès 80 €, retours gratuits sous 30 jours.",
             filters: "Filtres", f_category: "Catégorie", f_price: "Prix (€)", f_color: "Couleur", f_more: "Autres",
-            f_sale: "En promotion", f_lowstock: "Derniers exemplaires", reset: "Réinitialiser", show: "Voir",
+            f_sale: "En promotion", f_lowstock: "Derniers exemplaires", unavailable: "Indisponible", reset: "Réinitialiser", show: "Voir",
             sort_label: "Trier par", empty_title: "Aucun produit ne correspond",
             empty_text: "Essayez d'élargir vos critères ou de retirer un filtre.", load_more: "Voir plus de produits",
             cat_handbags: "Sacs à main", cat_shoulder: "Sacs bandoulière", cat_wallets: "Portefeuilles", cat_accessories: "Accessoires",
@@ -63,7 +51,7 @@
             bc_home: "Home", bc_shop: "Shop", title: "Our shop",
             subtitle: "Leather bags and accessories, chosen to last. Free shipping over €80, free returns within 30 days.",
             filters: "Filters", f_category: "Category", f_price: "Price (€)", f_color: "Colour", f_more: "More",
-            f_sale: "On sale", f_lowstock: "Last few left", reset: "Reset", show: "Show",
+            f_sale: "On sale", f_lowstock: "Last few left", unavailable: "Unavailable", reset: "Reset", show: "Show",
             sort_label: "Sort by", empty_title: "No products match",
             empty_text: "Try widening your criteria or removing a filter.", load_more: "Show more products",
             cat_handbags: "Handbags", cat_shoulder: "Shoulder bags", cat_wallets: "Wallets", cat_accessories: "Accessories",
@@ -83,7 +71,7 @@
     const t = () => T[lang];
 
     /* ---------- État (synchronisé avec l'URL pour un partage facile) ---------- */
-    const CATS = ["handbags", "shoulder", "wallets", "accessories"];
+    const CATS = CATEGORIES.map((category) => category.slug);
     const SORTS = ["pop", "new", "best", "asc", "desc"];
 
     const state = { cats: new Set(), colors: new Set(), min: null, max: null, sale: false, low: false, sort: "pop", page: 1 };
@@ -120,7 +108,7 @@
         if (state.min !== null && product.price < state.min) return false;
         if (state.max !== null && product.price > state.max) return false;
         if (state.sale && !product.old) return false;
-        if (state.low && product.stock > LOW_STOCK) return false;
+        if (state.low && (product.stock <= 0 || product.stock > LOW_STOCK)) return false;
         return true;
     }
 
@@ -184,7 +172,7 @@
         if (p.old) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
         else if (p.isNew) tags.appendChild(el("span", "tag", t().newTag));
         if (p.best) tags.appendChild(el("span", "tag tag--best", t().bestTag));
-        if (p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", t().left(p.stock)));
+        if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", t().left(p.stock)));
         media.appendChild(tags);
 
         const wish = el("button", "pcard__wish");
@@ -201,10 +189,11 @@
 
         const add = el("button", "pcard__add");
         add.type = "button";
-        add.setAttribute("aria-label", t().add(p.name));
+        add.disabled = p.stock <= 0;
+        add.setAttribute("aria-label", p.stock <= 0 ? t().unavailable : t().add(p.name));
         add.appendChild(svgIcon([PLUS]));
         add.addEventListener("click", () => {
-            addToCart({ id: p.id, name: p.name, price: p.price, image: p.img });
+            addToCart({ id: `${p.id}:default:${p.variantId}`, name: p.variantName ? `${p.name} — ${p.variantName}` : p.name, price: p.price, image: p.img });
             add.classList.add("is-added");
             add.replaceChildren(svgIcon([CHECK]));
             window.setTimeout(() => {
@@ -311,7 +300,7 @@
             list.appendChild(li);
         };
         make(t().all, null);
-        CATS.forEach((c) => make(t()[`cat_${c}`], c));
+        CATEGORIES.forEach((category) => make(category.name, category.slug));
     }
 
     function chip(label, onRemove) {
@@ -328,7 +317,7 @@
     function renderChips() {
         const box = $("active-chips");
         box.replaceChildren();
-        state.cats.forEach((c) => box.appendChild(chip(t()[`cat_${c}`], () => state.cats.delete(c))));
+        state.cats.forEach((c) => box.appendChild(chip(categoryLabel(c), () => state.cats.delete(c))));
         state.colors.forEach((c) => box.appendChild(chip(c, () => state.colors.delete(c))));
         if (state.min !== null || state.max !== null) {
             const label = `${state.min ?? 0} – ${state.max ?? "∞"} €`;
@@ -352,7 +341,7 @@
             const label = el("label", "swatch-opt");
             const input = document.createElement("input");
             input.type = "checkbox"; input.value = name; input.name = "color";
-            input.setAttribute("aria-label", name);
+            input.setAttribute("aria-label", COLOR_NAMES[name] || name);
             const dot = el("span");
             dot.style.backgroundColor = COLORS[name];
             label.append(input, dot);
