@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
                     models.UniqueConstraint(condition=~models.Q(("color_slug", "")), fields=("product", "color_slug"), name="unique_product_color_slug"),
                     models.CheckConstraint(condition=models.Q(("stock_quantity__gte", 0)), name="variant_stock_nonnegative"),
                     models.CheckConstraint(condition=models.Q(("price__gte", 0)), name="variant_price_nonnegative"),
-                    models.CheckConstraint(condition=models.Q(("compare_at_price__isnull", True)) | models.Q(("compare_at_price__gt", models.F("price"))), name="variant_reference_price_gt_sale"),
+                    models.CheckConstraint(condition=models.Q(("compare_at_price__isnull", True)) | models.Q(("compare_at_price__gt", models.F("price"))), name="variant_ref_price_gt_sale"),
                 ],
                 "indexes": [models.Index(fields=["product", "is_active", "position"], name="variant_product_active_pos_idx")],
             },
@@ -110,7 +110,7 @@ class Migration(migrations.Migration):
                 "ordering": ("-is_primary", "position", "pk"),
                 "indexes": [models.Index(fields=["product", "variant", "position"], name="media_product_variant_pos_idx")],
                 "constraints": [
-                    models.UniqueConstraint(condition=models.Q(("is_primary", True), ("variant__isnull", True)), fields=("product",), name="one_primary_common_media_per_product"),
+                    models.UniqueConstraint(condition=models.Q(("is_primary", True), ("variant__isnull", True)), fields=("product",), name="one_primary_common_media"),
                     models.UniqueConstraint(condition=models.Q(("is_primary", True), ("variant__isnull", False)), fields=("variant",), name="one_primary_variant_media"),
                 ],
             },
@@ -190,7 +190,7 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "avis",
                 "ordering": ("-created_at",),
                 "constraints": [models.CheckConstraint(condition=models.Q(("rating__gte", 1), ("rating__lte", 5)), name="review_rating_1_to_5")],
-                "indexes": [models.Index(fields=["product", "is_approved", "-created_at"], name="review_product_approved_date_idx")],
+                "indexes": [models.Index(fields=["product", "is_approved", "-created_at"], name="review_prod_approved_date_idx")],
             },
         ),
         migrations.CreateModel(
