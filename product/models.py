@@ -4,6 +4,7 @@ Les prix et les stocks sont portés par les variantes, jamais par Product.
 Les contenus éditoriaux restent rattachés au produit afin d'être administrables.
 """
 from decimal import Decimal
+import re
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -145,7 +146,7 @@ class ProductVariant(models.Model):
         super().clean()
         if self.compare_at_price is not None and self.price is not None and self.compare_at_price <= self.price:
             raise ValidationError({"compare_at_price": "Le prix de référence doit être supérieur au prix de vente."})
-        if self.color_code and not (len(self.color_code) == 7 and self.color_code.startswith("#")):
+        if self.color_code and not re.fullmatch(r"#[0-9a-fA-F]{6}", self.color_code):
             raise ValidationError({"color_code": "Utilisez un code hexadécimal au format #RRGGBB."})
 
     def __str__(self):
