@@ -203,6 +203,8 @@ class ProductMedia(models.Model):
             raise ValidationError({"variant": "La variante doit appartenir au produit sélectionné."})
         if self.media_type == self.IMAGE and not (self.image or self.source_url):
             raise ValidationError({"image": "Téléversez une image ou renseignez une URL externe."})
+        if self.media_type == self.VIDEO and not self.source_url:
+            raise ValidationError({"source_url": "Une vidéo doit avoir une URL externe."})
         if self.media_type == self.IMAGE and not self.alt_text.strip():
             raise ValidationError({"alt_text": "Un texte alternatif est requis pour une image."})
         if self.media_type == self.VIDEO and not self.poster_url:
