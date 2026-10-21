@@ -165,3 +165,10 @@ body.page-product .site-footer{padding-bottom:4.5rem}
 }
 @media(max-width:359px){.price strong{font-size:1.9rem}.offer__card{padding:.8rem;gap:.6rem}.trust{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.p-js .p-rv{opacity:1;transform:none;transition:none}.sbar{transition:none}}
+
+/* Masquage fiable des médias qui ne correspondent pas à la variante sélectionnée. */
+.gal__slide[hidden],
+.gal__thumbs li[hidden],
+.gal__thumb[hidden] {
+    display: none !important;
+}
