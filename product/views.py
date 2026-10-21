@@ -137,6 +137,7 @@ def detail(request, slug):
             "ship": offer_obj.display_delivery_label,
             "badge": offer_obj.badge,
             "featured": offer_obj.is_featured,
+            "includes_selected_variant": any(item.use_selected_variant for item in offer_items),
         })
 
     if not offers:
@@ -171,6 +172,7 @@ def detail(request, slug):
         "slug": product.slug,
         "name": product.name,
         "brand_line": product.brand_line,
+        "default_variant_price": str(default_variant.price),
         "usage_section_title": product.usage_section_title,
         "tagline": product.tagline or product.short_description,
         "seo_title": product.seo_title,
