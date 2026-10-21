@@ -162,7 +162,7 @@ def detail(request, slug):
         "fits": [(item.name, item.fits) for item in product.content_items.all()],
         "dims": dims,
         "craft": [{"t": item.title, "d": item.description, "img": item.image_url, "alt": item.alt_text} for item in product.craft_details.all()],
-        "lifestyle": [(item.title, item.image_url) for item in product.usages.all()],
+        "lifestyle": [{"title": item.title, "img": item.image_url, "alt": item.alt_text} for item in product.usages.all()],
         "dist": distribution,
         "reviews": [{"who": item.author_name, "stars": item.rating, "stars_display": "★" * item.rating + "☆" * (5 - item.rating), "t": item.comment} for item in reviews],
         "faq": [(item.question, item.answer) for item in product.faqs.all()],
