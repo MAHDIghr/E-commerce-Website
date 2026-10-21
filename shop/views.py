@@ -1,10 +1,31 @@
+"""Vue du catalogue alimentée par les données métier publiées."""
+from django.db.models import Prefetch
 from django.shortcuts import render
+
+from product.models import Category, ProductMedia, ProductVariant
+from product.views import product_card_data, published_products
 
 
 def catalog(request):
-    """Display the product catalog (front-end only for now).
+    categories = list(Category.objects.filter(is_active=True).order_by("position", "name"))
+    products = published_products().select_related("category").prefetch_related(
+        Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
+        Prefetch("media_items", queryset=ProductMedia.objects.order_by("position", "pk")),
+        "reviews",
+    ).order_by("-published_at", "-created_at", "name")
 
-    Products are rendered client-side from static/js/shop.js.
-    They will be provided by a Product model in the back-end phase.
-    """
-    return render(request, "catalog.html")
+    color_map = {}
+    for product in products:
+        for variant in product.variants.all():
+            if variant.is_active and variant.color_slug and variant.color_code:
+                color_map.setdefault(variant.color_slug, variant.color_code)
+
+    catalog_data = {
+        "products": product_card_data(products),
+        "categories": [{"slug": category.slug, "name": category.name} for category in categories],
+        "colors": color_map,
+    }
+    return render(request, "catalog.html", {
+        "categories": categories,
+        "catalog_data": catalog_data,
+    })
