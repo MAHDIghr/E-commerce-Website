@@ -137,8 +137,7 @@ class UploadedMediaTests(TestCase):
     def png_upload(name="test.png"):
         # Valid 1x1 PNG used only by the upload-path test.
         data = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/"
-            "lZ8AAAAASUVORK5CYII="
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
         )
         return SimpleUploadedFile(name, data, content_type="image/png")
 
