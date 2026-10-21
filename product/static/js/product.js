@@ -78,14 +78,19 @@
     const colorIn = () => $("input[name=color]:checked");
     const sync = () => {
         const o = offerIn().dataset;
-        $("#price-now").textContent = o.label;
-        $("#price-old").lastChild.textContent = o.old;
-        $("#price-off").textContent = Number(o.off) > 0 ? `-${o.off} %` : "";
-        $("#price-off").hidden = Number(o.off) <= 0;
-        $("#price-old").hidden = !o.old;
-        $("#sbar-price").textContent = o.label;
+        const color = colorIn().dataset;
+        const usesVariantPrice = o.usesVariantPrice === "true";
+        const priceLabel = usesVariantPrice ? color.priceLabel : o.label;
+        const oldLabel = usesVariantPrice ? color.oldLabel : o.old;
+        const discount = usesVariantPrice ? color.off : o.off;
+        $("#price-now").textContent = priceLabel;
+        $("#price-old").lastChild.textContent = oldLabel;
+        $("#price-old").hidden = !oldLabel;
+        $("#price-off").textContent = Number(discount) > 0 ? `-${discount} %` : "";
+        $("#price-off").hidden = Number(discount) <= 0;
+        $("#sbar-price").textContent = priceLabel;
         $("#sbar-offer").textContent = o.name;
-        $("#color-label").textContent = colorIn().dataset.label;
+        $("#color-label").textContent = color.label;
     };
     $$("input[name=offer], input[name=color]").forEach((i) => i.addEventListener("change", sync));
 
@@ -94,7 +99,8 @@
         const o = offerIn().dataset, label = btn.textContent;
         btn.disabled = true; btn.textContent = "Ajout…";
         window.setTimeout(() => {
-            addToCart({ id: `${data.slug}:${offerIn().value}:${colorIn().value}`, name: `${data.name} — ${o.name} (${colorIn().dataset.label})`, price: parseFloat(o.price), image: media[0].src });
+            const selectedPrice = o.usesVariantPrice === "true" ? parseFloat(colorIn().dataset.price) : parseFloat(o.price);
+            addToCart({ id: `${data.slug}:${offerIn().value}:${colorIn().value}`, name: `${data.name} — ${o.name} (${colorIn().dataset.label})`, price: selectedPrice, image: media[0].src });
             btn.disabled = false; btn.textContent = "Ajouté ✓"; btn.classList.add("is-done");
             window.setTimeout(() => { btn.textContent = label; btn.classList.remove("is-done"); }, 1400);
         }, reduced ? 0 : 450);
