@@ -1,635 +1,753 @@
-# E-commerce Website — My Line Collection
+# My Line Collection — Site e-commerce Django
 
-> Application e-commerce Django orientée mode, sacs à main et accessoires, avec une interface éditoriale premium, responsive et pensée en priorité pour le mobile.
+> Boutique en ligne de sacs à main et d'accessoires féminins. Cette branche connecte le catalogue à la base de données Django et permet de téléverser les images depuis l'administration. Le checkout, les commandes et les paiements réels restent hors périmètre.
 
-**Dépôt :** [MAHDIghr/E-commerce-Website](https://github.com/MAHDIghr/E-commerce-Website)  
-**Branches de référence :** `main`, `developpement` et `developpement-backend`  
-**Langue actuelle de l'interface :** français  
-**État fonctionnel :** sur `developpement-backend`, les catégories, produits, variantes et contenus de fiche sont chargés depuis les modèles Django. Le panier reste côté navigateur et le checkout/paiement ne sont pas encore des fonctionnalités métier réelles.
+- **Dépôt :** https://github.com/MAHDIghr/E-commerce-Website
+- **Branche documentée :** `developpement-backend`
+- **Langue de l'interface :** français
+- **Framework :** Django `6.1.1` (voir `requirements.txt`)
+- **Base locale par défaut :** SQLite
+- **Fichiers statiques :** CSS, JavaScript et ressources du site
+- **Fichiers médias téléversés :** dossier `media/` en local par défaut ; chemin configurable avec `DJANGO_MEDIA_ROOT`
 
 ---
 
 ## Sommaire
 
-- [1. Objectif du projet](#1-objectif-du-projet)
-- [2. État fonctionnel et limites importantes](#2-état-fonctionnel-et-limites-importantes)
-- [3. Organisation générale](#3-organisation-générale)
-- [4. Parcours et pages](#4-parcours-et-pages)
-- [5. Architecture technique](#5-architecture-technique)
-- [6. Différences entre les branches](#6-différences-entre-les-branches)
-- [7. Installation locale](#7-installation-locale)
-- [8. Commandes de développement](#8-commandes-de-développement)
-- [9. Configuration et déploiement](#9-configuration-et-déploiement)
-- [10. Sécurité, accessibilité et qualité](#10-sécurité-accessibilité-et-qualité)
-- [11. Feuille de route technique](#11-feuille-de-route-technique)
-- [12. Guide de travail pour une IA ou un nouveau contributeur](#12-guide-de-travail-pour-une-ia-ou-un-nouveau-contributeur)
-- [13. Règles de contribution Git](#13-règles-de-contribution-git)
+1. [Objectif et état du projet](#1-objectif-et-état-du-projet)
+2. [Fonctionnalités et limites](#2-fonctionnalités-et-limites)
+3. [Architecture du dépôt](#3-architecture-du-dépôt)
+4. [Routes du site](#4-routes-du-site)
+5. [Architecture Django et données](#5-architecture-django-et-données)
+6. [Modèle de données du catalogue](#6-modèle-de-données-du-catalogue)
+7. [Installation locale](#7-installation-locale)
+8. [Commandes de développement et de test](#8-commandes-de-développement-et-de-test)
+9. [Gérer le catalogue dans Django Admin](#9-gérer-le-catalogue-dans-django-admin)
+10. [Téléverser et stocker les images](#10-téléverser-et-stocker-les-images)
+11. [Configuration des fichiers statiques et médias](#11-configuration-des-fichiers-statiques-et-médias)
+12. [Déploiement en production sur cPanel / o2switch](#12-déploiement-en-production-sur-cpanel--o2switch)
+13. [Sécurité et bonnes pratiques](#13-sécurité-et-bonnes-pratiques)
+14. [État des tests et checklist de recette](#14-état-des-tests-et-checklist-de-recette)
+15. [Périmètre restant et feuille de route](#15-périmètre-restant-et-feuille-de-route)
+16. [Règles de travail et de contribution](#16-règles-de-travail-et-de-contribution)
 
 ---
 
-## 1. Objectif du projet
+## 1. Objectif et état du projet
 
-Le projet est une boutique en ligne de démonstration pour une marque de sacs et d'accessoires féminins. L'objectif est de construire une expérience d'achat moderne et crédible, avec une identité visuelle éditoriale, des médias produits riches, des offres groupées, un panier latéral et un tunnel de commande conçu pour évoluer vers une implémentation métier complète.
+My Line Collection est une boutique en ligne orientée sacs à main et accessoires féminins, avec une interface éditoriale premium et une conception mobile-first. Django rend les pages et expose les données du catalogue aux templates ; CSS et JavaScript gèrent l'affichage et les interactions côté navigateur.
 
-Les priorités de conception sont :
+La branche `developpement-backend` introduit une source de données persistante pour les catégories, produits, variantes, médias, offres et contenus éditoriaux des fiches produits. Elle permet également de téléverser des images depuis Django Admin, au lieu d'imposer la saisie d'une URL pour chaque image.
 
-- **Mobile-first :** navigation, carrousels, offres et actions principales doivent rester utilisables sur de petits écrans.
-- **Présentation produit convaincante :** galerie d'images et de vidéos, variantes de contenu, offres groupées, avis et produits associés.
-- **Parcours d'achat cohérent :** catalogue → fiche produit → panier → checkout.
-- **Interface soignée :** typographies Playfair Display et Inter, composants partagés, hiérarchie visuelle claire et micro-interactions.
-- **Base technique compréhensible :** Django gère le routage et le rendu des templates ; CSS et JavaScript assurent l'essentiel des interactions côté navigateur.
+### Principes de conception
 
-Les libellés commerciaux, prix, notes, avis, réductions, compteurs et articles visibles dans cette version peuvent être des **données fictives de démonstration**. Ils ne doivent pas être présentés comme des données réelles en production.
+- **Mobile-first :** les pages et interactions doivent rester utilisables sur téléphone.
+- **Catalogue administrable :** les données éditoriales du catalogue sont gérées via les modèles Django et Django Admin.
+- **Médias organisés :** les fichiers envoyés par l'administration sont rangés automatiquement dans des sous-dossiers de `MEDIA_ROOT`.
+- **Prix explicites :** les prix et stocks sont portés par les variantes.
+- **Publication contrôlée :** seuls les produits actifs et associés à une catégorie active sont éligibles à l'affichage public, selon les sélecteurs utilisés.
+- **Pas de fausse promesse métier :** une interface de panier ou de checkout ne signifie pas qu'une commande ou un paiement réel est implémenté.
 
-## 2. État fonctionnel et limites importantes
+Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale présents à des fins de démonstration doivent être vérifiés et remplacés par des données réelles avant toute ouverture commerciale.
 
-### Ce qui est en place
+## 2. Fonctionnalités et limites
 
-- Projet Django avec configuration centrale et applications séparées.
-- Templates Django héritant d'un layout partagé.
-- Pages d'accueil, de catalogue, de produit et de checkout.
-- Feuilles de style et scripts JavaScript organisés par fonctionnalité.
-- Panier et éléments de navigation côté client, selon les scripts partagés.
-- Modèles métier et administration du catalogue dans `developpement-backend` : catégories, produits, variantes, médias, offres, contenus de fiche et avis modérés.
-- Page d'accueil : catégories actives et section « Nos nouveautés » chargées depuis la base.
-- Catalogue et fiche produit alimentés par les données Django.
-- Le checkout conserve ses données de démonstration et le panier reste géré côté navigateur.
-- Dans `developpement`, améliorations récentes de la zone communautaire avec stories/reels et une visionneuse média.
+### Fonctionnalités raccordées aux modèles Django
 
-### Ce qui n'est pas encore un véritable système e-commerce
+- Catégories actives chargées depuis la base.
+- Produits, catégories et variantes gérés dans Django Admin.
+- Page d'accueil alimentée par les catégories actives et les nouveautés.
+- Catalogue alimenté par les données du catalogue.
+- Fiche produit résolue par slug.
+- Médias associés à un produit et, si nécessaire, à une variante.
+- Offres groupées et éléments qui composent ces offres.
+- Contenus éditoriaux : arguments, éléments de capacité, détails de fabrication, situations d'usage et FAQ.
+- Avis stockés dans la base ; seuls les avis approuvés sont récupérés par la vue de fiche produit.
+- Téléversement local d'images via `ImageField`, avec une organisation automatique des fichiers.
+- Compatibilité conservée avec certaines URL externes de médias.
+- Migration de base de données ajoutant les champs d'images téléversées.
 
-Dans `developpement-backend`, le catalogue, les catégories et les fiches produit utilisent les modèles Django. Le checkout utilise encore des données fictives ; aucune commande, aucun paiement ni calcul métier de checkout n'est exécuté côté serveur. Le panier est toujours conservé dans le navigateur et ne constitue pas une source fiable pour les prix ou les stocks.
+### Fonctionnalités qui ne doivent pas être considérées comme un système métier terminé
 
-Ne pas supposer que les fonctionnalités visuelles suivantes sont connectées à un service réel sans vérifier le code concerné :
+Dans cette branche, les éléments suivants ne sont pas un système e-commerce complet tant qu'une implémentation serveur dédiée n'a pas été développée et vérifiée :
 
-- comptes clients et authentification de boutique ;
-- persistance serveur du panier ;
-- application effective de codes promotionnels ;
-- calcul serveur des taxes, frais de port et totaux ;
-- création, suivi ou confirmation de commande ;
-- paiement par carte, Stripe, PayPal ou autre prestataire ;
-- envoi réel de newsletter ;
-- vérification réelle des avis clients, preuve sociale ou statistiques commerciales.
+- panier persistant côté serveur ;
+- réservation ou décrémentation transactionnelle du stock ;
+- création et gestion des commandes ;
+- calcul serveur des taxes, frais de livraison, réductions et totaux ;
+- application sécurisée de codes promotionnels ;
+- intégration et confirmation de paiement ;
+- remboursements, annulations et notifications de commande ;
+- authentification et espace client complets ;
+- traitement réel des abonnements newsletter ;
+- collecte et vérification des avis par de vrais clients.
 
-**Règle de sécurité :** aucun montant affiché par le navigateur ne doit être considéré comme fiable. Avant toute mise en production, le serveur devra recalculer les prix et totaux, valider les promotions et les quantités, vérifier les stocks, créer les commandes et confirmer les paiements à partir de notifications vérifiées du prestataire.
+**Règle essentielle :** le navigateur est contrôlé par l'utilisateur. Les prix, quantités, remises et totaux envoyés par JavaScript ne doivent jamais être considérés comme fiables. Lorsqu'un vrai checkout sera développé, le serveur devra recharger les produits et variantes depuis la base, recalculer les montants, vérifier les stocks, créer les commandes et vérifier les notifications du prestataire de paiement.
 
-## 3. Organisation générale
+## 3. Architecture du dépôt
 
-La structure fonctionnelle connue du dépôt est organisée autour de ces éléments :
+L'arborescence ci-dessous présente les principaux éléments utiles pour travailler sur cette branche. Elle n'est pas exhaustive ; le dépôt GitHub reste la référence pour les fichiers effectivement présents.
 
 ```text
 .
 ├── manage.py
 ├── requirements.txt
+├── .gitignore
+├── .env.example                 # si présent dans la branche
 ├── config/
-│   ├── urls.py
-│   └── settings/                 # paramètres Django organisés en package
+│   ├── urls.py                  # routes principales
+│   ├── wsgi.py
+│   ├── asgi.py
+│   └── settings/
+│       ├── base.py              # paramètres partagés, DB, static et media
+│       ├── development.py       # paramètres locaux
+│       └── production.py        # paramètres de production
 ├── home/
 │   ├── views.py
 │   ├── urls.py
-│   ├── templates/
-│   │   └── home.html
+│   ├── templates/home.html
 │   └── static/
-│       ├── css/
-│       │   └── home.css
-│       └── js/
-│           ├── home.js
-│           └── community-media.js  # présent sur developpement
 ├── shop/
 │   ├── views.py
-│   └── urls.py
+│   ├── urls.py
+│   ├── templates/catalog.html
+│   └── static/
 ├── product/
-│   ├── views.py
-│   └── urls.py
+│   ├── models.py                # modèles du catalogue
+│   ├── admin.py                 # formulaires d'administration
+│   ├── selectors.py             # sélection et préparation des produits publiés
+│   ├── views.py                 # fiche produit
+│   ├── urls.py
+│   ├── migrations/
+│   ├── tests.py
+│   ├── templates/product.html
+│   ├── static/
+│   └── ...
 ├── checkout/
 │   ├── views.py
-│   └── urls.py
+│   ├── urls.py
+│   └── ...
 ├── templates/
 │   ├── base.html
-│   └── partials/                # en-tête, pied de page, recherche, panier…
-└── static/                      # ressources partagées (CSS/JS et médias)
+│   └── partials/
+├── static/                      # ressources statiques partagées
+├── staticfiles/                 # destination de collectstatic, générée
+├── media/                       # fichiers téléversés en local, ignorés par Git
+└── db.sqlite3                   # base locale, ignorée par Git
 ```
 
-Cette arborescence est un guide de navigation, pas un inventaire exhaustif de chaque fichier. Consultez la branche cible pour confirmer les chemins exacts et les ressources qui y sont présentes.
-
-### Responsabilités des dossiers
+### Responsabilités principales
 
 | Élément | Responsabilité |
 |---|---|
-| `config/` | Configuration du projet Django et routage global. |
-| `home/` | Page d'accueil, sections éditoriales et fonctionnalités de la page d'accueil. |
-| `shop/` | Vue de catalogue ; les produits sont actuellement préparés côté client à partir de données statiques. |
-| `product/` | Construction des données de démonstration et rendu de la fiche produit. |
-| `checkout/` | Construction des données de démonstration et rendu du formulaire de commande. |
-| `templates/base.html` | Structure HTML partagée : métadonnées, styles communs, barre promotionnelle, en-tête, recherche, panier, contenu, pied de page et scripts communs. |
-| `static/` et `<app>/static/` | Styles, scripts, images et médias utilisés par les templates. |
-| `requirements.txt` | Dépendances Python épinglées. |
+| `config/settings/base.py` | Paramètres communs, SQLite, fichiers statiques et médias. |
+| `config/settings/development.py` | Paramètres locaux, chargement du fichier `.env`, hôtes autorisés. |
+| `config/settings/production.py` | Paramètres de production, secrets requis, HTTPS, cookies sécurisés et SMTP. |
+| `home/` | Page d'accueil et sections éditoriales. |
+| `shop/` | Vue de catalogue et préparation des catégories/produits à afficher. |
+| `product/` | Modèles du catalogue, administration, sélection des produits et fiche produit. |
+| `checkout/` | Interface de checkout de démonstration ; ne pas la confondre avec un système de commande opérationnel. |
+| `templates/` | Layout partagé et composants communs. |
+| `static/` et `<app>/static/` | Ressources statiques versionnées : CSS, JavaScript, icônes et images intégrées au code. |
+| `media/` | Fichiers téléversés par les utilisateurs autorisés ; ils ne sont pas versionnés dans Git. |
+| `staticfiles/` | Fichiers rassemblés par `collectstatic` pour le déploiement. |
 
-## 4. Parcours et pages
+## 4. Routes du site
 
-Les routes sont définies dans `config/urls.py`.
+Les routes principales sont déclarées dans `config/urls.py` et dans les URLconf des applications.
 
-| URL | Application | Fonction |
-|---|---|---|
-| `/` | `home` | Accueil et présentation de la boutique. |
-| `/boutique/` | `shop` | Catalogue. |
-| `/produit/` | `product` | Fiche du produit de démonstration par défaut. |
-| `/produit/<slug>/` | `product` | Fiche produit résolue à partir d'un slug. |
-| `/checkout/` | `checkout` | Formulaire et récapitulatif de commande de démonstration. |
-| `/admin/` | Django Admin | Administration Django standard, sous réserve de la configuration locale. |
+| URL | Fonction |
+|---|---|
+| `/` | Accueil. |
+| `/boutique/` | Catalogue. |
+| `/produit/` | Fiche par défaut, associée au slug `sac-cabas-camel`. |
+| `/produit/<slug>/` | Fiche produit identifiée par son slug. |
+| `/checkout/` | Interface de checkout de démonstration. |
+| `/admin/` | Administration Django. |
+| `/media/...` | URL publique des fichiers médias, sous réserve de la configuration du serveur et du mode d'exécution. |
 
-### Accueil
+Les routes d'images ne sont pas des vues de catalogue : elles servent des fichiers depuis le stockage média. En développement, Django ajoute une route de service des médias lorsque `DEBUG=True`. En production, le serveur web doit servir les fichiers de `MEDIA_ROOT` sous le préfixe `MEDIA_URL`.
 
-La page d'accueil est un template Django qui s'appuie sur des styles et scripts dédiés. Elle contient notamment des sections marketing et éditoriales, des contenus de collection, des éléments promotionnels, une newsletter de présentation et des composants d'engagement. Leur présence visuelle ne garantit pas qu'un service métier soit raccordé.
+## 5. Architecture Django et données
 
-### Catalogue
+### Paramètres Django
 
-La vue `shop.views.catalog` rend `catalog.html`. Les commentaires du code précisent que les produits sont actuellement rendus côté client à partir de `static/js/shop.js`. Une future intégration doit remplacer cette source de démonstration par des données provenant du back-end.
+Les paramètres sont séparés par environnement :
 
-### Fiche produit
+- `config.settings.base` : paramètres partagés, applications installées, middleware, templates, base de données, static et media.
+- `config.settings.development` : charge les variables depuis `.env`, active le mode développement et utilise la console pour les e-mails.
+- `config.settings.production` : exige les variables de configuration de production, désactive le mode debug, configure les cookies sécurisés et le backend SMTP.
 
-La vue `product.views.detail` appelle `build_product()` et transmet un dictionnaire `product` au template `product.html`. Les données incluent notamment :
-
-- nom, slug, accroche et ligne de marque ;
-- médias de type image ou vidéo, vignettes et textes alternatifs ;
-- offres groupées, prix indicatifs, anciens prix, économies affichées et informations de livraison ;
-- éléments de réassurance, avis/FAQ et suggestions de produits associés.
-
-Le code de la vue indique explicitement que les données sont fictives. Le template est conçu pour dépendre de la forme du dictionnaire plutôt que de la façon dont les données sont obtenues. C'est un point d'extension prévu pour brancher ultérieurement des modèles tels que produit, variante, média, offre, avis et produit associé.
-
-### Checkout
-
-La vue `checkout.views.checkout` transmet `build_checkout_data()` au template `checkout.html`. Le dictionnaire contient actuellement des articles, des modes de livraison, une devise/locale, un seuil de livraison offerte et une liste de pays de démonstration. Le champ `isMock` signale cet état fictif.
-
-Le checkout actuel sert à construire et évaluer l'interface. Il ne constitue pas une implémentation de paiement ou de traitement des commandes.
-
-### Stories et reels — branche `developpement`
-
-La branche `developpement` contient `home/static/js/community-media.js`, qui gère les interactions de la zone communautaire, les aperçus différés des reels et l'ouverture d'une visionneuse média. Les stories conservent une vignette statique plutôt que de lancer automatiquement leur vidéo. Une règle CSS masque également l'icône de lecture superposée sur les reels. Cette fonctionnalité n'est pas présente dans `main` à l'état comparé pour la rédaction de ce document.
-
-## 5. Architecture technique
-
-### Back-end
-
-- **Python / Django :** routage, vues et rendu des templates.
-- **Templates Django :** héritage via `base.html`, inclusion de composants partagés, chargement des ressources statiques et transmission de données au navigateur.
-- **Données de démonstration :** construites dans les vues produit et checkout ; le catalogue dépend de données côté client.
-- **Dépendances :** la version de Django déclarée dans `requirements.txt` est `6.1.1`. Le fichier est la référence pour installer les dépendances du dépôt.
-
-### Front-end
-
-- **HTML et templates Django** pour la structure.
-- **CSS** pour les styles globaux et spécifiques aux pages.
-- **JavaScript natif** pour les interactions : navigation, panier côté client, page d'accueil, galerie/achat produit, checkout et, dans `developpement`, médias communautaires.
-- **Google Fonts** : Playfair Display et Inter sont chargées par le template de base.
-- **Images de démonstration** : plusieurs visuels utilisent des URL Unsplash. Une vidéo de démonstration locale est référencée dans les données produit ; vérifiez la présence du fichier média correspondant avant de tester cette partie.
-
-### Routage et noms d'URL
-
-Les applications déclarent des espaces de noms (`app_name`) tels que `home`, `shop`, `product` et `checkout`. Préférez les noms d'URL Django et les balises `{% url %}` aux chemins codés en dur lorsque cela est compatible avec le contexte.
-
-## 6. Différences entre les branches
-
-Les deux branches partagent le socle Django et les pages principales. La comparaison des références au moment de la rédaction montre que `developpement` est en avance sur `main` et contient des changements concentrés sur l'interface d'accueil et la zone communautaire. Le contenu exact peut évoluer : vérifiez toujours les références actuelles avant de modifier le code.
-
-### `main` — branche de référence stable
-
-Utilisez `main` pour comprendre le socle commun et l'état de référence du projet :
-
-- routage Django vers l'accueil, le catalogue, la fiche produit et le checkout ;
-- layout partagé et composants globaux ;
-- interface de la boutique, catalogue, page produit et checkout en mode démonstration ;
-- styles et scripts présents dans cette branche.
-
-Dans l'état comparé, `main` ne contient pas `home/static/js/community-media.js) ; les interactions stories/reels récemment ajoutées à `developpement` ne doivent donc pas être supposées disponibles sur cette branche.
-
-### `developpement` — branche de travail UI/UX
-
-Cette branche part du même socle que `main` et comprend les changements UI/UX plus récents de la page d'accueil :
-
-- ajustements de `home/templates/home.html` ;
-- refonte/ajustements responsive et styles communautaires dans `home/static/css/home.css` ;
-- nouveau script `home/static/js/community-media.js` ;
-- stories et reels avec logique de prévisualisation et visionneuse ;
-- vignette des stories conservée sans lecture automatique ;
-- icône de lecture superposée des reels masquée par CSS.
-
-### Tableau synthétique
-
-| Sujet | `main` | `developpement` |
-|---|---|---|
-| Socle Django et routes principales | Présent | Présent |
-| Accueil, catalogue, produit et checkout | Présents | Présents |
-| Données produit et checkout réelles | Non, démonstration | Non, démonstration |
-| Ajustements récents de la zone communautaire | Non dans la comparaison actuelle | Oui |
-| Script `community-media.js` | Absent dans la comparaison actuelle | Présent |
-| Usage recommandé | Référence stable | Développement et validation UI/UX |
-
-**Ne fusionnez pas automatiquement les branches.** Examinez le diff et testez les pages touchées avant toute intégration. Les différences entre branches doivent être déduites du code et de Git, pas uniquement de ce résumé.
-
-## 7. Installation locale
-
-### Prérequis
-
-- Git ;
-- Python compatible avec la version de Django déclarée dans `requirements.txt` ;
-- pip.
-
-Vérifiez la version Python disponible :
-
-```bash
-python --version
-python -m pip --version
-```
-
-### Cloner le dépôt et choisir une branche
-
-```bash
-git clone https://github.com/MAHDIghr/E-commerce-Website.git
-cd E-commerce-Website
-
-# Branche de référence
-git switch main
-
-# Ou branche de développement
-git switch developpement
-```
-
-### Installer les dépendances
-
-Sous Linux/macOS :
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-Sous Windows PowerShell :
+Il faut toujours préciser le module de paramètres dans les commandes de gestion :
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python manage.py check --settings=config.settings.development
 ```
 
-Le dépôt épingle ses dépendances dans `requirements.txt`. Si l'installation échoue, vérifier d'abord la version de Python prise en charge par la version de Django installée et le contenu actuel du fichier de dépendances ; ne pas remplacer arbitrairement les versions.
+Ne mélange pas les variables locales et les secrets de production. La base configurée dans `base.py` est SQLite par défaut. Vérifie la stratégie de base de données avant de mettre le site en production, particulièrement si plusieurs requêtes concurrentes sont attendues.
 
-### Lancer le serveur de développement
+### Catalogue piloté par la base
 
-```bash
-python manage.py check
-python manage.py runserver
-```
+- `product/selectors.py` fournit le sélecteur commun des produits publiés et prépare les données des cartes.
+- `home/views.py` récupère les catégories actives et les nouveautés depuis les modèles.
+- `shop/views.py` récupère les catégories et les données produit pour le catalogue.
+- `product/views.py` récupère une fiche publiée à partir de son slug, prépare les variantes, les médias, les offres, les contenus et les avis approuvés.
+- Les templates utilisent les données préparées par les vues. Lorsqu'un fichier image est téléversé, l'URL est obtenue depuis le champ Django `ImageField`; l'image n'est pas codée en dur dans le template.
 
-Puis ouvrir [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
+### Publication d'un produit
 
-Le projet configure `manage.py` pour utiliser `config.settings.development` par défaut. Si Django indique que ce module ou une configuration nécessaire est introuvable, inspecter le package `config/settings/` de la branche sélectionnée et suivre sa configuration réelle. Ne pas inventer de variables d'environnement ou de fichiers de configuration absents.
+Le modèle `Product` comprend notamment `is_active`, `is_new`, `is_best_seller` et `published_at`. Le sélecteur public filtre les produits actifs et ceux dont la catégorie est active, avec des variantes actives et des médias image répondant aux conditions du sélecteur. La propriété `is_published` tient compte de `published_at`, mais il faut se référer au sélecteur utilisé par chaque page pour connaître exactement ses conditions d'affichage.
 
-Si une migration est nécessaire, consulter d'abord les applications et migrations existantes. Les fonctionnalités de démonstration décrites dans ce README ne signifient pas qu'un modèle métier ou une migration produit/commande existe déjà.
+Pour qu'un produit soit visible, renseigne correctement sa catégorie, ses variantes et son média principal, puis active sa publication. Un produit incomplet peut être enregistré dans l'administration mais ne pas apparaître dans les listes publiques.
 
-## 8. Commandes de développement
+## 6. Modèle de données du catalogue
 
-```bash
-# Vérifier la configuration Django
-python manage.py check
-
-# Démarrer le serveur local
-python manage.py runserver
-
-# Lister les routes/configurations disponibles selon le projet
-python manage.py help
-```
-
-Aucune suite de tests automatisés complète n'a été confirmée pendant la rédaction de ce document. Avant de déclarer une modification validée, exécuter les contrôles disponibles dans la branche et effectuer des vérifications manuelles des pages concernées. Ajouter des tests Django/JavaScript à mesure que la logique métier est implémentée.
-
-## 9. Configuration et déploiement
-
-Le projet utilise les mécanismes standards de Django et un fichier `requirements.txt`. La configuration réelle de déploiement doit être vérifiée dans `config/settings/` et dans l'environnement cible.
-
-Avant une mise en production :
-
-1. utiliser des paramètres de production distincts de ceux du développement ;
-2. définir une `SECRET_KEY` forte via une variable d'environnement ou un gestionnaire de secrets ;
-3. désactiver `DEBUG` ;
-4. configurer précisément `ALLOWED_HOSTS), HTTPS, cookies sécurisés et protections CSRF ;
-5. configurer la base de données, les migrations, les fichiers statiques et les médias ;
-6. définir une politique de logs, sauvegardes, surveillance et gestion des erreurs ;
-7. ne jamais committer de secrets, tokens, clés de paiement ou données personnelles ;
-8. tester le parcours complet dans un environnement de préproduction avant d'ouvrir la boutique.
-
-Ne pas considérer le serveur `runserver` comme un serveur de production. La configuration d'hébergement ne peut pas être déduite uniquement des vues front-end.
-
-## 10. Sécurité, accessibilité et qualité
-
-### Sécurité
-
-- Conserver l'échappement automatique des templates Django et ne pas injecter de HTML non fiable.
-- Garder la protection CSRF pour les formulaires qui effectuent des actions côté serveur.
-- Valider les données côté serveur dès que les formulaires sont reliés à une logique métier.
-- Calculer les prix, remises, frais et taxes sur le serveur.
-- Ne jamais stocker de données de carte bancaire dans l'application ; déléguer les données sensibles à un prestataire de paiement conforme.
-- Vérifier les signatures des webhooks de paiement avant de marquer une commande comme payée.
-- Ne pas exposer les secrets dans les fichiers statiques ou dans le JavaScript client.
-
-### Accessibilité et UX
-
-- Préserver les libellés accessibles, textes alternatifs, attributs ARIA utiles et états de focus.
-- Garder une navigation utilisable au clavier, y compris dans les modales et visionneuses.
-- Respecter `prefers-reduced-motion` pour les animations lorsque c'est pertinent.
-- Vérifier les contrastes, les tailles tactiles et le comportement responsive sur de vrais formats mobiles.
-- Éviter le lancement automatique de médias qui perturbe la navigation ou consomme inutilement des données.
-- Tester les erreurs, états vides, chargements et interactions, pas seulement le parcours idéal.
-
-## 11. Feuille de route technique
-
-Cette liste décrit les évolutions nécessaires pour passer d'un prototype UI à une boutique opérationnelle ; elle ne signifie pas que ces fonctions sont déjà implémentées.
-
-1. **Modèle de données :** produits, variantes, médias, prix, promotions, inventaire, avis et catégories.
-2. **Catalogue serveur :** remplacer les listes de démonstration par des requêtes Django et une pagination adaptée.
-3. **Panier fiable :** définir la stratégie de persistance et recalculer toutes les valeurs côté serveur.
-4. **Checkout :** validation des coordonnées, adresse, pays, modes de livraison, taxes et totaux côté serveur.
-5. **Commandes :** cycle de vie, identifiants, statuts, confirmations, emails et journal d'audit.
-6. **Paiement :** intégrer un prestataire, gérer l'authentification forte si nécessaire et confirmer le paiement via webhook.
-7. **Comptes et données personnelles :** définir les besoins d'authentification, de conservation, d'accès et de suppression.
-8. **Newsletter et promotions :** relier les formulaires à des services réels avec consentement et validation.
-9. **Qualité :** tests unitaires, tests de vues, tests de parcours et contrôles de régression visuelle.
-10. **Production :** configuration sécurisée, observabilité, sauvegardes, performance et accessibilité.
-
-## 12. Guide de travail pour une IA ou un nouveau contributeur
-
-Cette section est destinée à tout agent de programmation qui reçoit le dépôt comme contexte.
-
-### Avant de modifier le code
-
-1. Identifier la branche réellement checkoutée et examiner `git status`.
-2. Lire ce README, puis ouvrir les fichiers source concernés dans **la branche actuelle**.
-3. Comparer `main` et `developpement` si la demande touche une fonctionnalité présente dans une seule branche.
-4. Lire le template, le CSS et le JavaScript associés ensemble : beaucoup de composants dépendent de classes CSS, d'identifiants HTML et d'attributs `data-*`.
-5. Rechercher les points d'entrée, les inclusions de templates, les noms d'URL et les scripts chargés avant de créer un doublon.
-6. Vérifier si une donnée est réelle, statique, simulée ou fournie par le navigateur.
-
-### Règles de modification
-
-- Faire des changements ciblés et cohérents avec l'architecture existante ; éviter les réécritures globales non demandées.
-- Ne pas supprimer des fonctionnalités existantes simplement pour simplifier une implémentation.
-- Ne pas modifier les contrats entre HTML, CSS et JavaScript sans mettre à jour toutes les parties concernées.
-- Conserver la compatibilité mobile et les comportements clavier/lecteur d'écran.
-- Préserver les noms de routes et les espaces de noms Django sauf nécessité clairement justifiée.
-- Ne pas ajouter de dépendance sans raison technique et sans mettre à jour les fichiers de dépendances.
-- Ne jamais prétendre qu'un paiement, une commande, une newsletter ou une persistance est opérationnel si le code ne le démontre pas.
-- Ne pas inventer de variables d'environnement, de modèles, d'API ou de fichiers qui n'existent pas ; inspecter d'abord le dépôt.
-- Pour les stories/reels, consulter `home/static/js/community-media.js` et les règles de `home/static/css/home.css` sur `developpement` avant de modifier les interactions.
-- Après modification, contrôler le diff, lancer `python manage.py check` si possible, puis tester les pages et tailles d'écran affectées.
-- Dans le compte rendu final, lister les fichiers modifiés, le comportement obtenu, les vérifications effectuées et les limites restantes. Distinguer clairement les tests réellement exécutés des tests seulement recommandés.
-
-### Comment comprendre une fonctionnalité
-
-Pour suivre une page, partir de `config/urls.py`, puis suivre l'URL vers `<app>/urls.py`, la vue Python, le template rendu, les feuilles CSS et les scripts JavaScript associés. Pour les composants globaux, commencer par `templates/base.html`, `static/css/base.css` et `static/js/base.js`.
-
-## 13. Règles de contribution Git
-
-La convention de travail recommandée est :
-
-- `main` : branche de référence stable ;
-- `developpement` : intégration et validation des évolutions en cours.
-
-Avant de commencer :
-
-```bash
-git status
-git branch --show-current
-git log --oneline -8
-```
-
-Pour examiner les différences :
-
-```bash
-git diff main...developpement
-```
-
-Après une modification :
-
-```bash
-python manage.py check
-git diff --check
-git diff
-```
-
-Créer des commits petits et descriptifs. Ne pas pousser de secrets, fichiers de base de données locaux, environnements virtuels ou fichiers générés. Avant de fusionner vers `main`, revoir les différences, tester les pages affectées et confirmer que le comportement de démonstration est bien identifié comme tel.
-
----
-
-## État du document
-
-Ce README documente le code inspecté dans les branches `main` et `developpement` au moment de sa rédaction. Le code du dépôt reste la source de vérité : si ce document et l'implémentation divergent, inspecter la branche concernée, confirmer les différences et mettre à jour cette documentation.
-
----
-
-# Backend catalogue — branche `developpement-backend`
-
-Cette section documente la première phase de connexion du catalogue à la base de données. Elle complète le README existant sans remplacer l'historique ni les consignes générales du dépôt.
-
-## 1. Périmètre de cette phase
-
-Le code a été développé dans la branche `developpement-backend`, créée à partir de `developpement`. La branche `developpement` n'est pas modifiée par ce travail.
-
-### Inclus
-- Modèles Django pour les catégories, produits, variantes, médias, contenus de fiche produit, offres groupées et avis.
-- Enregistrement des modèles dans l'administration Django.
-- Chargement serveur des catégories et des nouveautés de la page d'accueil.
-- Alimentation du catalogue par des données issues de la base, transmises au JavaScript avec le filtre Django `json_script`.
-- Chargement de la fiche produit depuis le produit publié demandé par son slug.
-- Tests automatisés de base sur les modèles et les vues publiques.
-- Migration initiale `product/migrations/0001_initial.py`.
-
-### Explicitement non inclus
-- La section **« Notre sélection signature »** de l'accueil : elle a été laissée telle quelle et reste statique dans cette phase.
-- La section de produits associés « Vous aimerez aussi » de la fiche produit : elle reste hors périmètre ; aucune liste de produits fictifs n'est injectée.
-- Les commandes, le panier serveur, le paiement, les promotions globales, les frais de livraison réels et la réservation de stock au moment de la commande.
-- L'envoi de fichiers médias vers le serveur : les modèles stockent actuellement des URL HTTPS. Les fichiers doivent être hébergés sur un CDN ou un stockage adapté.
-- Des données commerciales de démonstration : aucune fiche produit ou catégorie réelle n'est créée automatiquement.
-
-## 2. Modèle de données
-
-Les modèles sont définis dans `product/models.py`.
+Les modèles sont définis dans `product/models.py`. Les champs exacts du code constituent la référence en cas de divergence avec ce résumé.
 
 | Modèle | Rôle |
 |---|---|
-| `Category` | Catégorie visible ou masquée, slug, description, image et ordre d'affichage. |
-| `Product` | Identité, descriptions, catégorie, dimensions, matière, indicateurs éditoriaux, publication et SEO. |
-| `ProductVariant` | SKU, couleur, prix, prix de référence éventuel, stock et activation. |
-| `ProductMedia` | Image ou vidéo commune au produit ou rattachée à une variante, texte alternatif, vignette et ordre. |
-| `ProductReason` | Arguments de vente de la fiche produit. |
-| `ProductContentItem` | Éléments qui peuvent ou non rentrer dans le sac. |
-| `ProductCraftDetail` | Détails de fabrication avec description et image facultative. |
-| `ProductUsage` | Situations d'utilisation avec image et texte alternatif. |
-| `ProductFAQ` | Questions fréquentes et réponses. |
-| `Review` | Avis avec note de 1 à 5, modération et adresse e-mail privée facultative. |
-| `ProductOffer` | Offre groupée affichée sur la fiche principale et son prix final configuré. |
-| `ProductOfferItem` | Produit, variante fixe ou variante choisie sur la fiche, et quantité dans l'offre. |
+| `Category` | Nom, slug, description, image téléversée ou URL externe, texte alternatif, activation et ordre. |
+| `Product` | Identité, catégorie, descriptions, matière, dimensions, attributs de publication et métadonnées SEO. |
+| `ProductVariant` | SKU unique, couleur, prix de vente, prix de référence facultatif, stock, activation et ordre. |
+| `ProductMedia` | Image ou vidéo associée au produit, éventuellement à une variante, texte alternatif, ordre et média principal. |
+| `ProductReason` | Arguments éditoriaux en faveur du produit. |
+| `ProductContentItem` | Éléments de capacité et indication qu'ils rentrent dans le produit. |
+| `ProductCraftDetail` | Détails de fabrication, description et image. |
+| `ProductUsage` | Situations d'usage illustrées par une image. |
+| `ProductFAQ` | Questions et réponses propres au produit. |
+| `ProductOffer` | Offre commerciale configurée pour le produit. |
+| `ProductOfferItem` | Produit/variante et quantité composant une offre. |
+| `Review` | Avis, note, commentaire et état d'approbation. |
 
-### Prix et stock
+### Prix et variantes
 
-- Le prix et le stock appartiennent à `ProductVariant`, pas à `Product`.
-- Chaque SKU doit être unique.
-- Le prix est un `DecimalField`, pas un flottant.
-- Le prix de référence est facultatif et, s'il est renseigné, doit être supérieur au prix de vente.
-- Les variantes avec stock nul ne doivent pas être considérées comme disponibles pour une future commande. La validation finale du stock devra être réalisée côté serveur lors de l'implémentation des commandes.
-- Les contraintes de base de données protègent les quantités et les montants non négatifs ainsi que certaines unicités.
+- Le prix et le stock sont portés par `ProductVariant`, pas par `Product`.
+- Le SKU doit être unique.
+- Le prix de vente doit être positif ou nul.
+- Si un prix de référence est renseigné, une contrainte exige qu'il soit supérieur au prix de vente.
+- Le stock est un entier positif ou nul.
+- Les variantes ont un ordre d'affichage et peuvent être désactivées.
+- La couleur peut être décrite par un nom, un slug et un code hexadécimal.
 
-### Publication publique
-
-Une fiche n'est visible par les vues publiques que si :
-1. le produit est actif ;
-2. sa catégorie est active ;
-3. sa date de publication est vide ou n'est pas dans le futur ;
-4. il existe au moins une variante active ;
-5. il existe au moins une image commune au produit (média de type `image`, sans variante).
-
-Ce dernier point évite de publier un produit sans image de catalogue. Un produit sans variante active ou sans image commune ne sera pas rendu comme fiche publique, même si son indicateur `is_active` est activé.
+Les contraintes et validations Django sont des protections utiles, mais il faut conserver une validation serveur stricte dans toute future logique de panier et de commande. `Model.clean()` n'est pas automatiquement exécuté par chaque appel à `save()` ; les services métier devront appeler explicitement la validation nécessaire et s'appuyer sur les contraintes de base de données.
 
 ### Médias
 
-- Les URL de médias publics doivent utiliser HTTPS.
-- Une image exige un texte alternatif ; une vidéo exige une URL de vignette.
-- Une variante associée à un média doit appartenir au même produit.
-- Les contraintes permettent au plus un média principal commun par produit et un média principal par variante.
-- Les médias sont ordonnés avec le média principal en premier.
-- Cette phase utilise des URL et ne gère pas le téléversement de fichiers. Le stockage et l'analyse de fichiers envoyés par des utilisateurs nécessiteront une conception distincte.
+- `Category.image` : image téléversée de catégorie.
+- `ProductMedia.image` : image téléversée du produit ou d'une variante.
+- `ProductCraftDetail.image` : image téléversée d'un détail de fabrication.
+- `ProductUsage.image` : image téléversée d'une situation d'usage.
+- Les champs URL associés restent disponibles pour des médias externes. Les URL renseignées dans les modèles concernés sont soumises à une validation HTTPS via `clean()`.
+- Pour les vidéos, `ProductMedia.source_url` représente l'URL du média et `poster_url` l'URL de la vignette.
+- Un texte alternatif descriptif doit être renseigné pour les images du produit.
+- Le champ `upload_to` détermine le sous-dossier et le classement par année/mois. Django crée le chemin nécessaire lors de l'enregistrement.
 
 ### Offres groupées
 
-Pour chaque ligne de `ProductOfferItem` :
-- le produit principal peut utiliser la variante choisie par le client sur la fiche ; dans ce cas, `use_selected_variant=True` et la variante fixe reste vide ;
-- les produits complémentaires doivent avoir une variante fixe appartenant au produit indiqué ;
-- la quantité doit être au moins égale à 1.
+Une offre possède un prix affiché et des éléments associés. Le produit principal peut utiliser la variante choisie sur la fiche ; les autres éléments utilisent une variante fixe. Les validations du modèle contrôlent la cohérence de ces références.
 
-Chaque offre publique doit inclure au moins une ligne utilisant la variante choisie sur la fiche. Les formulaires d'administration valident ces relations, et la vue de fiche filtre également les offres incomplètes, incohérentes ou dont un composant ne dispose pas du stock nécessaire avant de les exposer. Le prix final du lot est celui configuré dans `ProductOffer.price`. La comparaison et le pourcentage d'économie sont calculés à partir des prix de vente actuels des composants, et non de prix barrés qui pourraient déjà intégrer une remise. La référence tient compte de la variante sélectionnée lorsque le lot contient le produit principal.
-
-Le champ `display_delivery_label` est uniquement une mention éditoriale. Il ne calcule ni ne garantit des frais de port.
+Le libellé de livraison d'une offre est éditorial : il ne calcule pas les frais de livraison réels. Le checkout et les paiements ne doivent pas être considérés comme fonctionnels simplement parce que les offres sont configurables.
 
 ### Avis
 
-Seuls les avis dont `is_approved=True` alimentent la note, la répartition des étoiles et les commentaires publics. L'adresse e-mail de l'auteur n'est pas transmise au template.
+Les avis sont conservés avec une note, un commentaire et un indicateur `is_approved`. Ils sont masqués par défaut tant qu'ils ne sont pas approuvés. L'administration dispose d'une action d'approbation. L'e-mail éventuel de l'auteur est une donnée privée et ne doit jamais être affiché publiquement.
 
-## Téléversement des images (développement et production)
+## 7. Installation locale
 
-Les images du catalogue peuvent être téléversées directement depuis Django Admin. Les fichiers sont enregistrés automatiquement sous `MEDIA_ROOT`, avec des sous-dossiers dédiés :
-- catégories : `media/categories/AAAA/MM/` ;
-- images produit et variantes : `media/products/AAAA/MM/` ;
-- détails de fabrication : `media/products/craft/AAAA/MM/` ;
-- images d'usage : `media/products/usage/AAAA/MM/`.
+Les commandes suivantes sont prévues pour Windows PowerShell. Depuis macOS/Linux, adapte l'activation de l'environnement virtuel.
 
-En développement, `MEDIA_ROOT` pointe par défaut vers le dossier `media/` à la racine du projet. Quand `DEBUG=True`, `config/urls.py` expose les fichiers médias via `/media/` pour faciliter les tests locaux.
+### Prérequis
 
-En production, `DEBUG=False` : Django ne sert volontairement pas les fichiers médias lui-même. Le serveur web doit rendre le dossier `MEDIA_ROOT` accessible sous le préfixe `MEDIA_URL=/media/`. Le chemin peut être configuré avec la variable d'environnement `DJANGO_MEDIA_ROOT`. Sur cPanel/o2switch, définis-la vers un dossier réellement servi publiquement par le domaine, ou configure un lien/routage web vers ce dossier. Vérifie les permissions et ne rends jamais accessibles les fichiers privés ou les fichiers de configuration. Ne suppose pas qu'un dossier situé dans la racine Python est automatiquement public. Teste une URL d'image après déploiement.
+- Git.
+- Python compatible avec la version de Django déclarée dans `requirements.txt`. Python 3.12 est un choix pratique si cette version est installée localement.
+- Accès au dépôt GitHub.
 
-Les champs d'URL externe sont conservés comme solution de repli pour les médias déjà hébergés ailleurs. Pour une image locale, utiliser le champ de téléversement plutôt que saisir une URL. Les fichiers du dossier `media/` sont exclus de Git et doivent être sauvegardés séparément de la base de données.
+Vérifie les outils :
 
-Pour activer les téléversements d'images, installer les dépendances puis appliquer les migrations :
-
-```bash
-python -m pip install -r requirements.txt
-python manage.py migrate --settings=config.settings.development
+```powershell
+git --version
+py --version
 ```
 
-## 3. Administration et ajout des premiers produits
+### Cloner le dépôt (première installation)
 
-Les modèles sont disponibles dans l'administration Django :
-- catégories et produits ;
-- variantes et médias en ligne sur la fiche produit ;
-- arguments, éléments de capacité, détails de fabrication, usages, FAQ et offres en ligne ;
-- lignes d'offres groupées et avis dans leurs écrans d'administration dédiés.
-
-Pour préparer une fiche :
-1. Créer et activer une catégorie.
-2. Créer le produit avec son slug et sa catégorie. Laisser le produit inactif pendant la préparation.
-3. Créer au moins une variante active avec un SKU unique, un prix et un stock.
-4. Dans la ligne « Médias », téléverser une image depuis l'ordinateur (le fichier sera stocké dans `media/products/`). Renseigner un texte alternatif et définir le média principal si nécessaire. Les URL externes restent facultatives.
-5. Compléter les contenus de la fiche et, si besoin, les offres et leurs lignes.
-6. Renseigner le titre et la description SEO, puis activer le produit et définir sa date de publication si nécessaire.
-7. Vérifier la fiche, le catalogue et la page d'accueil avant de préparer toute mise en production.
-
-Un produit est une nouveauté de la page d'accueil uniquement si `is_new=True`. La section « Nos nouveautés » affiche au maximum quatre produits publiables portant cet indicateur. Les catégories de l'accueil et les catégories de filtres du catalogue proviennent des catégories actives.
-
-## 4. Transmission des données au frontend
-
-### Page d'accueil
-
-`home/views.py` transmet :
-- les catégories actives, triées par position puis nom ;
-- les produits publiables avec `is_new=True`, limités aux quatre plus récents, avec variantes actives et médias communs préchargés.
-
-Les boucles Django utilisent les valeurs du modèle : titre, catégorie, prix, prix de référence, stock et image. Les cartes ne sont plus alimentées par les anciennes valeurs de démonstration de la section « Nouveautés ».
-
-La section « Notre sélection signature » n'a pas été reliée à ces données et n'a pas été modifiée.
-
-### Catalogue
-
-`shop/views.py` charge les produits publiables, leur catégorie, leurs variantes actives, leurs médias et leurs avis approuvés. Les catégories et les métadonnées de couleurs sont aussi chargées depuis la base.
-
-Le contexte `catalog_data` est transmis dans `shop/templates/catalog.html` via `json_script`. `shop/static/js/shop.js` lit cet objet au lieu de contenir sa propre liste de produits fictifs. Le JavaScript conserve les filtres, le tri, la pagination d'affichage, les favoris et les interactions visuelles déjà présents. Les filtres par catégorie utilisent désormais les slugs réellement configurés dans l'administration.
-
-### Fiche produit
-
-`product/views.py` retrouve le produit par son slug et charge les variantes, les médias, les arguments, les éléments de capacité, les dimensions, les détails de fabrication, les usages, les FAQ, les offres et les avis approuvés. Un produit inactif, non encore publiable ou introuvable renvoie une réponse 404.
-
-Le template existant `product/templates/product.html` a été conservé comme structure de présentation. Les données fictives de `product/views.py` ont été remplacées par les données de la base. Les prix des variantes sont synchronisés avec le choix de couleur et la galerie filtre les médias selon la variante sélectionnée. Le prix final d'une offre reste configuré dans l'offre ; son prix de référence affiché suit la variante choisie et la quantité de produit principal incluse. Les images de la section d'usage utilisent les URL configurées dans les données. Les éléments sans données ne sont pas inventés.
-
-Les données structurées de la fiche sont insérées avec `json_script`, puis lues par `product/static/js/product.js`. Les templates Django conservent leur échappement automatique.
-
-## 5. Sécurité et limites actuelles
-
-Mesures mises en place dans cette phase :
-- accès public limité aux produits publiables ;
-- ORM Django et filtres côté serveur ;
-- modèles et contraintes de base de données pour les identifiants, montants, stocks et relations pertinentes ;
-- validation des variantes et médias dans les formulaires d'administration ;
-- contrôle défensif des lignes d'offre avant leur affichage ;
-- URL HTTPS pour les médias externes ;
-- avis en attente exclus des données publiques ;
-- transfert de données vers JavaScript avec `json_script`, sans construire un bloc JavaScript à partir de chaînes interpolées dans le HTML.
-
-**Limite importante :** le panier reste celui du prototype frontend et utilise toujours le stockage local du navigateur. Le prix affiché ou conservé par le navigateur n'est pas une preuve de prix ni de stock. Lors de la prochaine phase panier/commande, le serveur devra recalculer les montants depuis les variantes en base, revalider les quantités et les offres, vérifier le stock et traiter les mises à jour de stock de manière atomique. Aucun paiement ni commande réelle n'est implémenté ici.
-
-## 6. Migration, contrôles et tests
-
-Après avoir récupéré la branche, installer les dépendances :
-
-```bash
-python -m pip install -r requirements.txt
+```powershell
+git clone https://github.com/MAHDIghr/E-commerce-Website.git
+cd E-commerce-Website
+git fetch origin
+git switch --track -c developpement-backend origin/developpement-backend
 ```
 
-Les paramètres de développement utilisent `DJANGO_SECRET_KEY`. Définir cette variable dans l'environnement local ou dans le fichier `.env` non versionné, puis exécuter :
+Si le dépôt existe déjà sur l'ordinateur, ne le clone pas une seconde fois : ouvre le dossier existant puis récupère la branche :
 
-```bash
+```powershell
+git status
+git fetch origin
+git switch developpement-backend
+git pull origin developpement-backend
+```
+
+Si Git indique que la branche locale n'existe pas, utilise la commande `git switch --track -c developpement-backend origin/developpement-backend`. Si `git status` montre des modifications locales, examine-les avant de changer de branche ; ne les écrase pas avec une commande forcée.
+
+### Créer et activer un environnement virtuel
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Si PowerShell bloque l'activation, l'autorisation temporaire pour le terminal courant peut être utilisée :
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+Installe les dépendances :
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m django --version
+```
+
+La version Django attendue selon le fichier de dépendances est `6.1.1`. Pillow est requis pour traiter les champs d'images.
+
+### Configurer les variables locales
+
+La configuration de développement charge le fichier `.env` à la racine du dépôt et exige `DJANGO_SECRET_KEY`. Génère une clé :
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(50))"
+```
+
+Crée un fichier `.env` à la racine :
+
+```dotenv
+DJANGO_SECRET_KEY=REMPLACER_PAR_LA_CLE_GENEREE
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+```
+
+Remplace la valeur par la clé générée. Ne committe jamais le fichier `.env` ni les secrets. Le fichier `.gitignore` exclut `.env`, la base SQLite, `media/` et `staticfiles/`.
+
+### Vérifier, migrer et lancer
+
+```powershell
 python manage.py check --settings=config.settings.development
 python manage.py makemigrations --check --dry-run --settings=config.settings.development
 python manage.py migrate --settings=config.settings.development
-python manage.py test product --settings=config.settings.development
-```
-
-Pour administrer le catalogue localement :
-
-```bash
 python manage.py createsuperuser --settings=config.settings.development
 python manage.py runserver --settings=config.settings.development
 ```
 
-Ces commandes doivent être exécutées dans l'environnement local du projet. La migration initiale a été ajoutée au dépôt, mais elle n'a pas été appliquée à une base de production dans le cadre de cette modification. Les tests ont été ajoutés au dépôt ; ils doivent être exécutés dans un environnement disposant des dépendances du projet avant de considérer la phase comme validée.
+Ouvre ensuite :
 
-## 7. Fichiers principaux de cette phase
+- Accueil : http://127.0.0.1:8000/
+- Catalogue : http://127.0.0.1:8000/boutique/
+- Fiche par défaut : http://127.0.0.1:8000/produit/
+- Administration : http://127.0.0.1:8000/admin/
 
-- `product/models.py` — modèles, téléversements d'images et règles de validation.
-- `product/admin.py` — administration du catalogue.
-- `product/migrations/0001_initial.py` — schéma initial de la base.
-- `product/selectors.py` — règles partagées de publication et sérialisation des cartes catalogue.
-- `product/views.py` — données de fiche et exposition des données publiées.
-- `product/tests.py` — tests de modèle et de vues.
-- `home/views.py` et `home/templates/home.html` — catégories et nouveautés dynamiques, sans changement de la sélection signature.
-- `shop/views.py`, `shop/templates/catalog.html` et `shop/static/js/shop.js` — catalogue dynamique et filtres fondés sur les catégories configurées.
-- `product/templates/product.html` et `product/static/js/product.js` — liaison de la fiche produit aux variantes et offres réelles.
-- `requirements.txt` — dépendances, dont `python-dotenv` et Pillow pour les téléversements d'images.
+La base de données et les médias locaux sont créés dans l'environnement local. Ne copie pas la base de production sur un environnement de test sans avoir vérifié qu'elle ne contient pas de données sensibles.
+
+## 8. Commandes de développement et de test
+
+Toutes les commandes ci-dessous doivent être lancées depuis le dossier contenant `manage.py`, avec l'environnement virtuel activé et les paramètres adaptés.
+
+### Vérifications Django
+
+```powershell
+python manage.py check --settings=config.settings.development
+python manage.py makemigrations --check --dry-run --settings=config.settings.development
+python manage.py showmigrations --settings=config.settings.development
+```
+
+- `check` repère des problèmes de configuration Django.
+- `makemigrations --check --dry-run` indique si les modèles divergent des migrations existantes sans générer de fichier.
+- `showmigrations` affiche l'état des migrations.
+
+### Base de données
+
+```powershell
+python manage.py migrate --settings=config.settings.development
+```
+
+Ne supprime pas `db.sqlite3` pour résoudre une erreur de migration. Sauvegarde les données locales utiles et examine d'abord le message d'erreur.
+
+### Tests
+
+```powershell
+python manage.py test product --settings=config.settings.development
+python manage.py test --settings=config.settings.development
+```
+
+La suite `product` contient des tests de modèles, de vues et de stockage d'images. Exécute-la avant d'intégrer de nouvelles modifications. La commande globale peut également lancer des tests d'autres applications si elles en possèdent.
+
+**État des tests :** la présence de tests dans le dépôt ne signifie pas qu'ils ont été exécutés avec succès sur chaque commit. En cas d'échec, conserve la sortie complète et corrige la cause avant de considérer le changement validé.
+
+### Fichiers statiques
+
+```powershell
+python manage.py collectstatic --noinput --settings=config.settings.development
+```
+
+Cette commande collecte les fichiers statiques vers `STATIC_ROOT` (par défaut `staticfiles/`). Elle ne collecte pas les médias téléversés dans `media/`.
+
+### Diagnostic de configuration
+
+```powershell
+python manage.py diffsettings --settings=config.settings.development
+```
+
+Ne publie pas la sortie complète si elle contient des valeurs confidentielles.
+
+## 9. Gérer le catalogue dans Django Admin
+
+### Accéder à l'administration
+
+1. Lancer le serveur avec les paramètres de développement.
+2. Ouvrir http://127.0.0.1:8000/admin/.
+3. Se connecter avec un compte créé par `createsuperuser`.
+
+### Ordre conseillé pour créer un produit
+
+1. **Créer une catégorie** et choisir son nom, son slug, son ordre, son état actif et son image si nécessaire.
+2. **Créer un produit** et renseigner sa catégorie, son nom, son slug, ses descriptions, sa matière et ses dimensions facultatives.
+3. **Ajouter au moins une variante active** avec un SKU unique, un prix, un stock et éventuellement une couleur.
+4. **Ajouter un média image** dans la section des médias du produit. Pour un média partagé entre toutes les variantes, laisser la variante vide ; pour une photo propre à une variante, sélectionner celle-ci.
+5. **Choisir le média principal** et renseigner un texte alternatif descriptif.
+6. **Configurer les contenus facultatifs** : arguments, éléments de capacité, détails de fabrication, situations d'usage, FAQ et offres.
+7. **Configurer les champs de publication** : activer le produit, vérifier que sa catégorie est active, choisir `is_new` si le produit doit apparaître parmi les nouveautés et renseigner `published_at` si une date est nécessaire.
+8. **Enregistrer puis tester la page publique** et la présence du produit dans le catalogue.
+
+### Champs à connaître
+
+- `is_active` sur la catégorie : rend la catégorie éligible à l'affichage.
+- `is_active` sur le produit : le produit est éligible à l'affichage public.
+- `is_new` : marque le produit comme nouveauté pour la section concernée.
+- `is_best_seller` : indicateur de meilleure vente.
+- `published_at` : date de publication facultative.
+- `position` : contrôle l'ordre dans les sections qui utilisent cet ordre.
+- `is_primary` sur un média : indique le média principal ; des contraintes limitent le nombre de médias principaux selon le produit/variante.
+
+### Dépannage : le produit n'apparaît pas
+
+Vérifie, dans cet ordre :
+
+- la catégorie existe et est active ;
+- le produit est actif ;
+- le produit a au moins une variante active ;
+- le produit dispose d'un média image compatible avec les critères du sélecteur public ;
+- le média principal et la variante sont correctement associés ;
+- le produit est marqué comme nouveauté si tu le recherches dans cette section ;
+- les migrations ont été appliquées ;
+- les erreurs du terminal et de la console du navigateur.
+
+## 10. Téléverser et stocker les images
+
+### Principe
+
+Les champs `ImageField` enregistrent le chemin du fichier dans la base de données et le fichier lui-même dans le stockage configuré par Django. Le paramètre `upload_to` définit le sous-dossier à utiliser.
+
+Pour les champs locaux, tu n'as pas à copier l'URL de l'image ni à créer manuellement son nom dans le HTML. Dans les templates et vues, Django fournit l'URL à travers `.url`, par exemple `category.image.url` ou `media.image.url`, si un fichier est présent.
+
+### Dossiers de destination
+
+Les dossiers sont relatifs à `MEDIA_ROOT`. Le chemin inclut automatiquement l'année et le mois :
+
+| Type de fichier | Valeur `upload_to` | Exemple de chemin relatif |
+|---|---|---|
+| Image de catégorie | `categories/%Y/%m/` | `categories/2026/10/nom-image.webp` |
+| Image de produit/variante | `products/%Y/%m/` | `products/2026/10/nom-image.webp` |
+| Détail de fabrication | `products/craft/%Y/%m/` | `products/craft/2026/10/nom-image.webp` |
+| Situation d'usage | `products/usage/%Y/%m/` | `products/usage/2026/10/nom-image.webp` |
+
+Ces exemples illustrent la forme du chemin ; l'année et le mois réels sont ceux de la date du téléversement.
+
+### En développement
+
+Par défaut, `MEDIA_ROOT` vaut `BASE_DIR / "media"`, donc le dossier `media/` à la racine du projet. Tu peux personnaliser cet emplacement avec la variable d'environnement `DJANGO_MEDIA_ROOT`.
+
+Exemple PowerShell pour la session courante :
+
+```powershell
+$env:DJANGO_MEDIA_ROOT = "C:\chemin\vers\E-commerce-Website\media"
+python manage.py runserver --settings=config.settings.development
+```
+
+Si la variable n'est pas définie, Django utilise automatiquement le dossier local par défaut. En mode développement, `config/urls.py` expose les médias avec `static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)` lorsque `DEBUG=True`.
+
+**Important :** la route de service des médias ajoutée par Django est prévue pour le développement. Elle ne doit pas être utilisée comme stratégie de diffusion en production.
+
+### Formats et bonnes pratiques de fichiers
+
+- Utilise des noms de fichiers simples, sans informations personnelles.
+- Préfère des images optimisées en WebP ou AVIF lorsque ton flux de travail et les navigateurs cibles le permettent ; garde une qualité suffisante pour la fiche produit.
+- Redimensionne les fichiers à une taille adaptée à leur usage plutôt que d'envoyer des images originales inutilement lourdes.
+- Fournis un texte alternatif descriptif et utile.
+- N'utilise pas le texte alternatif pour empiler des mots-clés SEO.
+- Ne téléverse pas d'archives, de scripts, de fichiers exécutables ou de documents confidentiels dans les champs d'images.
+- Vérifie la taille maximale de requête du serveur et la taille des images avant un téléversement volumineux.
+- Pillow est déclaré dans `requirements.txt` pour la prise en charge des images par Django.
+
+### URL externe ou fichier téléversé ?
+
+Utilise le champ de téléversement lorsque le fichier doit être géré par ton site. Les champs d'URL externe restent disponibles lorsqu'une ressource est réellement hébergée sur un CDN ou une autre origine HTTPS. Une URL externe doit être stable et accessible publiquement si elle est utilisée pour une image affichée sur le site.
+
+Pour une vidéo, le modèle actuel utilise une URL externe pour la source et une URL externe pour sa vignette. Le téléversement de vidéos n'est pas mis en place par ces champs.
+
+### Sauvegardes et Git
+
+Le dossier `media/` est exclu de Git par `.gitignore`. C'est intentionnel : les photos produits sont des fichiers de données, pas du code source.
+
+Il faut donc sauvegarder séparément :
+1. la base de données ;
+2. le dossier média complet ;
+3. les variables de configuration et procédures de déploiement, sans versionner les secrets.
+
+Restaurer uniquement la base de données ne restaure pas les fichiers images. Restaurer uniquement `media/` ne restaure pas les relations de la base. Les deux doivent correspondre.
+
+## 11. Configuration des fichiers statiques et médias
+
+### Fichiers statiques
+
+Les fichiers statiques sont les ressources versionnées du front-end : CSS, JavaScript, icônes et images incluses dans le code. La configuration partagée utilise :
+
+- `STATIC_URL = "static/"`
+- `STATIC_ROOT = BASE_DIR / "staticfiles"`
+- `STATICFILES_DIRS = [BASE_DIR / "static"]`
+
+En production, exécute `collectstatic` et configure le serveur web pour servir les fichiers de `STATIC_ROOT`.
+
+### Fichiers médias
+
+Les médias sont les fichiers téléversés par l'administration et ne sont pas versionnés avec le code. La configuration utilise :
+
+- `MEDIA_URL = "/media/"`
+- `MEDIA_ROOT = Path(os.environ.get("DJANGO_MEDIA_ROOT", str(BASE_DIR / "media"))).resolve()`
+
+`MEDIA_ROOT` est un chemin sur le système de fichiers ; `MEDIA_URL` est le préfixe d'URL public. Ils remplissent des rôles différents et ne doivent pas être confondus.
+
+### Exigence de production
+
+Avec `DEBUG=False`, la configuration actuelle n'ajoute pas de route Django pour servir les fichiers médias. Le serveur web doit être configuré pour exposer le répertoire indiqué par `DJANGO_MEDIA_ROOT` sous `/media/`, ou un mécanisme équivalent doit être configuré.
+
+Le fait de définir `DJANGO_MEDIA_ROOT` ne rend pas automatiquement le dossier public. Le routage du domaine et les permissions du système de fichiers doivent être configurés explicitement. Teste une URL d'image dans le navigateur après déploiement et vérifie qu'elle renvoie le fichier attendu, sans exposer le reste de l'application.
+
+**Ne place jamais les secrets, le fichier `.env`, la base de données ou d'autres fichiers privés dans un répertoire public.** Si le serveur web ne peut pas exposer un dossier situé hors de la racine publique, configure un dossier média dédié et renseigne son chemin absolu via `DJANGO_MEDIA_ROOT`.
+
+## 12. Déploiement en production sur cPanel / o2switch
+
+Cette section décrit les points à préparer ; elle ne signifie pas que l'application a été déployée ou que le routage média est déjà configuré sur l'hébergement.
+
+### Paramètres et secrets requis
+
+La configuration `config.settings.production` exige les variables suivantes :
+
+| Variable | Utilisation |
+|---|---|
+| `DJANGO_SECRET_KEY` | Clé secrète Django. |
+| `DJANGO_ALLOWED_HOSTS` | Liste séparée par des virgules des noms d'hôtes autorisés. |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Liste séparée par des virgules des origines HTTPS de confiance pour CSRF. |
+| `EMAIL_HOST` | Serveur SMTP. |
+| `EMAIL_PORT` | Port SMTP, par défaut 587 si non défini. |
+| `EMAIL_USE_TLS` | Active STARTTLS lorsque vrai. |
+| `EMAIL_USE_SSL` | Active SSL implicite lorsque vrai. |
+| `EMAIL_HOST_USER` | Compte SMTP. |
+| `EMAIL_HOST_PASSWORD` | Mot de passe SMTP. |
+| `DEFAULT_FROM_EMAIL` | Adresse expéditeur par défaut. |
+| `SERVER_EMAIL` | Adresse expéditeur des messages techniques. |
+| `DJANGO_MEDIA_ROOT` | Chemin absolu du stockage média à utiliser ; le serveur web doit aussi l'exposer sous `/media/`. |
+
+Les secrets doivent être définis dans l'environnement de l'application cPanel ou un gestionnaire de secrets approprié. Ne les écris pas dans les fichiers suivis par Git, les tickets, les captures d'écran ou ce README.
+
+### Étapes de préparation
+
+1. Vérifier la version de Python sélectionnée par l'application cPanel.
+2. Déployer le code de la branche voulue et installer `requirements.txt` dans l'environnement Python de l'application.
+3. Configurer `DJANGO_SETTINGS_MODULE=config.settings.production` selon la configuration Passenger/cPanel.
+4. Définir toutes les variables requises, notamment les hôtes, origines CSRF, SMTP et la clé secrète.
+5. Définir `DJANGO_MEDIA_ROOT` sur un dossier persistant adapté au stockage des images téléversées.
+6. Configurer le serveur web pour servir les fichiers de `STATIC_ROOT` et les médias sous `MEDIA_URL`. Vérifier le chemin public réel sur l'hébergement avant d'autoriser les téléversements en production.
+7. Vérifier les permissions du dossier média : l'application doit pouvoir y écrire et le serveur web doit pouvoir lire les images publiques.
+8. Exécuter les vérifications Django, les migrations et `collectstatic`.
+9. Redémarrer l'application Python/Passenger si l'environnement cPanel le requiert.
+10. Tester la page d'accueil, le catalogue, les fiches produit, l'administration, les téléversements et les URLs des fichiers.
+11. Mettre en place des sauvegardes régulières de la base et des médias, puis tester une restauration.
+
+### Commandes de déploiement
+
+À exécuter dans l'environnement de production avec les variables déjà configurées :
+
+```bash
+python -m pip install -r requirements.txt
+python manage.py check --settings=config.settings.production
+python manage.py check --deploy --settings=config.settings.production
+python manage.py migrate --settings=config.settings.production
+python manage.py collectstatic --noinput --settings=config.settings.production
+```
+
+La configuration de production force `DEBUG=False`, redirige vers HTTPS et active les cookies sécurisés. Vérifie que HTTPS fonctionne réellement avant d'utiliser ces paramètres. Les vérifications de déploiement peuvent signaler des points de configuration supplémentaires à traiter.
+
+### Point particulier : SQLite
+
+Le dépôt configure SQLite par défaut. Avant de mettre le site en production, évalue si SQLite correspond à la charge attendue et au fonctionnement du plan d'hébergement. Si tu conserves SQLite, vérifie les permissions du fichier, l'accès concurrent, les sauvegardes et la restauration. Ne stocke pas la base dans un emplacement temporaire ou public.
+
+### Point particulier : médias publics
+
+Les photos de produits sont destinées à être publiques, mais le dossier média ne doit pas devenir une zone d'exécution de scripts. Configure le serveur pour servir les fichiers comme des fichiers statiques, désactive l'exécution de code dans ce répertoire et limite les types de fichiers acceptés par le formulaire. Si des documents privés sont ajoutés ultérieurement, ne les stocke pas dans le même emplacement public.
+
+## 13. Sécurité et bonnes pratiques
+
+### Secrets et configuration
+
+- Ne jamais committer `.env`, clés secrètes, mots de passe SMTP ou identifiants.
+- Utiliser `config.settings.development` en local et `config.settings.production` en production.
+- Ne jamais activer `DEBUG=True` sur le site public.
+- Restreindre `DJANGO_ALLOWED_HOSTS` aux hôtes réellement utilisés.
+- Définir `DJANGO_CSRF_TRUSTED_ORIGINS` avec les origines exactes nécessaires.
+
+### Données et validation
+
+- Utiliser les contraintes de base de données et les validations Django.
+- Ne jamais faire confiance aux prix et stocks fournis par le navigateur.
+- Garder les avis non approuvés invisibles publiquement.
+- Vérifier que les variantes appartiennent au produit attendu et que les éléments d'offres sont cohérents.
+- Ne pas publier de prix de référence, réductions, avis ou statistiques qui ne sont pas justifiés.
+- Ne pas exposer les e-mails privés des auteurs d'avis.
+
+### Téléversement de fichiers
+
+- Réserver les formulaires de téléversement à des utilisateurs autorisés.
+- Limiter la taille des fichiers au niveau de l'application et du serveur web.
+- Contrôler les formats réellement autorisés ; ne pas se fier uniquement à l'extension du nom de fichier ou au type MIME envoyé par le navigateur.
+- Utiliser le traitement d'image approprié et envisager une normalisation des images.
+- Ne pas rendre le dossier média exécutable.
+- Garder les fichiers téléversés hors du dépôt Git.
+- Sauvegarder les fichiers média et contrôler les permissions de lecture/écriture.
+
+### Front-end
+
+- Échapper les données dans les templates et utiliser les mécanismes de rendu Django.
+- Ne pas insérer du contenu utilisateur dans le DOM comme du HTML non fiable.
+- Garder les scripts et styles partagés cohérents avec les templates.
+- Tester les interactions au clavier, les libellés accessibles, les textes alternatifs et les vues mobiles.
+
+### Dépendances et mises à jour
+
+- Installer les versions définies dans `requirements.txt`.
+- Vérifier la compatibilité avant de mettre à jour Django, Python ou Pillow.
+- Tester les migrations sur une copie de données avant un déploiement sensible.
+- Lire les erreurs de test avant de modifier les contraintes ou de supprimer des données.
+
+## 14. État des tests et checklist de recette
+
+### Tests automatisés disponibles
+
+Le fichier `product/tests.py` contient des tests sur les modèles, les vues du catalogue et le stockage local d'images, notamment :
+
+- validation du prix de référence d'une variante ;
+- cohérence d'une variante dans un élément d'offre ;
+- cohérence du produit et de la variante d'un média ;
+- affichage des données de catalogue ;
+- filtre de nouveautés sur la page d'accueil ;
+- accès à une fiche publiée et rejet d'un produit inactif ;
+- invisibilité des avis non approuvés ;
+- stockage des images téléversées dans les chemins prévus.
+
+L'existence de ces tests n'est pas une preuve de réussite. Lance les commandes de test et conserve leur résultat pour chaque modification significative.
+
+### Recette manuelle
+
+- [ ] Les migrations sont appliquées sans erreur.
+- [ ] L'administration est accessible uniquement aux utilisateurs autorisés.
+- [ ] Une catégorie peut être créée et son image téléversée.
+- [ ] Un produit peut être créé avec une variante active, un prix et un stock.
+- [ ] Les médias se retrouvent dans le sous-dossier attendu de `MEDIA_ROOT`.
+- [ ] L'image de catégorie s'affiche sur la page qui l'utilise.
+- [ ] La fiche produit affiche ses médias et ses variantes.
+- [ ] Une URL externe HTTPS existante continue de fonctionner si elle est utilisée.
+- [ ] Un produit inactif ne peut pas être consulté publiquement.
+- [ ] Les avis non approuvés ne sont pas affichés.
+- [ ] La section « Notre sélection signature » n'a pas été modifiée intentionnellement dans le cadre du travail backend.
+- [ ] Les nouveautés sont filtrées avec `is_new`.
+- [ ] Les images s'affichent sur téléphone et sur grand écran.
+- [ ] En production, les fichiers média sont accessibles par leur URL publique, sans rendre les fichiers privés accessibles.
+- [ ] La base de données et le dossier média sont inclus dans la procédure de sauvegarde.
+
+## 15. Périmètre restant et feuille de route
+
+Les sujets suivants doivent être traités comme des chantiers séparés, avec leur propre analyse, tests et critères d'acceptation.
+
+### Priorité 1 — valider le catalogue et les médias
+
+- Exécuter l'ensemble des tests sur la branche.
+- Tester les téléversements en local avec plusieurs images et variantes.
+- Vérifier les tailles maximales, formats, dimensions et erreurs d'upload.
+- Configurer et tester le service du dossier média sur l'hébergement cible.
+- Définir une stratégie d'optimisation et de sauvegarde des images.
+- Vérifier la cohérence des données d'administration et des contenus publics.
+
+### Priorité 2 — rendre le parcours d'achat réellement opérationnel
+
+- Concevoir un panier côté serveur ou une session de panier validée côté serveur.
+- Recalculer les prix, remises, quantités et frais côté serveur.
+- Valider les stocks et prévenir les commandes concurrentes sur les dernières unités.
+- Créer des modèles de commande et de lignes de commande avec un état explicite.
+- Intégrer un prestataire de paiement en mode test, vérifier ses webhooks et traiter les paiements de manière idempotente.
+- Mettre en place les e-mails de commande, les erreurs, les remboursements et la journalisation.
+
+### Priorité 3 — exploitation
+
+- Mettre en place une stratégie de sauvegarde et de restauration testée.
+- Ajouter des journaux exploitables et une surveillance des erreurs.
+- Examiner le besoin d'une base de données de production adaptée à la charge.
+- Évaluer un CDN si le catalogue et le trafic le justifient.
+- Mettre en place une procédure de mise à jour et de retour arrière.
+
+Ces éléments sont des pistes de travail, pas des fonctionnalités déjà livrées.
+
+## 16. Règles de travail et de contribution
+
+### Avant de modifier le code
+
+1. Confirmer la branche courante avec `git branch --show-current`.
+2. Vérifier `git status` et préserver les modifications locales.
+3. Lire le code et les tests concernés avant de choisir une implémentation.
+4. Respecter les conventions et la structure déjà utilisées.
+5. Ne pas modifier les sections visuelles hors périmètre, notamment « Notre sélection signature », sans demande explicite.
+6. Ne pas inventer de règles métier ou de données produit : demander les précisions manquantes.
+
+### Après une modification
+
+1. Lancer `python manage.py check --settings=config.settings.development`.
+2. Vérifier les migrations avec `makemigrations --check --dry-run`.
+3. Exécuter les tests pertinents.
+4. Vérifier les pages concernées dans le navigateur et dans la console.
+5. Mettre à jour ce README si l'architecture, les commandes, les variables ou le comportement ont changé.
+6. Décrire le périmètre réel dans le message de commit ; ne pas annoncer des tests qui n'ont pas été exécutés.
+
+### Commandes Git utiles
+
+```powershell
+git status
+git branch --show-current
+git fetch origin
+git pull origin developpement-backend
+git diff
+git diff --check
+```
+
+Ne force pas un push, ne supprime pas de branche et ne réinitialise pas la base de données pour contourner un problème sans comprendre ses conséquences.
+
+---
+
+## Référence finale
+
+Pour cette branche, les sources de vérité sont, dans l'ordre :
+
+1. le code actuellement présent dans `developpement-backend` ;
+2. les modèles et migrations pour le schéma des données ;
+3. les tests pour les comportements explicitement couverts ;
+4. ce README pour l'installation, les procédures et les limites connues.
+
+Si le code change, ce document doit être mis à jour pour rester fidèle au comportement réel. Les procédures de production doivent toujours être validées sur l'hébergement cible : en particulier, définir `DJANGO_MEDIA_ROOT` ne suffit pas à rendre les images publiques tant que le serveur web n'est pas configuré pour servir ce répertoire.
