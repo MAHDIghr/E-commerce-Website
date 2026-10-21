@@ -366,6 +366,8 @@ class ProductOfferItem(models.Model):
             if self.offer_id and self.product_id and self.product_id != self.offer.product_id:
                 errors["product"] = "Seul le produit principal de l'offre peut utiliser la variante choisie sur la fiche."
         else:
+            if self.offer_id and self.product_id and self.product_id == self.offer.product_id:
+                errors["use_selected_variant"] = "Le produit principal doit utiliser la variante choisie sur la fiche."
             if not self.variant_id:
                 errors["variant"] = "Sélectionnez une variante fixe pour cet article."
             elif self.product_id and self.variant.product_id != self.product_id:
