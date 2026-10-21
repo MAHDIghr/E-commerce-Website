@@ -58,7 +58,7 @@ def detail(request, slug):
                     break
                 component_variant = default_variant
             else:
-                if not item.variant_id or item.variant.product_id != item.product_id:
+                if item.product_id == product.pk or not item.variant_id or item.variant.product_id != item.product_id:
                     invalid_offer = True
                     break
                 component_variant = item.variant
