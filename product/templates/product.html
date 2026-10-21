@@ -55,8 +55,8 @@
 
       <p class="price">
         <strong id="price-now">{{ product.selected.price_label }}</strong>
-        <del id="price-old"><span class="visually-hidden">Prix avant remise </span>{{ product.selected.old_label }}</del>
-        <span class="price__off" id="price-off">-{{ product.selected.off }} %</span>
+        <del id="price-old"{% if not product.selected.old_label %} hidden{% endif %}><span class="visually-hidden">Prix avant remise </span>{{ product.selected.old_label }}</del>
+        <span class="price__off" id="price-off"{% if not product.selected.off %} hidden{% endif %}>{% if product.selected.off %}-{{ product.selected.off }} %{% endif %}</span>
       </p>
 
       <fieldset class="opt">
@@ -116,7 +116,7 @@
 <section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Les détails de fabrication</h2>
   <ul class="strip craft-strip" tabindex="0" aria-label="Détails de fabrication — faites glisser horizontalement pour parcourir les cartes">
-    {% for c in product.craft %}<li class="craft-strip__card"><img src="{{ c.img }}" alt="" width="600" height="750" loading="lazy"><div class="craft-strip__copy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></div></li>{% endfor %}
+    {% for c in product.craft %}<li class="craft-strip__card"><img src="{{ c.img }}" alt="{{ c.alt|default:c.t }}" width="600" height="750" loading="lazy" decoding="async"><div class="craft-strip__copy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></div></li>{% endfor %}
   </ul>
 </div></section>
 
