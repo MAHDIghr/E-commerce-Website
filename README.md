@@ -858,6 +858,7 @@ Le sélecteur public écarte maintenant aussi les médias communs de type Image 
 Dans **Django Admin → Produits → ouvrir le produit** :
 
 - lire le diagnostic « État catalogue » ;
+- si le produit doit apparaître dans les nouveautés de l'accueil, cocher aussi « Nouveauté » (is_new) ; la page d'accueil n'affiche que les quatre nouveautés les plus récentes ;
 - vérifier que le produit et sa catégorie sont actifs ;
 - vérifier la date de publication ;
 - ouvrir la section des variantes et confirmer qu'au moins une variante est active, avec un prix et un stock renseignés ;
