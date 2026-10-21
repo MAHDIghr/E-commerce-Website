@@ -49,7 +49,9 @@
         media = visible.map(({ item }) => item);
         allSlides.forEach((slide, index) => { slide.hidden = !visibleIndexes.has(index); });
         allThumbs.forEach((thumb, index) => {
-            thumb.hidden = !visibleIndexes.has(index);
+            const visibleThumb = visibleIndexes.has(index);
+            thumb.hidden = !visibleThumb;
+            if (thumb.closest("li")) thumb.closest("li").hidden = !visibleThumb;
             thumb.removeAttribute("aria-current");
         });
         cur = -1;
