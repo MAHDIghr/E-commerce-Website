@@ -18,39 +18,27 @@
     overflow: hidden;
 }
 
-.hero-media img {
+.hero-media__picture {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.hero-media__picture img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center center;
-    transition: object-position 250ms ease-out;
+    object-position: center;
 }
 
-/* À mesure que l'écran rétrécit, le cadrage glisse vers la droite
-   de la photo pour conserver sa partie droite dans la zone visible. */
-@media (max-width: 1200px) {
-    .hero-media img { object-position: 60% center; }
-}
-
-@media (max-width: 992px) {
-    .hero-media img { object-position: 70% center; }
-}
-
+/* L'image mobile est sélectionnée par <picture> sous 768 px. */
 @media (max-width: 768px) {
     .hero {
         min-height: calc(100svh - var(--header-height) - var(--promo-height));
     }
-
-    .hero-media img { object-position: 80% center; }
-}
-
-@media (max-width: 576px) {
-    .hero-media img { object-position: 90% center; }
-}
-
-@media (max-width: 400px) {
-    .hero-media img { object-position: right center; }
 }
 
 .hero-media__veil {
