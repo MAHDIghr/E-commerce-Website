@@ -12,9 +12,13 @@ from .models import Product, ProductMedia, ProductOffer, ProductVariant, Review
 def published_products():
     """Queryset partagé : seuls les produits actifs et déjà publiables sont visibles."""
     now = timezone.now()
-    return Product.objects.filter(is_active=True).filter(
+    return Product.objects.filter(
+        is_active=True,
+        media_items__variant__isnull=True,
+        media_items__media_type=ProductMedia.IMAGE,
+    ).filter(
         Q(published_at__isnull=True) | Q(published_at__lte=now)
-    )
+    ).distinct()
 
 
 def product_card_data(queryset):
