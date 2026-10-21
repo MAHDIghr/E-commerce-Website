@@ -554,7 +554,7 @@ Le contexte `catalog_data` est transmis dans `shop/templates/catalog.html` via `
 
 `product/views.py` retrouve le produit par son slug et charge les variantes, les médias, les arguments, les éléments de capacité, les dimensions, les détails de fabrication, les usages, les FAQ, les offres et les avis approuvés. Un produit inactif, non encore publiable ou introuvable renvoie une réponse 404.
 
-Le template existant `product/templates/product.html` a été conservé comme structure de présentation. Les données fictives de `product/views.py` ont été remplacées par les données de la base. Les prix des variantes sont synchronisés avec le choix de couleur ; les prix des offres restent ceux configurés sur les offres. Les éléments sans données ne sont pas inventés.
+Le template existant `product/templates/product.html` a été conservé comme structure de présentation. Les données fictives de `product/views.py` ont été remplacées par les données de la base. Les prix des variantes sont synchronisés avec le choix de couleur et la galerie filtre les médias selon la variante sélectionnée ; les prix des offres restent ceux configurés sur les offres. Les éléments sans données ne sont pas inventés.
 
 Les données structurées de la fiche sont insérées avec `json_script`, puis lues par `product/static/js/product.js`. Les templates Django conservent leur échappement automatique.
 
@@ -603,7 +603,7 @@ Ces commandes doivent être exécutées dans l'environnement local du projet. La
 - `product/models.py` — modèles et règles de validation.
 - `product/admin.py` — administration du catalogue.
 - `product/migrations/0001_initial.py` — schéma initial de la base.
-- `product/views.py` — sélecteurs, données de fiche et exposition des données publiées.
+- `product/selectors.py` — règles partagées de publication et sérialisation des cartes catalogue.\n- `product/views.py` — données de fiche et exposition des données publiées.
 - `product/tests.py` — tests de modèle et de vues.
 - `home/views.py` et `home/templates/home.html` — catégories et nouveautés dynamiques, sans changement de la sélection signature.
 - `shop/views.py`, `shop/templates/catalog.html` et `shop/static/js/shop.js` — catalogue dynamique et filtres fondés sur les catégories configurées.
