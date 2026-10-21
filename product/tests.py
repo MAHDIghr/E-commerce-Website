@@ -120,7 +120,8 @@ class CatalogViewTests(TestCase):
 
     def test_admin_diagnoses_missing_publication_requirements(self):
         self.product.is_active = False
-        self.product.save(update_fields=["is_active"])
+        self.product.is_new = False
+        self.product.save(update_fields=["is_active", "is_new"])
         self.category.is_active = False
         self.category.save(update_fields=["is_active"])
         variant = self.product.variants.first()
@@ -136,6 +137,7 @@ class CatalogViewTests(TestCase):
         self.assertIn("Catégorie inactive", diagnostic)
         self.assertIn("Aucune variante active", diagnostic)
         self.assertIn("Aucune image commune valide", diagnostic)
+        self.assertIn("cochez « Nouveauté »", diagnostic)
 
     def test_catalog_provides_a_django_generated_product_url_template(self):
         response = self.client.get(reverse("shop:catalog"))
