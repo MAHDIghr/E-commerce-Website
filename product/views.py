@@ -90,16 +90,14 @@ def detail(request, slug):
         raise Http404("Produit indisponible.")
     default_variant = variants[0]
 
-    media_items = [
-        item for item in product.media_items.all()
-        if item.variant_id is None or item.variant_id == default_variant.pk
-    ]
+    media_items = list(product.media_items.all())
     media = [{
         "type": item.media_type,
         "src": item.source_url,
         "poster": item.poster_url or item.source_url,
         "thumb": item.poster_url or item.source_url,
         "alt": item.alt_text,
+        "variant_id": str(item.variant_id) if item.variant_id else "",
     } for item in media_items]
 
     offers = []
