@@ -11,8 +11,9 @@
     const grid = document.getElementById("product-grid");
     if (!grid) return;
 
-    /* URL de base de la page produit (fournie par Django via data-product-url) */
-    const PRODUCT_URL = grid.dataset.productUrl || "#";
+    /* Modèle d’URL produit généré par Django ; le slug est remplacé au moment de créer chaque carte. */
+    const PRODUCT_URL_TEMPLATE = grid.dataset.productUrl || "#";
+    const productUrl = (slug) => PRODUCT_URL_TEMPLATE.replace("__product_slug__", encodeURIComponent(slug));
 
     /* Données rendues par Django via json_script. */
     const catalogDataNode = document.getElementById("catalog-data");
@@ -160,7 +161,7 @@
         card.style.setProperty("--i", String(Math.min(index, 8)));
 
         const media = el("a", "pcard__media");
-        media.href = `${PRODUCT_URL}${p.id}/`;
+        media.href = productUrl(p.id);
         media.setAttribute("aria-label", p.name);
 
         const img = document.createElement("img");
@@ -211,7 +212,7 @@
 
         const h3 = el("h3", "pcard__name");
         const link = el("a", "", p.name);
-        link.href = `${PRODUCT_URL}${p.id}/`;
+        link.href = productUrl(p.id);
         h3.appendChild(link);
         body.appendChild(h3);
 
