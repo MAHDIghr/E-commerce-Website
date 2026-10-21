@@ -155,6 +155,8 @@ def detail(request, slug):
             "ship": "", "badge": "", "featured": True, "uses_variant_price": True,
         }]
     selected = next((item for item in offers if item["featured"]), offers[0])
+    for offer_data in offers:
+        offer_data["featured"] = offer_data is selected
     reviews = list(product.reviews.all())
     reviews_count = len(reviews)
     rating = round(sum(review.rating for review in reviews) / reviews_count, 1) if reviews_count else 0
