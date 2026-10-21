@@ -22,7 +22,7 @@
       <div class="gal__stage">
         <ul class="gal__track" tabindex="0">
           {% for m in product.media %}
-          <li class="gal__slide" aria-label="{{ forloop.counter }} sur {{ product.media|length }}">
+          <li class="gal__slide" data-variant="{{ m.variant_id }}" aria-label="{{ forloop.counter }} sur {{ product.media|length }}">
             {% if m.type == "video" %}
             <button type="button" class="gal__media gal__video" data-video="{{ m.src }}" aria-label="Lire la vidéo : {{ m.alt }}">
               <img src="{{ m.poster }}" alt="" width="900" height="1125" loading="lazy" decoding="async"><span class="gal__play" aria-hidden="true"></span>
@@ -41,7 +41,7 @@
       </div>
       <ul class="gal__thumbs">
         {% for m in product.media %}
-        <li><button type="button" class="gal__thumb" data-go="{{ forloop.counter0 }}" aria-label="Voir : {{ m.alt }}"><img src="{{ m.thumb }}" alt="" width="64" height="80" loading="lazy"></button></li>
+        <li><button type="button" class="gal__thumb" data-variant="{{ m.variant_id }}" data-go="{{ forloop.counter0 }}" aria-label="Voir : {{ m.alt }}"><img src="{{ m.thumb }}" alt="" width="64" height="80" loading="lazy"></button></li>
         {% endfor %}
       </ul>
     </section>
