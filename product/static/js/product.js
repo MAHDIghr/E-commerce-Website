@@ -11,7 +11,7 @@
     document.body.classList.add("p-js");
 
     /* ---------- Galerie ---------- */
-    const track = $(".gal__track"), allSlides = $(".gal__slide"), allThumbs = $(".gal__thumb"), count = $("#gal-count");
+    const track = $(".gal__track"), allSlides = $$(".gal__slide"), allThumbs = $$(".gal__thumb"), count = $("#gal-count");
     let slides = allSlides;
     let thumbs = allThumbs;
     let cur = -1;
