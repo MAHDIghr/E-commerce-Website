@@ -112,7 +112,8 @@
 
         // Pour un lot incluant le sac choisi, le prix de référence suit la variante sélectionnée.
         if (!usesVariantPrice && o.includesSelectedVariant === "true" && o.referenceTotal !== "") {
-            const reference = Number(o.referenceTotal) + Number(color.price) - Number(o.baseVariantPrice);
+            const mainQuantity = Math.max(1, Number(o.mainQuantity || 1));
+            const reference = Number(o.referenceTotal) + (Number(color.price) - Number(o.baseVariantPrice)) * mainQuantity;
             const offerPrice = Number(o.price);
             if (Number.isFinite(reference) && reference > offerPrice) {
                 oldLabel = reference.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
@@ -131,6 +132,27 @@
         $("#sbar-price").textContent = priceLabel;
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = color.label;
+
+        // Les prix barrés des cartes d'offres suivent aussi la variante sélectionnée.
+        $('input[name="offer"]').forEach((input) => {
+            const offerData = input.dataset;
+            let cardOldLabel = offerData.old;
+            if (offerData.usesVariantPrice === "true") {
+                cardOldLabel = color.oldLabel;
+            } else if (offerData.includesSelectedVariant === "true" && offerData.referenceTotal !== "") {
+                const quantity = Math.max(1, Number(offerData.mainQuantity || 1));
+                const reference = Number(offerData.referenceTotal)
+                    + (Number(color.price) - Number(offerData.baseVariantPrice)) * quantity;
+                cardOldLabel = Number.isFinite(reference) && reference > Number(offerData.price)
+                    ? reference.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"
+                    : "";
+            }
+            const oldPrice = input.closest(".offer").querySelector(".offer__price del");
+            if (oldPrice) {
+                oldPrice.textContent = cardOldLabel || "";
+                oldPrice.hidden = !cardOldLabel;
+            }
+        });
     };
     const updateAvailability = () => {
         const stock = Number(colorIn().dataset.stock);
