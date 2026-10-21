@@ -9,9 +9,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
-from django.utils import timezone
 from urllib.parse import urlparse
-from django.utils.text import slugify
+
+from django.utils import timezone
 
 
 def _require_https(value, field_name):
@@ -143,7 +143,7 @@ class ProductVariant(models.Model):
 
     def clean(self):
         super().clean()
-        if self.compare_at_price is not None and self.compare_at_price <= self.price:
+        if self.compare_at_price is not None and self.price is not None and self.compare_at_price <= self.price:
             raise ValidationError({"compare_at_price": "Le prix de référence doit être supérieur au prix de vente."})
         if self.color_code and not (len(self.color_code) == 7 and self.color_code.startswith("#")):
             raise ValidationError({"color_code": "Utilisez un code hexadécimal au format #RRGGBB."})
