@@ -80,9 +80,23 @@
         const o = offerIn().dataset;
         const color = colorIn().dataset;
         const usesVariantPrice = o.usesVariantPrice === "true";
-        const priceLabel = usesVariantPrice ? color.priceLabel : o.label;
-        const oldLabel = usesVariantPrice ? color.oldLabel : o.old;
-        const discount = usesVariantPrice ? color.off : o.off;
+        let priceLabel = usesVariantPrice ? color.priceLabel : o.label;
+        let oldLabel = usesVariantPrice ? color.oldLabel : o.old;
+        let discount = usesVariantPrice ? color.off : o.off;
+
+        // Pour un lot incluant le sac choisi, le prix de référence suit la variante sélectionnée.
+        if (!usesVariantPrice && o.includesSelectedVariant === "true" && o.oldPrice !== "") {
+            const reference = Number(o.oldPrice) + Number(color.price) - Number(o.baseVariantPrice);
+            const offerPrice = Number(o.price);
+            if (Number.isFinite(reference) && reference > offerPrice) {
+                oldLabel = reference.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+                discount = Math.round((1 - offerPrice / reference) * 100);
+            } else {
+                oldLabel = "";
+                discount = 0;
+            }
+        }
+
         $("#price-now").textContent = priceLabel;
         $("#price-old").lastChild.textContent = oldLabel;
         $("#price-old").hidden = !oldLabel;
