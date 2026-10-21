@@ -1,7 +1,10 @@
+import base64
+import tempfile
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import (
@@ -119,3 +122,47 @@ class CatalogViewTests(TestCase):
         response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
         self.assertNotContains(response, "Avis en attente")
         self.assertNotContains(response, "Visiteur privé")
+
+
+
+class UploadedMediaTests(TestCase):
+    def setUp(self):
+        self.media_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.media_dir.cleanup)
+        settings_override = override_settings(MEDIA_ROOT=self.media_dir.name)
+        settings_override.enable()
+        self.addCleanup(settings_override.disable)
+
+    @staticmethod
+    def png_upload(name="test.png"):
+        # Valid 1x1 PNG used only by the upload-path test.
+        data = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/"
+            "lZ8AAAAASUVORK5CYII="
+        )
+        return SimpleUploadedFile(name, data, content_type="image/png")
+
+    def test_category_image_is_stored_in_media_categories_folder(self):
+        category = Category.objects.create(
+            name="Catégorie test",
+            slug="categorie-test-upload",
+            image=self.png_upload("categorie.png"),
+        )
+        self.assertTrue(category.image.name.startswith("categories/"))
+        self.assertTrue(category.image.storage.exists(category.image.name))
+
+    def test_product_image_is_stored_in_media_products_folder(self):
+        category = Category.objects.create(name="Sacs", slug="sacs-upload")
+        product = Product.objects.create(
+            category=category, name="Sac test", slug="sac-test-upload", is_active=True
+        )
+        media = ProductMedia.objects.create(
+            product=product,
+            media_type=ProductMedia.IMAGE,
+            image=self.png_upload("sac.png"),
+            alt_text="Sac test",
+        )
+        self.assertTrue(media.image.name.startswith("products/"))
+        self.assertTrue(media.image.storage.exists(media.image.name))
+
+
