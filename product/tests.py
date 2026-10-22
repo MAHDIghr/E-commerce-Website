@@ -28,6 +28,26 @@ class CatalogModelTests(TestCase):
             price=Decimal("89.90"), stock_quantity=4,
         )
 
+    def test_offer_badge_controls_title_and_order(self):
+        premium = ProductOffer.objects.create(
+            product=self.product, title="Texte libre", badge=ProductOffer.BADGE_PREMIUM,
+            price=Decimal("129.90"),
+        )
+        medium = ProductOffer.objects.create(
+            product=self.product, title="Texte libre", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("109.90"),
+        )
+        essential = ProductOffer.objects.create(
+            product=self.product, title="Texte libre", badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("89.90"),
+        )
+        self.assertEqual(essential.title, "Essentiel")
+        self.assertEqual(medium.title, "Medium")
+        self.assertEqual(premium.title, "Premium")
+        self.assertEqual(list(self.product.offers.values_list("badge", flat=True)), [
+            ProductOffer.BADGE_ESSENTIAL, ProductOffer.BADGE_MEDIUM, ProductOffer.BADGE_PREMIUM,
+        ])
+
     def test_variant_rejects_reference_price_not_above_sale_price(self):
         variant = ProductVariant(
             product=self.product, sku="CABAS-CAMEL-INVALID",
@@ -135,6 +155,7 @@ class CatalogViewTests(TestCase):
         self.assertNotContains(response, '"id": "cabas-camel"')
 
     def test_admin_diagnoses_missing_publication_requirements(self):
+        self.product.offers.all().delete()
         self.product.is_active = False
         self.product.is_new = False
         self.product.save(update_fields=["is_active", "is_new"])
@@ -153,6 +174,7 @@ class CatalogViewTests(TestCase):
         self.assertIn("Catégorie inactive", diagnostic)
         self.assertIn("Aucune variante active", diagnostic)
         self.assertIn("Aucune image commune valide", diagnostic)
+        self.assertIn("Aucune offre active valide", diagnostic)
         self.assertIn("cochez « Nouveauté »", diagnostic)
 
     def test_catalog_provides_a_django_generated_product_url_template(self):
