@@ -330,58 +330,28 @@
 
 
     <!-- ============================================================
-         AVIS CLIENTS
+         AVIS CLIENTS — avis approuvés et sélectionnés dans Django Admin
          ============================================================ -->
     <section class="section testimonials-section" id="about">
         <div class="container">
-
             <div class="section-header reveal">
                 <div>
                     <p class="eyebrow" data-i18n="testimonials_eyebrow">Avis clients</p>
                     <h2 data-i18n="testimonials_title">Elles nous font confiance</h2>
                 </div>
             </div>
-
             <div class="testimonials-grid">
-                <div class="testimonial-card reveal">
-                    <div class="testimonial-stars" aria-hidden="true">
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                    </div>
-                    <p class="testimonial-quote">Un cuir magnifique et un service client très réactif. Mon sac est encore plus beau qu'en photo.</p>
-                    <p class="testimonial-author">— Camille D.</p>
-                    <a href="#" class="testimonial-link" data-frontend-only>Lire l'avis complet <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
-                </div>
-                <div class="testimonial-card reveal">
-                    <div class="testimonial-stars" aria-hidden="true">
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                    </div>
-                    <p class="testimonial-quote">Livraison rapide et emballage soigné. La qualité est vraiment au rendez-vous.</p>
-                    <p class="testimonial-author">— Sarah M.</p>
-                    <a href="#" class="testimonial-link" data-frontend-only>Lire l'avis complet <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
-                </div>
-                <div class="testimonial-card reveal">
-                    <div class="testimonial-stars" aria-hidden="true">
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"></polygon></svg>
-                    </div>
-                    <p class="testimonial-quote">Exactement ce que je cherchais : intemporel, pratique et élégant.</p>
-                    <p class="testimonial-author">— Léa B.</p>
-                    <a href="#" class="testimonial-link" data-frontend-only>Lire l'avis complet <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
-                </div>
+                {% for review in featured_reviews %}
+                <article class="testimonial-card reveal">
+                    <p class="testimonial-stars testimonial-stars--text" role="img" aria-label="Note de {{ review.rating }} sur 5">{{ review.rating_stars }}</p>
+                    <p class="testimonial-quote">{{ review.comment }}</p>
+                    <p class="testimonial-author">— {{ review.author_name }}</p>
+                    <a href="{% url 'product:detail' slug=review.product.slug %}" class="testimonial-link">Voir l’avis sur {{ review.product.name }} <span aria-hidden="true">→</span></a>
+                </article>
+                {% empty %}
+                <p class="testimonials-empty">Les avis de nos clientes et clients apparaîtront ici après validation par notre équipe.</p>
+                {% endfor %}
             </div>
-            <div class="testimonials-cta"><a href="#" class="button button-outline" data-frontend-only>Voir tous les avis</a></div>
-
         </div>
     </section>
 

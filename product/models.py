@@ -309,14 +309,28 @@ class Review(models.Model):
     rating = models.PositiveSmallIntegerField("Note", validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField("Commentaire")
     is_approved = models.BooleanField("Approuvé", default=False, db_index=True)
+    is_featured = models.BooleanField("Mis en avant sur l’accueil", default=False, db_index=True)
     created_at = models.DateTimeField("Créé le", auto_now_add=True)
 
     class Meta:
         ordering = ("-created_at",)
         indexes = [models.Index(fields=("product", "is_approved", "-created_at"), name="review_prod_approved_date_idx")]
-        constraints = [models.CheckConstraint(condition=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_to_5")]
+        constraints = [
+            models.CheckConstraint(condition=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_to_5"),
+            models.CheckConstraint(condition=Q(is_featured=False) | Q(is_approved=True), name="featured_review_must_be_approved"),
+        ]
         verbose_name = "avis"
         verbose_name_plural = "avis"
+
+    def save(self, *args, **kwargs):
+        # Un avis en attente ne peut jamais être mis en avant, même via un appel direct à save().
+        if not self.is_approved:
+            self.is_featured = False
+        super().save(*args, **kwargs)
+
+    @property
+    def rating_stars(self):
+        return "★" * self.rating + "☆" * (5 - self.rating)
 
     def __str__(self):
         return f"Avis de {self.author_name} — {self.product.name}"

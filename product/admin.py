@@ -188,11 +188,17 @@ class ProductOfferItemAdmin(admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ("product", "author_name", "rating", "is_approved", "created_at")
-    list_filter = ("is_approved", "rating", "created_at")
+    list_display = ("product", "author_name", "rating", "is_approved", "is_featured", "created_at")
+    list_filter = ("is_approved", "is_featured", "rating", "created_at")
     search_fields = ("product__name", "author_name", "comment")
     readonly_fields = ("created_at",)
+    list_editable = ("is_approved", "is_featured")
     actions = ("approve_reviews",)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.is_approved:
+            obj.is_featured = False
+        super().save_model(request, obj, form, change)
 
     @admin.action(description="Approuver les avis sélectionnés")
     def approve_reviews(self, request, queryset):

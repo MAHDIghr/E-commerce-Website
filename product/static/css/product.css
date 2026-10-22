@@ -177,3 +177,21 @@ body.page-product .site-footer{padding-bottom:4.5rem}
     margin: .5rem 0 0;
     font-size: .875rem;
 }
+
+
+/* Formulaire d'avis : lisible sur mobile et utilisable au clavier. */
+.review-form-wrap { max-width: 760px; margin: 2.5rem auto 0; padding: 1.5rem; border: 1px solid var(--color-line); border-radius: 1rem; background: var(--color-bg, #fff); }
+.review-form-wrap h3 { margin: 0 0 .5rem; }
+.review-form__note { color: var(--color-ink-muted, #666); font-size: .9rem; line-height: 1.55; }
+.review-form { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.review-form__field { display: grid; gap: .4rem; }
+.review-form__field label { font-weight: 600; }
+.review-form__field input, .review-form__field select, .review-form__field textarea { width: 100%; min-height: 46px; padding: .75rem .85rem; border: 1px solid var(--color-line, #ddd); border-radius: .5rem; background: #fff; color: var(--color-ink, #222); font: inherit; }
+.review-form__field textarea { min-height: 120px; resize: vertical; }
+.review-form__field input:focus-visible, .review-form__field select:focus-visible, .review-form__field textarea:focus-visible { outline: 2px solid var(--color-accent, #b07a4a); outline-offset: 2px; }
+.review-form .errorlist { margin: .1rem 0 0; padding-left: 1.2rem; color: #a12828; font-size: .875rem; }
+.review-form__trap { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
+.review-empty { flex: 1 0 100%; padding: 1rem; color: var(--color-ink-muted, #666); }
+.review-message { padding: .8rem 1rem; border-radius: .5rem; background: #f4f0e9; }
+.review-message--error { background: #fff0f0; color: #8a1c1c; }
+@media (max-width: 600px) { .review-form-wrap { padding: 1rem; margin-top: 1.5rem; } }

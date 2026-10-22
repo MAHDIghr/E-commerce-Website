@@ -2,7 +2,7 @@
 from django.db.models import Prefetch
 from django.shortcuts import render
 
-from product.models import Category, ProductMedia, ProductVariant
+from product.models import Category, ProductMedia, ProductVariant, Review
 from product.selectors import published_products
 
 
@@ -18,7 +18,13 @@ def home(request):
             ).order_by("-is_primary", "position", "pk"),
         ),
     ).order_by("-published_at", "-created_at")[:4]
+    featured_reviews = Review.objects.filter(
+        is_approved=True,
+        is_featured=True,
+        product__in=published_products(),
+    ).select_related("product").order_by("-created_at")[:3]
     return render(request, "home.html", {
         "categories": categories,
         "new_products": new_products,
+        "featured_reviews": featured_reviews,
     })

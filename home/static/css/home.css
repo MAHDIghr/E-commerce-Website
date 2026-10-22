@@ -1638,3 +1638,9 @@ body.community-modal-open { overflow: hidden; }
 
 /* Les reels gardent une vignette épurée : pas d'icône lecture/pause superposée. */
 .community .reel__play { display: none !important; }
+
+
+/* Les témoignages de l'accueil proviennent des avis approuvés en base. */
+.testimonial-stars--text { display: block; color: #b07a4a; letter-spacing: .08em; font-size: 1.1rem; }
+.testimonial-link { display: inline-flex; align-items: center; gap: .4rem; }
+.testimonials-empty { grid-column: 1 / -1; color: var(--color-ink-muted, #666); text-align: center; }

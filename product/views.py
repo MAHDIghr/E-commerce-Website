@@ -2,9 +2,12 @@
 from decimal import Decimal
 
 from django.db.models import Prefetch
+from django.contrib import messages
 from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 
+from .forms import ReviewForm
 from .models import Product, ProductMedia, ProductOffer, ProductVariant, Review
 from .selectors import published_products
 
@@ -24,11 +27,26 @@ def _detail_queryset():
 
 
 def detail(request, slug):
-    """Rend une fiche à partir des données publiées ; les brouillons renvoient 404."""
+    """Rend une fiche publiée et reçoit les avis publics en attente de modération."""
     try:
         product = _detail_queryset().get(slug=slug)
     except Product.DoesNotExist as exc:
         raise Http404("Produit introuvable.") from exc
+
+    review_form = ReviewForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST":
+        if review_form.is_valid():
+            Review.objects.create(
+                product=product,
+                author_name=review_form.cleaned_data["author_name"],
+                rating=review_form.cleaned_data["rating"],
+                comment=review_form.cleaned_data["comment"],
+                is_approved=False,
+                is_featured=False,
+            )
+            messages.success(request, "Merci pour votre avis. Il sera publié après vérification.")
+            return redirect(f"{reverse('product:detail', kwargs={'slug': product.slug})}#avis")
+        messages.error(request, "Vérifiez les champs indiqués avant de renvoyer votre avis.")
 
     variants = list(product.variants.all())
     if not variants:
@@ -132,6 +150,7 @@ def detail(request, slug):
         "seo_title": product.seo_title,
         "rating": rating,
         "rating_stars": "★" * int(round(rating)) + "☆" * (5 - int(round(rating))),
+        "rating_stars": "★" * int(round(rating)) + "☆" * (5 - int(round(rating))),
         "reviews_count": reviews_count,
         "media": media,
         "colors": [{
@@ -163,4 +182,4 @@ def detail(request, slug):
     context_product["tagline"] = context_product["tagline"] or ""
     context_product["seo_title"] = context_product["seo_title"] or product.name
     context_product["seo_description"] = product.seo_description or product.short_description or product.name
-    return render(request, "product.html", {"product": context_product})
+    return render(request, "product.html", {"product": context_product, "review_form": review_form})

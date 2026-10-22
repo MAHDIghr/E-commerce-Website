@@ -217,7 +217,7 @@ Les modèles sont définis dans `product/models.py`. Les champs exacts du code c
 | `ProductFAQ` | Questions et réponses propres au produit. |
 | `ProductOffer` | Offre commerciale configurée pour le produit. |
 | `ProductOfferItem` | Produit/variante et quantité composant une offre. |
-| `Review` | Avis, note, commentaire et état d'approbation. |
+| `Review` | Avis rattaché à un produit, note, commentaire, état d’approbation et sélection facultative pour l’accueil. |
 
 ### Prix et variantes
 
@@ -250,7 +250,7 @@ Le libellé de livraison d'une offre est éditorial : il ne calcule pas les frai
 
 ### Avis
 
-Les avis sont conservés avec une note, un commentaire et un indicateur `is_approved`. Ils sont masqués par défaut tant qu'ils ne sont pas approuvés. L'administration dispose d'une action d'approbation. L'e-mail éventuel de l'auteur est une donnée privée et ne doit jamais être affiché publiquement.
+Les avis sont toujours rattachés à un produit via `Review.product`. Les visiteurs peuvent déposer un avis depuis la fiche du produit ; les champs publics sont le nom affiché, la note et le commentaire. L’avis est créé avec `is_approved=False` et `is_featured=False` : il n’apparaît nulle part publiquement avant modération. L’administration permet de modifier ou supprimer les avis, de les approuver et de choisir lesquels apparaissent sur l’accueil. La contrainte `featured_review_must_be_approved` empêche de mettre en avant un avis non approuvé. L’e-mail éventuel de l’auteur reste privé et n’est pas collecté par le formulaire public.
 
 ## 7. Installation locale
 
@@ -906,3 +906,44 @@ python manage.py test product --settings=config.settings.development
 ```
 
 Ces commandes doivent être exécutées avant déploiement. Le code poussé sur GitHub ne signifie pas que la migration est déjà appliquée sur l'hébergement de production.
+
+
+## 20. Avis produits et témoignages de l’accueil
+
+### Règles fonctionnelles
+
+- Chaque avis possède une relation obligatoire vers un produit (`Review.product`). Il ne peut pas être affiché comme avis d’un autre produit.
+- Le formulaire public se trouve dans la section **Avis clients** de la fiche produit. Il accepte un nom affiché, une note de 1 à 5 et un commentaire de 10 à 2 000 caractères.
+- Les champs sensibles de modération ne sont jamais fournis par le navigateur : le formulaire public ne permet pas de définir `is_approved`, `is_featured` ou le produit cible.
+- Après envoi, l’avis reste en attente de validation. Le contenu n’est pas rendu public avant approbation.
+- La page d’accueil ne présente que les avis **approuvés et mis en avant** dont le produit satisfait encore les conditions de publication du catalogue. Chaque témoignage renvoie vers la fiche du produit concerné.
+- Les avis en attente ne peuvent pas être mis en avant : le modèle réinitialise ce choix à l’enregistrement et une contrainte de base de données protège également cette règle.
+- Les avis publics sont affichés par les templates Django avec échappement automatique. Le commentaire n’est jamais interprété comme du HTML.
+- Le formulaire utilise la protection CSRF Django et un champ piège simple contre les robots. Ce champ ne remplace pas une limitation de débit au niveau du serveur ou du reverse proxy pour un déploiement exposé à des abus.
+
+### Modération et gestion dans Django Admin
+
+Dans **Administration → Avis** :
+
+1. Rechercher un avis par produit, auteur ou contenu.
+2. Vérifier le produit associé et le texte envoyé.
+3. Approuver les avis qui peuvent être publiés.
+4. Cocher **Mis en avant sur l’accueil** uniquement pour les avis approuvés que l’on souhaite afficher dans les témoignages de la page d’accueil.
+5. Modifier ou supprimer un avis via les actions standard de Django Admin.
+
+L’accueil affiche au maximum les trois avis mis en avant les plus récents. Si aucun avis ne correspond aux critères, un message informatif est affiché à la place : aucun témoignage fictif n’est injecté. L’adresse e-mail n’est pas demandée dans le formulaire public et n’est jamais affichée dans les templates.
+
+### Migration et recette
+
+La migration `0004_review_featured` ajoute le champ de mise en avant et la contrainte d’intégrité correspondante. Elle ne publie pas automatiquement les avis historiques : les avis existants restent non mis en avant jusqu’à sélection manuelle dans l’administration.
+
+Après récupération de la branche :
+
+```powershell
+python manage.py check --settings=config.settings.development
+python manage.py makemigrations --check --dry-run --settings=config.settings.development
+python manage.py migrate --settings=config.settings.development
+python manage.py test product --settings=config.settings.development
+```
+
+Vérifier manuellement l’envoi d’un avis, le refus des notes invalides, la modération, l’affichage d’un avis approuvé sur la fiche du bon produit et la sélection des témoignages de l’accueil. Le code commité sur GitHub ne signifie pas que la migration a été appliquée sur l’hébergement de production.
