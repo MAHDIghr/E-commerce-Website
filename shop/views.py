@@ -4,7 +4,7 @@ Le navigateur ne fournit que des identifiants et des quantités. Prix, variantes
 offres, publication et disponibilité sont toujours vérifiés côté serveur.
 """
 import json
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.db.models import Q, Prefetch
 from django.http import JsonResponse
@@ -13,7 +13,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from product.models import (
-    Category, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant, Review,
+    Category, ProductMedia, ProductOffer, ProductVariant, Review,
 )
 from product.selectors import product_card_data, published_products
 

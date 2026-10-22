@@ -222,8 +222,9 @@ function buildCartItemNode(item) {
 function updateShippingProgress() {
     if (!shippingFill || !shippingText) return;
     const subtotal = Number(cartSnapshot.subtotal || 0);
-    shippingFill.style.width = String(Math.min(subtotal / FREE_SHIPPING_THRESHOLD, 1) * 100) + "%";
-    shippingText.textContent = subtotal >= FREE_SHIPPING_THRESHOLD ? "🎉 Livraison gratuite débloquée !" : "Plus que " + formatPrice(FREE_SHIPPING_THRESHOLD - subtotal) + " pour la livraison offerte";
+    const threshold = Number(cartSnapshot.free_shipping_threshold || FREE_SHIPPING_THRESHOLD);
+    shippingFill.style.width = String(threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0) + "%";
+    shippingText.textContent = threshold > 0 && subtotal >= threshold ? "🎉 Livraison gratuite débloquée !" : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " pour la livraison offerte";
 }
 function renderCartDrawer() {
     if (!cartItemsContainer) return; cartItemsContainer.replaceChildren(); const items = getCart();
