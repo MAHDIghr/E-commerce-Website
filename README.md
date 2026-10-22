@@ -880,15 +880,15 @@ En production, il faut aussi confirmer que l'administration et le site utilisent
 - Une offre peut inclure d'autres produits. Chaque ligne doit sélectionner le produit et, pour un produit complémentaire, une variante appartenant à ce produit.
 - Un produit sans offre active valide est exclu du catalogue public. La fiche produit ne doit pas remplacer une offre invalide par un prix de variante présenté comme une offre commerciale.
 
-### Créer une offre dans Django Admin
+### Créer de une à trois offres dans Django Admin
 
-1. Enregistrer le produit, ses variantes actives et son image commune.
-2. Ouvrir **Offres** dans l'administration et créer une offre.
-3. Sélectionner le **produit principal**, choisir son badge et le type de livraison, puis saisir le prix de l'offre.
-4. Dans la section des articles de l'offre, ajouter une ligne pour le produit principal. Sélectionner le même produit et cocher **Utiliser la variante choisie sur la fiche** ; laisser **Variante fixe** vide.
-5. Pour chaque produit complémentaire, ajouter une ligne distincte, sélectionner ce produit, choisir sa variante fixe et définir la quantité.
-6. Enregistrer, puis revenir sur la fiche du produit et lire le diagnostic de publication.
-7. N'activer le produit que lorsque les autres conditions de publication sont satisfaites.
+1. Ouvrir la fiche du produit dans **Produits** et enregistrer le produit, ses variantes actives et son image commune.
+2. Dans la section **Offres** au bas de la fiche produit, ajouter une ligne pour chaque niveau souhaité : Essentiel, Medium et/ou Premium. Il est possible d'en créer une seule, deux ou les trois.
+3. Pour chaque ligne, choisir le badge, le type de livraison, le prix et l'état actif. Le titre et l'ordre sont automatiques. Un même badge ne peut pas être utilisé deux fois pour ce produit.
+4. Enregistrer la fiche produit. Utiliser le lien **Modifier** d'une offre pour ouvrir sa fiche détaillée et configurer les produits qui la composent.
+5. Dans la section des articles de l'offre, ajouter une ligne pour le produit principal. Sélectionner ce même produit et cocher **Utiliser la variante choisie sur la fiche** ; laisser **Variante fixe** vide.
+6. Pour chaque produit complémentaire, ajouter une ligne distincte, sélectionner ce produit, choisir sa variante fixe et définir la quantité.
+7. Enregistrer l'offre, puis revenir sur la fiche du produit et lire le diagnostic de publication. N'activer le produit que lorsque les autres conditions de publication sont satisfaites.
 
 Le badge détermine le titre et la position automatiquement. Un produit peut avoir une, deux ou trois offres actives, mais pas deux offres actives portant le même badge.
 
