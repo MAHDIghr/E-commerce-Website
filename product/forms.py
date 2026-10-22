@@ -20,8 +20,11 @@ class ReviewForm(forms.Form):
         label="Votre avis", min_length=10, max_length=2000, strip=True,
         widget=forms.Textarea(attrs={"rows": 4, "maxlength": "2000", "placeholder": "Partagez votre expérience avec ce produit…"}),
     )
-    # Champ piège pour les robots : il n'est jamais présenté aux visiteurs.
-    website = forms.CharField(required=False, widget=forms.HiddenInput)
+    # Champ texte masqué par CSS : les robots qui remplissent tous les champs sont détectés.
+    website = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"tabindex": "-1", "autocomplete": "off"}),
+    )
 
     def clean_website(self):
         value = self.cleaned_data.get("website", "")
