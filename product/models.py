@@ -361,6 +361,7 @@ class ProductOffer(models.Model):
 
     def save(self, *args, **kwargs):
         self.position = self.BADGE_ORDER.get(self.badge, 99)
+        self.title = dict(self.BADGE_CHOICES).get(self.badge, self.title)
         super().save(*args, **kwargs)
 
     @property
