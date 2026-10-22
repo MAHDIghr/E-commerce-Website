@@ -4,7 +4,7 @@ Les vues ne doivent exposer que des produits publiables et des données
 nécessaires à la présentation. Les montants ici sont informatifs côté client ;
 le panier et les commandes devront recalculer les prix côté serveur.
 """
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from .models import Product, ProductMedia
@@ -22,6 +22,8 @@ def published_products():
             variants__is_active=True,
             offers__is_active=True,
             offers__items__use_selected_variant=True,
+            offers__items__product_id=F("pk"),
+            offers__items__variant__isnull=True,
         )
         & (Q(published_at__isnull=True) | Q(published_at__lte=now))
         & (Q(media_items__image__gt="") | Q(media_items__source_url__gt=""))
