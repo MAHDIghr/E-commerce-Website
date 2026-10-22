@@ -19,6 +19,7 @@
             <span aria-current="page" data-shop-i18n="bc_shop">Boutique</span>
         </nav>
         <h1 data-shop-i18n="title">Notre boutique</h1>
+        {% if search_query %}<p class="shop-search-summary">Résultats pour <strong>« {{ search_query }} »</strong> <a href="{% url 'shop:catalog' %}">Effacer la recherche</a></p>{% endif %}
         <p class="shop-head__desc" data-shop-i18n="subtitle">Sacs et accessoires en cuir, choisis pour durer. Livraison offerte dès 80 €, retours gratuits sous 30 jours.</p>
 
         <ul class="category-pills" id="category-pills" aria-label="Catégories"></ul>

@@ -229,27 +229,12 @@ class CatalogViewTests(TestCase):
         self.assertNotContains(response, "Visiteur privé")
 
 
-    def test_public_review_submission_is_pending_and_attached_to_current_product(self):
+    def test_public_review_submission_is_disabled_until_checkout_is_ready(self):
         response = self.client.post(
             reverse("product:detail", kwargs={"slug": self.product.slug}),
             {"author_name": "Camille", "rating": "5", "comment": "Très beau sac et finitions soignées."},
         )
-        self.assertEqual(response.status_code, 302)
-        review = Review.objects.get(author_name="Camille")
-        self.assertEqual(review.product, self.product)
-        self.assertFalse(review.is_approved)
-        self.assertFalse(review.is_featured)
-        self.assertNotContains(
-            self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug})),
-            "Très beau sac et finitions soignées.",
-        )
-
-    def test_public_review_submission_rejects_invalid_rating(self):
-        response = self.client.post(
-            reverse("product:detail", kwargs={"slug": self.product.slug}),
-            {"author_name": "Camille", "rating": "6", "comment": "Une expérience tout à fait correcte."},
-        )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 405)
         self.assertFalse(Review.objects.filter(author_name="Camille").exists())
 
     def test_home_only_displays_approved_featured_reviews_for_published_products(self):

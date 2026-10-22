@@ -1,0 +1,11 @@
+/* Formulaire d'avis — habillage de l'interface Django Admin */
+.review-admin-input { width: min(100%, 760px) !important; max-width: 760px; }
+.review-admin-comment { min-height: 150px; line-height: 1.65; padding: 12px !important; }
+.review-rating-preview, .review-admin-preview__stars { color: #a66d3e; letter-spacing: 2px; font-size: 16px; }
+.review-rating-muted { color: #c8bdb1; }
+.review-admin-preview { max-width: 760px; padding: 22px 24px; border: 1px solid #e5d9cc; border-radius: 12px; background: linear-gradient(135deg, #fff 0%, #f7f0e8 100%); box-shadow: 0 8px 24px rgba(35, 25, 17, .05); }
+.review-admin-preview__stars { margin-bottom: 10px; font-size: 20px; }
+.review-admin-preview strong { display: block; color: #2a211b; font-size: 15px; }
+.review-admin-preview p { margin: 8px 0 12px; max-width: 65ch; color: #594c42; line-height: 1.75; white-space: pre-wrap; }
+.review-admin-preview small { color: #867466; }
+.field-review_preview { padding-top: 8px; }

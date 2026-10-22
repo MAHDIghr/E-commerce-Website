@@ -26,6 +26,7 @@ def _detail_queryset():
     )
 
 
+@require_GET
 def detail(request, slug):
     """Rend une fiche publiée et reçoit les avis publics en attente de modération."""
     try:

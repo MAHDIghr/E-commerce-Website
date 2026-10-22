@@ -1,5 +1,6 @@
 """Administration des données du catalogue."""
 from django.contrib import admin
+from django import forms
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
@@ -186,14 +187,45 @@ class ProductOfferItemAdmin(admin.ModelAdmin):
     search_fields = ("offer__title", "product__name", "variant__sku")
 
 
+class ReviewAdminForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = "__all__"
+        widgets = {
+            "author_name": forms.TextInput(attrs={"class": "review-admin-input", "placeholder": "Ex. : Camille"}),
+            "author_email": forms.EmailInput(attrs={"class": "review-admin-input", "autocomplete": "off"}),
+            "comment": forms.Textarea(attrs={"class": "review-admin-input review-admin-comment", "rows": 6, "placeholder": "Rédigez un retour précis, naturel et utile aux clientes."}),
+        }
+
+
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ("product", "author_name", "rating", "is_approved", "is_featured", "created_at")
+    form = ReviewAdminForm
+    list_display = ("product", "author_name", "rating_display", "is_approved", "is_featured", "created_at")
     list_filter = ("is_approved", "is_featured", "rating", "created_at")
     search_fields = ("product__name", "author_name", "comment")
-    readonly_fields = ("created_at",)
+    list_select_related = ("product",)
+    readonly_fields = ("created_at", "review_preview")
     list_editable = ("is_approved", "is_featured")
     actions = ("approve_reviews",)
+    fieldsets = (
+        ("Avis et produit", {"description": "Créez un avis de test ici. Les avis ne peuvent pas être envoyés depuis le site public à ce stade.", "fields": ("product", "author_name", "author_email", "rating", "comment")}),
+        ("Publication", {"description": "Un avis doit être approuvé pour apparaître sur la fiche produit. Cochez aussi « Mis en avant » pour l'afficher sur l'accueil.", "fields": ("is_approved", "is_featured", "review_preview")}),
+        ("Traçabilité", {"fields": ("created_at",)}),
+    )
+
+    class Media:
+        css = {"all": ("admin/css/review_admin.css",)}
+
+    @admin.display(description="Aperçu de la note", ordering="rating")
+    def rating_display(self, obj):
+        return format_html('<span class="review-rating-preview" aria-label="{} sur 5">{}<span class="review-rating-muted">{}</span></span>', obj.rating, "★" * obj.rating, "☆" * (5 - obj.rating))
+
+    @admin.display(description="Aperçu de l'avis")
+    def review_preview(self, obj):
+        if not obj or not obj.pk:
+            return "L'aperçu apparaîtra après l'enregistrement."
+        return format_html('<div class="review-admin-preview"><div class="review-admin-preview__stars">{}</div><strong>{}</strong><p>{}</p><small>{}</small></div>', "★" * obj.rating + "☆" * (5 - obj.rating), obj.author_name, obj.comment, obj.product.name)
 
     def save_model(self, request, obj, form, change):
         if not obj.is_approved:
@@ -202,4 +234,4 @@ class ReviewAdmin(admin.ModelAdmin):
 
     @admin.action(description="Approuver les avis sélectionnés")
     def approve_reviews(self, request, queryset):
-        queryset.update(is_approved=True)
+        queryset.update(is_approved=True, is_featured=False)

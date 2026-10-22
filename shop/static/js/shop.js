@@ -91,6 +91,8 @@
 
     function writeUrl() {
         const p = new URLSearchParams();
+        const currentQuery = new URLSearchParams(window.location.search).get("q");
+        if (currentQuery) p.set("q", currentQuery);
         if (state.cats.size) p.set("cat", [...state.cats].join(","));
         if (state.colors.size) p.set("color", [...state.colors].join(","));
         if (state.min !== null) p.set("min", state.min);
@@ -194,7 +196,7 @@
         add.setAttribute("aria-label", p.stock <= 0 ? t().unavailable : t().add(p.name));
         add.appendChild(svgIcon([PLUS]));
         add.addEventListener("click", () => {
-            addToCart({ id: `${p.id}:default:${p.variantId}`, name: p.variantName ? `${p.name} — ${p.variantName}` : p.name, price: p.price, image: p.img });
+            addToCart({ variantId: p.variantId });
             add.classList.add("is-added");
             add.replaceChildren(svgIcon([CHECK]));
             window.setTimeout(() => {

@@ -821,3 +821,25 @@ h3 { font-size: 1.05rem; font-weight: 500; }
         scroll-behavior: auto !important;
     }
 }
+
+/* Recherche instantanée et messages du panier */
+.search-suggestions { margin-top: .8rem; max-height: min(52vh, 420px); overflow-y: auto; }
+.search-suggestions__hint { margin: .7rem 0 0; color: var(--color-ink-muted); font-size: .82rem; }
+.search-suggestions__list { display: grid; gap: .35rem; margin: .4rem 0 0; padding: 0; }
+.search-suggestion { display: flex; align-items: center; gap: .8rem; padding: .55rem; border-radius: var(--radius-sm); transition: background-color var(--transition-fast); }
+.search-suggestion:hover, .search-suggestion:focus-visible { background: var(--color-bg-alt); }
+.search-suggestion img { width: 48px; height: 56px; flex: 0 0 48px; object-fit: cover; border-radius: 5px; background: var(--color-bg-alt); }
+.search-suggestion__details { display: grid; min-width: 0; flex: 1; gap: .1rem; }
+.search-suggestion__details strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
+.search-suggestion__details small { color: var(--color-ink-muted); font-size: .73rem; }
+.search-suggestion__price { white-space: nowrap; font-size: .82rem; font-weight: 600; }
+.shop-search-summary { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; color: var(--color-ink-muted); font-size: .88rem; }
+.shop-search-summary strong { color: var(--color-ink); }
+.shop-search-summary a { margin-left: .4rem; color: var(--color-accent-dark); text-decoration: underline; }
+.cart-status { margin: .75rem 1rem 0; padding: .65rem .8rem; border-radius: var(--radius-sm); background: var(--color-bg-alt); font-size: .8rem; }
+.cart-status.is-error { color: #8b2c20; background: #fff0ec; }
+.cart-status[hidden] { display: none; }
+.cart-item__warning { margin: .4rem 0 0; color: #8b2c20; font-size: .72rem; line-height: 1.4; }
+.cart-item__qty button:disabled { cursor: not-allowed; opacity: .35; }
+.cart-checkout-note { margin: .65rem 0 0; color: var(--color-ink-muted); font-size: .73rem; line-height: 1.5; text-align: center; }
+@media (max-width: 520px) { .search-overlay { padding-top: 6vh; } .search-overlay__panel { padding: 1rem; } }

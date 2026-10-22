@@ -137,23 +137,16 @@
       <ul>{% for r in product.dist %}<li><span>{{ r.n }} ★</span><i class="bar" style="--w: {{ r.pct }}%"></i><span>{{ r.pct }} %</span></li>{% endfor %}</ul>
     </div>
     <ul class="rev__list" tabindex="0" aria-label="Avis clients — faites glisser horizontalement pour parcourir les avis">
-      {% for r in product.reviews %}<li class="tile"><p class="stars" role="img" aria-label="{{ r.stars }} sur 5">{{ r.stars_display }}</p><p>{{ r.t }}</p><p class="rev__who">{{ r.who }}</p></li>{% empty %}<li class="review-empty">Aucun avis publié pour le moment. Soyez la première personne à partager votre expérience.</li>{% endfor %}
+      {% for r in product.reviews %}<li class="tile"><p class="stars" role="img" aria-label="{{ r.stars }} sur 5">{{ r.stars_display }}</p><p>{{ r.t }}</p><p class="rev__who">{{ r.who }}</p></li>{% empty %}<li class="review-empty">Aucun avis publié pour le moment. Revenez découvrir les retours de notre communauté.</li>{% endfor %}
     </ul>
   </div>
-  <div class="review-form-wrap">
-    <h3>Partager votre avis</h3>
-    <p class="review-form__note">Votre avis est rattaché à ce produit. Il sera visible après validation par notre équipe. Le formulaire ne demande pas votre adresse e-mail.</p>
-    {% if messages %}<div class="review-messages" role="status" aria-live="polite">{% for message in messages %}<p class="review-message review-message--{{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
-    <form method="post" action="#avis" class="review-form">
-      {% csrf_token %}
-      <div class="review-form__trap" aria-hidden="true">{{ review_form.website }}</div>
-      {{ review_form.non_field_errors }}
-      <div class="review-form__field">{{ review_form.author_name.label_tag }}{{ review_form.author_name }}{{ review_form.author_name.errors }}</div>
-      <div class="review-form__field">{{ review_form.rating.label_tag }}{{ review_form.rating }}{{ review_form.rating.errors }}</div>
-      <div class="review-form__field">{{ review_form.comment.label_tag }}{{ review_form.comment }}{{ review_form.comment.errors }}</div>
-      <button type="submit" class="button button-primary">Envoyer mon avis</button>
-    </form>
-  </div>
+  <aside class="review-admin-note" aria-label="Publication des avis">
+    <span class="review-admin-note__mark" aria-hidden="true">✦</span>
+    <div><h3>Chaque avis compte</h3>
+      <p>Les avis affichés sont sélectionnés et publiés par notre équipe afin de préserver une présentation fiable de nos produits.</p>
+      <p class="review-admin-note__small">La collecte des avis clients sera activée lorsque le parcours de commande sera opérationnel.</p>
+    </div>
+  </aside>
 </div></section>
 
 <section class="p-sec"><div class="p-wrap p-wrap--narrow">

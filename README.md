@@ -910,40 +910,56 @@ Ces commandes doivent être exécutées avant déploiement. Le code poussé sur 
 
 ## 20. Avis produits et témoignages de l’accueil
 
-### Règles fonctionnelles
+### Fonctionnement actuel
 
-- Chaque avis possède une relation obligatoire vers un produit (`Review.product`). Il ne peut pas être affiché comme avis d’un autre produit.
-- Le formulaire public se trouve dans la section **Avis clients** de la fiche produit. Il accepte un nom affiché, une note de 1 à 5 et un commentaire de 10 à 2 000 caractères.
-- Les champs sensibles de modération ne sont jamais fournis par le navigateur : le formulaire public ne permet pas de définir `is_approved`, `is_featured` ou le produit cible.
-- Après envoi, l’avis reste en attente de validation. Le contenu n’est pas rendu public avant approbation.
-- La page d’accueil ne présente que les avis **approuvés et mis en avant** dont le produit satisfait encore les conditions de publication du catalogue. Chaque témoignage renvoie vers la fiche du produit concerné.
-- Les avis en attente ne peuvent pas être mis en avant : le modèle réinitialise ce choix à l’enregistrement et une contrainte de base de données protège également cette règle.
-- Les avis publics sont affichés par les templates Django avec échappement automatique. Le commentaire n’est jamais interprété comme du HTML.
-- Le formulaire utilise la protection CSRF Django et un champ piège simple contre les robots. Ce champ ne remplace pas une limitation de débit au niveau du serveur ou du reverse proxy pour un déploiement exposé à des abus.
+- Chaque avis est obligatoirement rattaché à un produit via Review.product.
+- La création et la modification des avis sont réservées à l’administration Django pendant la phase de développement. Aucun formulaire public ne permet actuellement d’envoyer un avis.
+- La fiche produit affiche uniquement les avis approuvés, associés à ce produit et échappés automatiquement par les templates Django.
+- L’accueil affiche au maximum trois avis approuvés et mis en avant dont le produit est toujours publiable. Chaque témoignage renvoie vers la fiche du produit.
+- Un avis non approuvé ne peut pas être mis en avant. Cette règle est appliquée par le modèle et par une contrainte de base de données.
+- L’adresse e-mail reste facultative, privée et n’est jamais rendue dans le site public.
 
-### Modération et gestion dans Django Admin
+### Ajouter un avis de test
 
-Dans **Administration → Avis** :
+Dans Administration → Avis → Ajouter un avis :
 
-1. Rechercher un avis par produit, auteur ou contenu.
-2. Vérifier le produit associé et le texte envoyé.
-3. Approuver les avis qui peuvent être publiés.
-4. Cocher **Mis en avant sur l’accueil** uniquement pour les avis approuvés que l’on souhaite afficher dans les témoignages de la page d’accueil.
-5. Modifier ou supprimer un avis via les actions standard de Django Admin.
+1. Sélectionner le produit exact auquel l’avis doit être rattaché.
+2. Renseigner le nom affiché, la note entre 1 et 5 et le commentaire.
+3. Cocher Approuvé pour rendre l’avis visible sur la fiche produit.
+4. Cocher Mis en avant sur l’accueil uniquement si l’avis est approuvé et doit figurer parmi les témoignages de la page d’accueil.
+5. Enregistrer, puis vérifier la fiche du produit et l’accueil.
 
-L’accueil affiche au maximum les trois avis mis en avant les plus récents. Si aucun avis ne correspond aux critères, un message informatif est affiché à la place : aucun témoignage fictif n’est injecté. L’adresse e-mail n’est pas demandée dans le formulaire public et n’est jamais affichée dans les templates.
+Le formulaire d’administration présente des champs organisés, un aperçu après enregistrement et une liste avec filtres de modération. Le formulaire public sera étudié après la mise en place du checkout et des règles permettant de vérifier une commande réelle. Aucune preuve d’achat n’est simulée à ce stade.
 
-### Migration et recette
-
-La migration `0004_review_featured` ajoute le champ de mise en avant et la contrainte d’intégrité correspondante. Elle ne publie pas automatiquement les avis historiques : les avis existants restent non mis en avant jusqu’à sélection manuelle dans l’administration.
-
-Après récupération de la branche :
+### Recette des avis
 
 ```powershell
 python manage.py check --settings=config.settings.development
-python manage.py makemigrations --check --dry-run --settings=config.settings.development
-python manage.py migrate --settings=config.settings.development
 python manage.py test product --settings=config.settings.development
 ```
 
-Vérifier manuellement l’envoi d’un avis, le refus des notes invalides, la modération, l’affichage d’un avis approuvé sur la fiche du bon produit et la sélection des témoignages de l’accueil. Le code commité sur GitHub ne signifie pas que la migration a été appliquée sur l’hébergement de production.
+La migration 0004_review_featured ajoute le champ de mise en avant et sa contrainte d’intégrité. Elle doit être appliquée séparément avec python manage.py migrate --settings=config.settings.development. La publication sur GitHub ne signifie pas que la migration a été appliquée sur l’hébergement de production.
+
+## Panier invité
+
+Le panier utilise la session Django côté serveur. Le navigateur ne peut envoyer que l’identifiant de variante, l’identifiant facultatif d’offre et la quantité ; les prix, les produits publiés, les variantes actives et les stocks sont recalculés et contrôlés par le serveur. Les prix fournis par le client sont ignorés.
+
+- GET /boutique/panier/ renvoie le contenu et les totaux calculés côté serveur.
+- POST /boutique/panier/modifier/ accepte les actions add, update, remove et clear, avec protection CSRF Django.
+- Les quantités sont limitées à 10 par ligne et au stock disponible. Le panier ne réserve pas le stock.
+- Les lignes devenues invalides (produit non publié, variante inactive ou offre supprimée) sont retirées lors de la relecture.
+- Le tiroir du panier et les badges sont alimentés par la réponse serveur. Le prix affiché n’est pas une preuve de prix définitif pour une commande.
+- Le checkout reste une maquette front-end : aucun paiement, aucune commande et aucun frais de livraison ne sont calculés ou confirmés par cette fonctionnalité.
+
+## Recherche catalogue
+
+La recherche est disponible depuis l’overlay global et la page boutique. Elle propose des suggestions après deux caractères, limite les requêtes et ne renvoie que des produits satisfaisant les conditions de publication. La recherche du catalogue combine les termes saisis sur le nom, le slug, la description courte/complète, la ligne de marque, l’accroche et la catégorie. Les filtres du catalogue peuvent ensuite être combinés aux résultats de recherche.
+
+### Recette panier et recherche
+
+```powershell
+python manage.py check --settings=config.settings.development
+python manage.py test shop --settings=config.settings.development
+```
+
+Ces commandes doivent être exécutées dans l’environnement local du projet. Aucun test ni déploiement n’est réputé réussi sans résultat effectivement observé.

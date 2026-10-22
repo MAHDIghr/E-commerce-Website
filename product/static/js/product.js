@@ -182,15 +182,17 @@
     updateAvailability();
 
     /* ---------- Ajout au panier (réutilise addToCart de base.js) ---------- */
-    $$(".js-add").forEach((btn) => btn.addEventListener("click", () => {
-        const o = offerIn().dataset, label = btn.textContent;
-        btn.disabled = true; btn.textContent = "Ajout…";
-        window.setTimeout(() => {
-            const selectedPrice = o.usesVariantPrice === "true" ? parseFloat(colorIn().dataset.price) : parseFloat(o.price);
-            addToCart({ id: `${data.slug}:${offerIn().value}:${colorIn().value}`, name: `${data.name} — ${o.name} (${colorIn().dataset.label})`, price: selectedPrice, image: media[0].src });
-            btn.disabled = false; btn.textContent = "Ajouté ✓"; btn.classList.add("is-done");
+    $(".js-add").forEach((btn) => btn.addEventListener("click", async () => {
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Ajout…";
+        const added = await addToCart({ variantId: Number(colorIn().value), offerId: Number(offerIn().value) });
+        btn.disabled = false;
+        btn.textContent = added ? "Ajouté ✓" : label;
+        if (added) {
+            btn.classList.add("is-done");
             window.setTimeout(() => { btn.textContent = label; btn.classList.remove("is-done"); }, 1400);
-        }, reduced ? 0 : 450);
+        }
     }));
 
     /* ---------- Barre collante : visible quand aucun CTA de page n'est à l'écran ---------- */
