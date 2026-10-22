@@ -351,13 +351,13 @@ class ProductOffer(models.Model):
         super().clean()
         if not self.product_id or not self.badge:
             return
-        siblings = ProductOffer.objects.filter(product_id=self.product_id)
+        siblings = ProductOffer.objects.filter(product_id=self.product_id, is_active=True)
         if self.pk:
             siblings = siblings.exclude(pk=self.pk)
-        if siblings.filter(badge=self.badge).exists():
-            raise ValidationError({"badge": "Ce produit possède déjà une offre avec ce badge."})
-        if siblings.count() >= 3:
-            raise ValidationError({"badge": "Un produit ne peut pas avoir plus de trois offres."})
+        if self.is_active and siblings.filter(badge=self.badge).exists():
+            raise ValidationError({"badge": "Ce produit possède déjà une offre active avec ce badge."})
+        if self.is_active and siblings.count() >= 3:
+            raise ValidationError({"badge": "Un produit ne peut pas avoir plus de trois offres actives."})
 
     def save(self, *args, **kwargs):
         self.position = self.BADGE_ORDER.get(self.badge, 99)
