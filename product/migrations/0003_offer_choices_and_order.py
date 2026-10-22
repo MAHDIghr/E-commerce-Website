@@ -68,4 +68,12 @@ class Migration(migrations.Migration):
             name="position",
             field=models.PositiveIntegerField(default=0, editable=False, verbose_name="Ordre automatique"),
         ),
+        migrations.AddConstraint(
+            model_name="productoffer",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(is_active=True),
+                fields=("product", "badge"),
+                name="unique_active_offer_badge",
+            ),
+        ),
     ]
