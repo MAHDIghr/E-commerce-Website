@@ -323,17 +323,23 @@ class Review(models.Model):
 
 
 class ProductOffer(models.Model):
+    BADGE_ESSENTIAL = "essential"
+    BADGE_MEDIUM = "medium"
+    BADGE_PREMIUM = "premium"
+    BADGE_CHOICES = [(BADGE_ESSENTIAL, "Essentiel"), (BADGE_MEDIUM, "Medium"), (BADGE_PREMIUM, "Premium")]
+    BADGE_ORDER = {BADGE_ESSENTIAL: 0, BADGE_MEDIUM: 1, BADGE_PREMIUM: 2}
+    DELIVERY_PAID = "paid"
+    DELIVERY_FREE = "free"
+    DELIVERY_CHOICES = [(DELIVERY_PAID, "Livraison payante"), (DELIVERY_FREE, "Livraison gratuite")]
+
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="offers", verbose_name="Produit principal")
     title = models.CharField("Titre", max_length=120)
-    badge = models.CharField("Badge", max_length=100, blank=True)
-    display_delivery_label = models.CharField(
-        "Mention de livraison affichée", max_length=120, blank=True,
-        help_text="Texte éditorial uniquement ; ne calcule pas les frais de livraison.",
-    )
+    badge = models.CharField("Badge", max_length=20, choices=BADGE_CHOICES, default=BADGE_ESSENTIAL)
+    display_delivery_label = models.CharField("Type de livraison", max_length=10, choices=DELIVERY_CHOICES, default=DELIVERY_PAID, help_text="Ce choix décrit l'offre et ne calcule pas les frais de livraison.")
     price = models.DecimalField("Prix de l'offre (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
     is_featured = models.BooleanField("Offre mise en avant", default=False)
     is_active = models.BooleanField("Active", default=True, db_index=True)
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre automatique", default=0, editable=False)
 
     class Meta:
         ordering = ("position", "pk")
@@ -341,8 +347,28 @@ class ProductOffer(models.Model):
         verbose_name = "offre"
         verbose_name_plural = "offres"
 
+    def clean(self):
+        super().clean()
+        if not self.product_id or not self.badge:
+            return
+        siblings = ProductOffer.objects.filter(product_id=self.product_id)
+        if self.pk:
+            siblings = siblings.exclude(pk=self.pk)
+        if siblings.filter(badge=self.badge).exists():
+            raise ValidationError({"badge": "Ce produit possède déjà une offre avec ce badge."})
+        if siblings.count() >= 3:
+            raise ValidationError({"badge": "Un produit ne peut pas avoir plus de trois offres."})
+
+    def save(self, *args, **kwargs):
+        self.position = self.BADGE_ORDER.get(self.badge, 99)
+        super().save(*args, **kwargs)
+
+    @property
+    def delivery_label(self):
+        return self.get_display_delivery_label_display()
+
     def __str__(self):
-        return f"{self.product.name} — {self.title}"
+        return f"{self.product.name} — {self.get_badge_display()}"
 
 
 class ProductOfferItem(models.Model):
