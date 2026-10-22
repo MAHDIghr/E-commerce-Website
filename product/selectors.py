@@ -20,6 +20,8 @@ def published_products():
             media_items__variant__isnull=True,
             media_items__media_type=ProductMedia.IMAGE,
             variants__is_active=True,
+            offers__is_active=True,
+            offers__items__use_selected_variant=True,
         )
         & (Q(published_at__isnull=True) | Q(published_at__lte=now))
         & (Q(media_items__image__gt="") | Q(media_items__source_url__gt=""))
