@@ -102,18 +102,8 @@ def detail(request, slug):
         })
 
     if not offers:
-        # L'offre implicite n'est pas une donnée commerciale : on affiche le prix de la variante.
-        offers = [{
-            "id": "default", "title": "À l'unité", "items": product.name,
-            "price": float(default_variant.price),
-            "old": float(default_variant.compare_at_price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else None,
-            "price_label": _eur(default_variant.price),
-            "old_label": _eur(default_variant.compare_at_price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
-            "save_label": _eur(default_variant.compare_at_price - default_variant.price) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else "",
-            "off": round((1 - default_variant.price / default_variant.compare_at_price) * 100) if default_variant.compare_at_price and default_variant.compare_at_price > default_variant.price else 0,
-            "ship": "", "badge": "", "featured": True, "uses_variant_price": True,
-            "main_quantity": 1,
-        }]
+        raise Http404("Offre indisponible.")
+
     selected = next((item for item in offers if item["featured"]), offers[0])
     for offer_data in offers:
         offer_data["featured"] = offer_data is selected
