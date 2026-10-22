@@ -343,7 +343,14 @@ class ProductOffer(models.Model):
 
     class Meta:
         ordering = ("position", "pk")
-        constraints = [models.CheckConstraint(condition=Q(price__gte=0), name="offer_price_nonnegative")]
+        constraints = [
+            models.CheckConstraint(condition=Q(price__gte=0), name="offer_price_nonnegative"),
+            models.UniqueConstraint(
+                fields=("product", "badge"),
+                condition=Q(is_active=True),
+                name="unique_active_offer_badge",
+            ),
+        ]
         verbose_name = "offre"
         verbose_name_plural = "offres"
 
