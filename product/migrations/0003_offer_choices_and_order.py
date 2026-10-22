@@ -3,13 +3,6 @@ from django.db import migrations, models
 
 def normalize_offer_choices(apps, schema_editor):
     ProductOffer = apps.get_model("product", "ProductOffer")
-    aliases = {
-        "essentiel": "essential",
-        "essential": "essential",
-        "moyen": "medium",
-        "medium": "medium",
-        "premium": "premium",
-    }
     delivery_aliases = {
         "livraison gratuite": "free",
         "gratuite": "free",
@@ -18,13 +11,27 @@ def normalize_offer_choices(apps, schema_editor):
         "payante": "paid",
         "paid": "paid",
     }
-    for offer in ProductOffer.objects.all().iterator():
-        raw_badge = (offer.badge or "").strip().lower()
-        offer.badge = aliases.get(raw_badge, "essential")
-        raw_delivery = (offer.display_delivery_label or "").strip().lower()
-        offer.display_delivery_label = delivery_aliases.get(raw_delivery, "paid")
-        offer.position = {"essential": 0, "medium": 1, "premium": 2}[offer.badge]
-        offer.save(update_fields=["badge", "display_delivery_label", "position"])
+    product_ids = ProductOffer.objects.order_by().values_list("product_id", flat=True).distinct()
+    for product_id in product_ids:
+        offers = ProductOffer.objects.filter(product_id=product_id).order_by("position", "pk")
+        for index, offer in enumerate(offers):
+            if index == 0:
+                offer.badge = "essential"
+                offer.position = 0
+            elif index == 1:
+                offer.badge = "medium"
+                offer.position = 1
+            elif index == 2:
+                offer.badge = "premium"
+                offer.position = 2
+            else:
+                # Keep historical data, but deactivate offers beyond the supported three tiers.
+                offer.badge = "premium"
+                offer.position = 2
+                offer.is_active = False
+            raw_delivery = (offer.display_delivery_label or "").strip().lower()
+            offer.display_delivery_label = delivery_aliases.get(raw_delivery, "paid")
+            offer.save(update_fields=["badge", "display_delivery_label", "position", "is_active"])
 
 
 class Migration(migrations.Migration):
