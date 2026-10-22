@@ -49,10 +49,10 @@ class ProductFAQInline(admin.TabularInline):
     extra = 0
 
 
-class ProductOfferInline(admin.TabularInline):
-    model = ProductOffer
-    extra = 0
-    fields = ("title", "badge", "display_delivery_label", "price", "is_featured", "is_active", "position")
+class ProductOfferItemInline(admin.TabularInline):
+    model = ProductOfferItem
+    extra = 1
+    fields = ("product", "variant", "use_selected_variant", "quantity", "position")
 
 
 @admin.register(Category)
@@ -82,7 +82,7 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = (
         ProductVariantInline, ProductMediaInline, ProductReasonInline,
         ProductContentItemInline, ProductCraftDetailInline, ProductUsageInline,
-        ProductFAQInline, ProductOfferInline,
+        ProductFAQInline,
     )
     ordering = ("name",)
 
@@ -157,6 +157,7 @@ class ProductOfferAdmin(admin.ModelAdmin):
     search_fields = ("title", "product__name")
     ordering = ("product__name", "position")
     fields = ("product", "title", "badge", "display_delivery_label", "price", "is_featured", "is_active")
+    inlines = (ProductOfferItemInline,)
 
 
 @admin.register(ProductOfferItem)
