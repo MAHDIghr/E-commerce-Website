@@ -76,6 +76,14 @@ class CatalogViewTests(TestCase):
             source_url="https://cdn.example.test/cabas.webp",
             alt_text="Cabas camel de face", is_primary=True,
         )
+        offer = ProductOffer.objects.create(
+            product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+            display_delivery_label=ProductOffer.DELIVERY_PAID, price=Decimal("89.90"),
+            is_featured=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=offer, product=self.product, use_selected_variant=True, quantity=1,
+        )
 
     def test_catalog_receives_database_products_and_categories(self):
         response = self.client.get(reverse("shop:catalog"))
@@ -99,6 +107,14 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, "Notre sélection signature")
         self.assertContains(response, reverse("shop:catalog") + "?cat=" + self.category.slug)
         self.assertNotContains(response, "?cat=handbags")
+
+    def test_product_without_linked_offer_is_not_published(self):
+        self.product.offers.all().delete()
+        response = self.client.get(reverse("shop:catalog"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '"id": "cabas-camel"')
+        detail = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(detail.status_code, 404)
 
     def test_product_without_common_image_is_not_published(self):
         variant = self.product.variants.first()
