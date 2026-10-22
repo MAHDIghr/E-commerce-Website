@@ -121,6 +121,17 @@ class ProductAdmin(admin.ModelAdmin):
             issues.append(
                 "Aucune image commune valide : ajoutez un média de type Image et laissez « Variante » vide."
             )
+
+        has_valid_offer = ProductOffer.objects.filter(
+            product=obj,
+            is_active=True,
+            items__product=obj,
+            items__use_selected_variant=True,
+            items__variant__isnull=True,
+        ).exists()
+        if not has_valid_offer:
+            issues.append("Aucune offre active valide : créez une offre et reliez-y le produit principal.")
+
         return issues
 
     @admin.display(description="État catalogue", ordering="is_active")
