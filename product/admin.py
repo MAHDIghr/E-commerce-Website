@@ -49,6 +49,14 @@ class ProductFAQInline(admin.TabularInline):
     extra = 0
 
 
+class ProductOfferInline(admin.TabularInline):
+    model = ProductOffer
+    extra = 0
+    fields = ("badge", "display_delivery_label", "price", "is_featured", "is_active")
+    show_change_link = True
+    ordering = ("position", "pk")
+
+
 class ProductOfferItemInline(admin.TabularInline):
     model = ProductOfferItem
     extra = 1
@@ -82,7 +90,7 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = (
         ProductVariantInline, ProductMediaInline, ProductReasonInline,
         ProductContentItemInline, ProductCraftDetailInline, ProductUsageInline,
-        ProductFAQInline,
+        ProductFAQInline, ProductOfferInline,
     )
     ordering = ("name",)
 
