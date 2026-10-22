@@ -25,9 +25,8 @@ def _detail_queryset():
 
 
 @require_GET
-@require_GET
 def detail(request, slug):
-    """Rend une fiche publiée et reçoit les avis publics en attente de modération."""
+    """Affiche une fiche publiée et ses avis créés/modérés depuis Django Admin."""
     try:
         product = _detail_queryset().get(slug=slug)
     except Product.DoesNotExist as exc:
