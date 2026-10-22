@@ -29,9 +29,10 @@ def normalize_offer_choices(apps, schema_editor):
                 offer.badge = "premium"
                 offer.position = 2
                 offer.is_active = False
+            offer.title = {"essential": "Essentiel", "medium": "Medium", "premium": "Premium"}[offer.badge]
             raw_delivery = (offer.display_delivery_label or "").strip().lower()
             offer.display_delivery_label = delivery_aliases.get(raw_delivery, "paid")
-            offer.save(update_fields=["badge", "display_delivery_label", "position", "is_active"])
+            offer.save(update_fields=["badge", "title", "display_delivery_label", "position", "is_active"])
 
 
 class Migration(migrations.Migration):
