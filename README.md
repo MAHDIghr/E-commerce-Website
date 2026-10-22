@@ -866,3 +866,43 @@ Dans **Django Admin → Produits → ouvrir le produit** :
 - enregistrer, puis recharger le catalogue sans cache.
 
 En production, il faut aussi confirmer que l'administration et le site utilisent la même base de données, que les migrations sont appliquées et que le stockage média est accessible. Le dépôt seul ne permet pas de vérifier les valeurs réelles du produit créé dans l'instance en ligne.
+
+
+## 19. Offres commerciales : règles, administration et publication
+
+### Règles métier
+
+- Une offre est toujours rattachée à un produit principal.
+- Chaque produit doit disposer d'au moins une offre active contenant une ligne qui référence le produit principal avec **« Utiliser la variante choisie sur la fiche »** activé et sans variante fixe.
+- Trois badges au maximum sont proposés : **Essentiel**, **Medium**, **Premium**.
+- Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement.
+- Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. Cette mention décrit l'offre ; elle ne calcule pas encore les frais réels de livraison au checkout.
+- Une offre peut inclure d'autres produits. Chaque ligne doit sélectionner le produit et, pour un produit complémentaire, une variante appartenant à ce produit.
+- Un produit sans offre active valide est exclu du catalogue public. La fiche produit ne doit pas remplacer une offre invalide par un prix de variante présenté comme une offre commerciale.
+
+### Créer une offre dans Django Admin
+
+1. Enregistrer le produit, ses variantes actives et son image commune.
+2. Ouvrir **Offres** dans l'administration et créer une offre.
+3. Sélectionner le **produit principal**, choisir son badge et le type de livraison, puis saisir le prix de l'offre.
+4. Dans la section des articles de l'offre, ajouter une ligne pour le produit principal. Sélectionner le même produit et cocher **Utiliser la variante choisie sur la fiche** ; laisser **Variante fixe** vide.
+5. Pour chaque produit complémentaire, ajouter une ligne distincte, sélectionner ce produit, choisir sa variante fixe et définir la quantité.
+6. Enregistrer, puis revenir sur la fiche du produit et lire le diagnostic de publication.
+7. N'activer le produit que lorsque les autres conditions de publication sont satisfaites.
+
+Le badge détermine le titre et la position automatiquement. Un produit peut avoir une, deux ou trois offres actives, mais pas deux offres actives portant le même badge.
+
+### Migration et vérifications
+
+La migration `0003_offer_choices_and_order` normalise les anciennes valeurs de badge et de livraison. Les offres historiques au-delà des trois niveaux pris en charge sont conservées mais désactivées ; vérifier ces enregistrements après migration avant de les réactiver.
+
+Après récupération de la branche :
+
+```powershell
+python manage.py check --settings=config.settings.development
+python manage.py makemigrations --check --dry-run --settings=config.settings.development
+python manage.py migrate --settings=config.settings.development
+python manage.py test product --settings=config.settings.development
+```
+
+Ces commandes doivent être exécutées avant déploiement. Le code poussé sur GitHub ne signifie pas que la migration est déjà appliquée sur l'hébergement de production.
