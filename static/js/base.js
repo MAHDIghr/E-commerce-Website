@@ -179,6 +179,7 @@ const cartSubtotalEl = document.querySelector("#cart-subtotal");
 const cartCountBadges = document.querySelectorAll(".cart-count");
 const cartActionButtons = document.querySelectorAll('[data-action="open-cart"]');
 const cartStatus = document.querySelector("#cart-status");
+const cartClearButton = document.querySelector("#cart-clear");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
 const FREE_SHIPPING_THRESHOLD = 80;
@@ -264,6 +265,7 @@ function bumpCartIcon() { cartActionButtons.forEach((b) => { b.classList.remove(
 if (cartTrigger) cartTrigger.addEventListener("click", openCart);
 if (cartClose) cartClose.addEventListener("click", closeCart);
 if (cartBackdrop) cartBackdrop.addEventListener("click", closeCart);
+if (cartClearButton) cartClearButton.addEventListener("click", async () => { try { await mutateCart({ action: "clear" }); showCartStatus("Le panier a été vidé."); } catch (e) {} });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCart(); closeSearch(); } });
 document.querySelectorAll('[data-action="add-to-cart"], [data-action="quick-add"]').forEach((button) => {
     button.addEventListener("click", async (event) => {
