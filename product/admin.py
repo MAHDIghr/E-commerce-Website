@@ -206,7 +206,6 @@ class ReviewAdmin(admin.ModelAdmin):
     search_fields = ("product__name", "author_name", "comment")
     list_select_related = ("product",)
     readonly_fields = ("created_at", "review_preview")
-    list_editable = ("is_approved", "is_featured")
     actions = ("approve_reviews",)
     fieldsets = (
         ("Avis et produit", {"description": "Créez un avis de test ici. Les avis ne peuvent pas être envoyés depuis le site public à ce stade.", "fields": ("product", "author_name", "author_email", "rating", "comment")}),

@@ -39,7 +39,7 @@
             <span data-i18n="cart_subtotal">Sous-total</span>
             <span id="cart-subtotal">0,00 €</span>
         </div>
-        <a href="{% url 'checkout:checkout' %}" class="button button-primary button-block" data-i18n="cart_checkout">Continuer</a>
+        <button type="button" class="button button-primary button-block cart-checkout-disabled" disabled aria-disabled="true">Commande bientôt disponible</button>
         <p class="cart-checkout-note">Le parcours de commande est encore en préparation. Aucun paiement ne sera lancé depuis ce panier.</p>
     </div>
 </aside>
