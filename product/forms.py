@@ -11,7 +11,7 @@ class ReviewForm(forms.Form):
         strip=True,
         widget=forms.TextInput(attrs={"autocomplete": "name", "maxlength": "100", "placeholder": "Ex. : Camille"}),
     )
-    rating = forms.ChoiceField(
+    rating = forms.TypedChoiceField(
         label="Votre note",
         choices=((1, "1 étoile"), (2, "2 étoiles"), (3, "3 étoiles"), (4, "4 étoiles"), (5, "5 étoiles")),
         coerce=int,
