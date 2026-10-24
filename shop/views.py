@@ -96,7 +96,10 @@ def search_suggestions(request):
             continue
         media_items = list(product.media_items.all())
         media = next((item for item in media_items if item.is_primary), None) or next(iter(media_items), None)
-        image = (media.image.url if media and media.image else media.source_url) if media else ""
+        image = (
+            media.poster_url if media and media.media_type == ProductMedia.VIDEO and media.poster_url
+            else (media.image.url if media and media.image else media.source_url) if media else ""
+        )
         offer = product.offers.filter(
             is_active=True, items__product_id=product.pk,
             items__use_selected_variant=True, items__variant__isnull=True,
@@ -215,9 +218,12 @@ def _line_details(variant_id, offer_id, quantity):
         if variant.color_name:
             title += f" ({variant.color_name})"
     media = ProductMedia.objects.filter(
-        product_id=variant.product_id, media_type=ProductMedia.IMAGE,
+        product_id=variant.product_id,
     ).order_by("-is_primary", "position", "pk").first()
-    image = (media.image.url if media and media.image else media.source_url) if media else ""
+    image = (
+        media.poster_url if media and media.media_type == ProductMedia.VIDEO and media.poster_url
+        else (media.image.url if media and media.image else media.source_url) if media else ""
+    )
     available = max_available >= quantity and max_available > 0
     return {
         "key": f"{variant.pk}:{offer.pk if offer else 0}",
