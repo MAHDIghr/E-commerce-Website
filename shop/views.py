@@ -13,7 +13,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from product.models import (
-    Category, ProductMedia, ProductOffer, ProductVariant, Review,
+    Category, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant, Review,
 )
 from product.selectors import product_card_data, published_products
 
@@ -270,8 +270,9 @@ def offer_options(request, slug):
             continue
 
         components = []
+        offer_items = list(offer.items.all())
         reference_total = Decimal("0.00")
-        for item in offer.items.all():
+        for item in offer_items:
             component = variant if item.use_selected_variant else item.variant
             if component is None:
                 components = []
@@ -297,9 +298,9 @@ def offer_options(request, slug):
             "components": components,
             "component_count": sum(component["quantity"] for component in components),
             "uses_variant_price": (
-                len(components) == 1
-                and components[0]["quantity"] == 1
-                and offer.items.all()[0].use_selected_variant
+                len(offer_items) == 1
+                and offer_items[0].quantity == 1
+                and offer_items[0].use_selected_variant
             ),
         })
 
