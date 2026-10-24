@@ -10,6 +10,73 @@
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     document.body.classList.add("p-js");
 
+    /*
+     * Achat de la fiche produit : gestion locale et explicite des trois CTA
+     * (principal, final et barre collante). On arrête la propagation afin que
+     * le contrôleur partagé ne traite pas une seconde fois ce même clic.
+     * Cette initialisation est placée avant la galerie pour ne pas dépendre
+     * de ses interactions secondaires.
+     */
+    $(".js-add").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (button.disabled || button.getAttribute("aria-busy") === "true") return;
+
+            const variant = $('input[name="color"]:checked');
+            const offer = $('input[name="offer"]:checked');
+            const variantId = Number(variant && variant.value);
+            const offerId = Number(offer && offer.value);
+            const status = $("#variant-stock-status");
+
+            if (!Number.isSafeInteger(variantId) || variantId < 1 ||
+                !Number.isSafeInteger(offerId) || offerId < 1) {
+                const message = "Choisissez une variante et une offre disponible avant de continuer.";
+                if (status) status.textContent = message;
+                if (typeof showCartStatus === "function") showCartStatus(message, true);
+                return;
+            }
+            if (typeof addToCart !== "function") {
+                const message = "Le panier n'est pas initialisé. Actualisez la page puis réessayez.";
+                if (status) status.textContent = message;
+                return;
+            }
+
+            const originalMarkup = button.innerHTML;
+            const originalDisabled = button.disabled;
+            button.disabled = true;
+            button.setAttribute("aria-busy", "true");
+            button.textContent = "Ajout en cours…";
+            try {
+                const added = await addToCart({ variantId, offerId });
+                if (added) {
+                    button.classList.add("is-done");
+                    button.textContent = "Ajouté ✓";
+                } else {
+                    button.innerHTML = originalMarkup;
+                }
+            } catch (error) {
+                const message = error && error.message || "L'ajout au panier a échoué. Réessayez.";
+                if (status) status.textContent = message;
+                if (typeof showCartStatus === "function") showCartStatus(message, true);
+                button.innerHTML = originalMarkup;
+            } finally {
+                button.removeAttribute("aria-busy");
+                const selectedVariant = $('input[name="color"]:checked');
+                const selectedOffer = $('input[name="offer"]:checked');
+                const stock = Number(selectedVariant && selectedVariant.dataset.stock || 0);
+                const required = Math.max(1, Number(selectedOffer && selectedOffer.dataset.mainQuantity || 1));
+                button.disabled = !selectedVariant || !selectedOffer || stock < required;
+                window.setTimeout(() => {
+                    if (!button.isConnected) return;
+                    button.classList.remove("is-done");
+                    button.innerHTML = originalMarkup;
+                    button.disabled = !selectedVariant || !selectedOffer || stock < required;
+                }, 1400);
+            }
+        });
+    });
+
     /* ---------- Galerie ---------- */
     const track = $(".gal__track"), allSlides = $$(".gal__slide"), allThumbs = $$(".gal__thumb"), count = $("#gal-count");
     let slides = allSlides;
