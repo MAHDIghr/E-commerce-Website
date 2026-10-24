@@ -31,9 +31,10 @@
 
         <div class="hero-media">
             <picture class="hero-media__picture">
+                {# Fallback temporaire : l'image mobile dédiée n'est pas encore présente dans le dépôt. #}
                 <source
                     media="(max-width: 767px)"
-                    srcset="{% static 'images/sac-vedette-accueil-mobile.webp' %}"
+                    srcset="{% static 'images/sac-vedette-accueil.webp' %}"
                 >
                 <img
                     src="{% static 'images/sac-vedette-accueil.webp' %}"
