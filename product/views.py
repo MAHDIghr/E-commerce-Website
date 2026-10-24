@@ -37,7 +37,7 @@ def detail(request, slug):
     variants = list(product.variants.all())
     if not variants:
         raise Http404("Produit indisponible.")
-    default_variant = variants[0]
+    default_variant = next((variant for variant in variants if variant.stock_quantity > 0), variants[0])
 
     media_items = list(product.media_items.all())
     media = [{
@@ -53,7 +53,8 @@ def detail(request, slug):
         lines = []
         accessories = []
         offer_items = list(offer_obj.items.all())
-        invalid_offer = not any(item.use_selected_variant for item in offer_items)
+        main_items = [item for item in offer_items if item.use_selected_variant]
+        invalid_offer = len(main_items) != 1
         for item in offer_items:
             if item.use_selected_variant:
                 if (
@@ -105,8 +106,14 @@ def detail(request, slug):
                     "available": item.variant.stock_quantity >= item.quantity,
                     "available_quantity": item.variant.stock_quantity // item.quantity,
                 })
-        # Les offres incomplètes ou incohérentes ne sont jamais exposées au client.
-        if not lines or invalid_offer:
+        # Une offre publique doit avoir exactement un composant principal valide.
+        if (
+            not lines
+            or invalid_offer
+            or main_items[0].product_id != product.pk
+            or main_items[0].variant_id is not None
+            or main_items[0].quantity < 1
+        ):
             continue
         # Aucun prix n'est stocké sur les variantes : une offre porte son propre prix.
         old_price = offer_obj.reference_price
