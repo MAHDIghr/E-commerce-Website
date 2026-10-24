@@ -180,6 +180,8 @@ const cartCountBadges = document.querySelectorAll(".cart-count");
 const cartActionButtons = document.querySelectorAll('[data-action="open-cart"]');
 const cartStatus = document.querySelector("#cart-status");
 const cartClearButton = document.querySelector("#cart-clear");
+const shippingFill = document.querySelector("#shipping-fill");
+const shippingText = document.querySelector("#shipping-text");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
 const FREE_SHIPPING_THRESHOLD = 80;
