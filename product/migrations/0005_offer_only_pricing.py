@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db import migrations
+from django.db import migrations, models
 
 
 def ensure_offer_prices(apps, schema_editor):
@@ -50,4 +50,59 @@ class Migration(migrations.Migration):
         migrations.RemoveConstraint(model_name="productvariant", name="variant_ref_price_gt_sale"),
         migrations.RemoveField(model_name="productvariant", name="compare_at_price"),
         migrations.RemoveField(model_name="productvariant", name="price"),
+        migrations.AlterField(
+            model_name="productvariant",
+            name="sku",
+            field=models.CharField(max_length=80, unique=True, verbose_name="Référence interne de la variante"),
+        ),
+        migrations.AlterField(
+            model_name="category",
+            name="position",
+            field=models.PositiveIntegerField(db_index=True, default=0, verbose_name="Ordre d'affichage des catégories"),
+        ),
+        migrations.AlterField(
+            model_name="productvariant",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des couleurs"),
+        ),
+        migrations.AlterField(
+            model_name="productmedia",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des médias"),
+        ),
+        migrations.AlterField(
+            model_name="productreason",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des arguments"),
+        ),
+        migrations.AlterField(
+            model_name="productcontentitem",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des éléments"),
+        ),
+        migrations.AlterField(
+            model_name="productcraftdetail",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des détails de fabrication"),
+        ),
+        migrations.AlterField(
+            model_name="productusage",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des situations d'usage"),
+        ),
+        migrations.AlterField(
+            model_name="productfaq",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des questions fréquentes"),
+        ),
+        migrations.AlterField(
+            model_name="productoffer",
+            name="position",
+            field=models.PositiveIntegerField(default=0, editable=False, verbose_name="Ordre d'affichage des offres (automatique)"),
+        ),
+        migrations.AlterField(
+            model_name="productofferitem",
+            name="position",
+            field=models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage des composants de l'offre"),
+        ),
     ]
