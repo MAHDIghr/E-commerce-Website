@@ -232,6 +232,8 @@
                 <article class="product-card reveal"
                     data-product-id="{{ product.slug }}:default:{{ variant.pk }}"
                     data-variant-id="{{ variant.pk }}"
+                    data-product-slug="{{ product.slug }}"
+                    data-offers-url="{% url 'shop:offer_options' slug=product.slug %}"
                     data-product-name="{{ product.name }}{% if variant.color_name %} — {{ variant.color_name }}{% endif %}"
                     data-product-price="{{ variant.price }}"
                     data-product-image="{% if media %}{% if media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
