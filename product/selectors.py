@@ -17,7 +17,6 @@ def published_products():
         Q(
             is_active=True,
             category__is_active=True,
-            media_items__variant__isnull=True,
             media_items__media_type=ProductMedia.IMAGE,
             variants__is_active=True,
             offers__is_active=True,
@@ -39,12 +38,7 @@ def product_card_data(queryset):
             continue
 
         media_items = list(product.media_items.all())
-        media = next(
-            (item for item in media_items if item.variant_id is None and item.media_type == ProductMedia.IMAGE),
-            None,
-        )
-        if media is None:
-            media = next((item for item in media_items if item.media_type == ProductMedia.IMAGE), None)
+        media = next((item for item in media_items if item.media_type == ProductMedia.IMAGE), None)
 
         approved_reviews = [
             review for review in product.reviews.all() if review.is_approved
@@ -59,10 +53,12 @@ def product_card_data(queryset):
             for item in product.variants.all()
             if item.is_active and item.color_slug and item.color_code
         ]
-        offer = product.offers.filter(
+        active_offers = product.offers.filter(
             is_active=True, items__product_id=product.pk,
             items__use_selected_variant=True, items__variant__isnull=True,
-        ).distinct().order_by("-is_featured", "position", "pk").first()
+        ).distinct()
+        essential_offer = active_offers.filter(badge="essential").first()
+        offer = essential_offer or active_offers.order_by("-is_featured", "position", "pk").first()
         if offer is None:
             continue
         products.append({
@@ -72,7 +68,11 @@ def product_card_data(queryset):
             "name": product.name,
             "cat": product.category.slug,
             "price": float(offer.price),
-            "old": None,
+            "old": (
+                float(essential_offer.reference_price)
+                if essential_offer and essential_offer.reference_price is not None
+                else None
+            ),
             "offerId": offer.pk,
             "offerTitle": offer.title,
             "colors": [color["slug"] for color in colors],
