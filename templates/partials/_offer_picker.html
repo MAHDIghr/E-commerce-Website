@@ -12,10 +12,15 @@
             <legend class="visually-hidden">Offres disponibles</legend>
             <div class="offer-picker__options" id="offer-picker-options"></div>
         </fieldset>
+        <fieldset class="offer-picker__fieldset offer-picker__accessories" id="offer-picker-accessories" hidden>
+            <legend>Accessoires offerts en option</legend>
+            <p class="offer-picker__accessories-intro">Cochez les articles que vous souhaitez recevoir avec votre offre. Leur prix sera de 0,00 €.</p>
+            <div class="offer-picker__accessory-list" id="offer-picker-accessory-list"></div>
+        </fieldset>
         <p class="offer-picker__status" id="offer-picker-status" role="status" aria-live="polite" hidden></p>
         <div class="offer-picker__footer">
             <p><span aria-hidden="true">◇</span> Prix et disponibilité vérifiés avant l’ajout au panier.</p>
-            <button type="submit" class="button button-primary button-block" id="offer-picker-submit">Ajouter l’offre au panier</button>
+            <button type="submit" class="button button-primary button-block" id="offer-picker-submit">Confirmer ma sélection</button>
         </div>
     </form>
 </dialog>
