@@ -7,6 +7,7 @@ from .models import SignatureSelection
 @admin.register(SignatureSelection)
 class SignatureSelectionAdmin(admin.ModelAdmin):
     list_display = ("position", "product", "image_preview", "is_active")
+    list_display_links = ("product",)
     list_filter = ("is_active",)
     search_fields = ("product__name", "product__slug")
     autocomplete_fields = ("product",)
