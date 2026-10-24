@@ -1,8 +1,14 @@
+{% load static %}
 <div class="cart-backdrop" id="cart-backdrop"></div>
 
-<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier" data-cart-url="{% url 'shop:cart_api' %}" data-cart-mutation-url="{% url 'shop:cart_mutation' %}">
+<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier"
+       role="dialog" aria-modal="true" data-cart-url="{% url 'shop:cart_api' %}"
+       data-cart-mutation-url="{% url 'shop:cart_mutation' %}">
     <div class="cart-drawer__header">
-        <h2 data-i18n="cart_title">Votre panier</h2>
+        <div class="cart-drawer__heading">
+            <span class="cart-drawer__eyebrow">MY LINE COLLECTION</span>
+            <h2><span data-i18n="cart_title">Votre panier</span> <span id="cart-title-count" class="cart-title-count" hidden></span></h2>
+        </div>
         <button type="button" class="cart-drawer__close" data-action="close-cart" aria-label="Fermer le panier">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -11,36 +17,53 @@
         </button>
     </div>
 
-    <div class="shipping-progress">
-        <div class="shipping-progress__track">
-            <div class="shipping-progress__fill" id="shipping-fill"></div>
+    <div class="shipping-progress" aria-label="Progression vers la livraison offerte">
+        <div class="shipping-progress__label">
+            <span class="shipping-progress__icon" aria-hidden="true">✦</span>
+            <span id="shipping-text">Plus que 80,00 € pour la livraison offerte</span>
         </div>
-        <p class="shipping-progress__text" id="shipping-text">
-            Plus que <strong>80,00 €</strong> pour la livraison gratuite
-        </p>
+        <div class="shipping-progress__track">
+            <div class="shipping-progress__fill" id="shipping-fill" role="progressbar"
+                 aria-label="Progression vers la livraison offerte" aria-valuemin="0" aria-valuemax="80" aria-valuenow="0"></div>
+        </div>
     </div>
 
     <p id="cart-status" class="cart-status" role="status" aria-live="polite" hidden></p>
-    <ul class="cart-drawer__items" id="cart-items"></ul>
 
-    <div class="cart-drawer__empty" id="cart-empty">
-        <svg class="icon" viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
-            <path d="M6 6h15l-1.5 9h-12z"></path>
-            <path d="M6 6 4.5 3H2"></path>
-            <circle cx="9" cy="20" r="1"></circle>
-            <circle cx="18" cy="20" r="1"></circle>
-        </svg>
-        <p style="margin:0; font-weight:600;" data-i18n="cart_empty_title">Votre panier est vide</p>
-        <p style="margin:0;" data-i18n="cart_empty_text">Parcourez nos collections pour trouver votre prochain sac.</p>
+    <div class="cart-drawer__empty" id="cart-empty" hidden>
+        <div class="cart-empty__art" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 48 48">
+                <path d="M10 17h28l-3 25H13z"></path>
+                <path d="M17 18v-5a7 7 0 0 1 14 0v5"></path>
+            </svg>
+        </div>
+        <p class="cart-drawer__empty-kicker">Une belle découverte vous attend</p>
+        <h3 data-i18n="cart_empty_title">Votre panier est vide</h3>
+        <p data-i18n="cart_empty_text">Parcourez nos collections pour trouver votre prochain sac.</p>
+        <a class="button button-primary button-block cart-empty__cta" href="{% url 'shop:catalog' %}">Découvrir la collection</a>
+        <p class="cart-empty__note">Des pièces choisies pour accompagner votre quotidien.</p>
+    </div>
+
+    <div class="cart-drawer__body">
+        <div class="cart-drawer__list-heading">
+            <span>Votre sélection</span>
+            <span class="cart-drawer__list-note">Prix affichés en euros</span>
+        </div>
+        <ul class="cart-drawer__items" id="cart-items"></ul>
+        <a class="cart-continue-link" href="{% url 'shop:catalog' %}">← Continuer mes achats</a>
     </div>
 
     <div class="cart-drawer__footer" id="cart-footer" hidden>
         <div class="cart-drawer__subtotal">
             <span data-i18n="cart_subtotal">Sous-total</span>
-            <span id="cart-subtotal">0,00 €</span>
+            <strong id="cart-subtotal">0,00 €</strong>
         </div>
+        <p class="cart-drawer__shipping-note">Livraison et éventuelles réductions confirmées lors de la commande.</p>
         <button type="button" class="button button-primary button-block cart-checkout-disabled" disabled aria-disabled="true">Commande bientôt disponible</button>
         <button type="button" class="button button-outline button-block cart-clear" id="cart-clear">Vider le panier</button>
-        <p class="cart-checkout-note">Le parcours de commande est encore en préparation. Aucun paiement ne sera lancé depuis ce panier.</p>
+        <div class="cart-trust">
+            <span aria-hidden="true">◇</span>
+            <p>Votre sélection est conservée pendant cette session. Le paiement n'est pas encore activé.</p>
+        </div>
     </div>
 </aside>
