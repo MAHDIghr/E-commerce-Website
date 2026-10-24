@@ -107,11 +107,17 @@ class CatalogViewTests(TestCase):
             offer=self.offer, product=self.product, use_selected_variant=True, quantity=1,
         )
 
-    def test_product_javascript_asset_resolves_and_is_loaded(self):
+    def test_product_javascript_asset_resolves_and_all_add_buttons_have_offer_context(self):
         self.assertIsNotNone(finders.find("js/product.js"))
         response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/static/js/product.js")
+        self.assertContains(response, 'id="product-data"')
+        self.assertContains(response, 'name="color"')
+        self.assertContains(response, 'name="offer"')
+        self.assertContains(response, 'class="button button-primary button-block cta js-add"')
+        self.assertContains(response, 'class="button button-secondary js-add"')
+        self.assertContains(response, 'class="button button-primary js-add"')
 
     def test_product_detail_sets_csrf_cookie_and_allows_secure_cart_add(self):
         client = Client(enforce_csrf_checks=True)
