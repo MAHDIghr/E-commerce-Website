@@ -56,11 +56,22 @@ def product_card_data(queryset):
             if item.is_active and item.color_slug and item.color_code
         ]
         offer = product.offers.filter(
+            is_active=True, items__product_id=product.pk,
+            items__use_selected_variant=True, items__variant__isnull=True,
+        ).distinct().order_by("-is_featured", "position", "pk").first()
+        if offer is None:
+            continue
+        essential_offer = product.offers.filter(
             is_active=True, badge="essential", items__product_id=product.pk,
             items__use_selected_variant=True, items__variant__isnull=True,
         ).distinct().order_by("position", "pk").first()
-        if offer is None:
-            continue
+        reference_price = essential_offer.reference_price if essential_offer else None
+        essential_price = essential_offer.price if essential_offer else None
+        discount = (
+            round((reference_price - essential_price) * 100 / reference_price)
+            if reference_price is not None and essential_price is not None and reference_price > essential_price
+            else 0
+        )
         products.append({
             "id": product.slug,
             "variantId": variant.pk,
@@ -68,11 +79,8 @@ def product_card_data(queryset):
             "name": product.name,
             "cat": product.category.slug,
             "price": float(offer.price),
-            "old": float(offer.reference_price) if offer.reference_price is not None else None,
-            "off": (
-                round((offer.reference_price - offer.price) * 100 / offer.reference_price)
-                if offer.reference_price is not None and offer.reference_price > offer.price else 0
-            ),
+            "old": float(reference_price) if reference_price is not None and discount else None,
+            "off": discount,
             "offerId": offer.pk,
             "offerTitle": offer.title,
             "colors": [color["slug"] for color in colors],
