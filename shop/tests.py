@@ -215,6 +215,76 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(reduce_to_stock.status_code, 200)
         self.assertTrue(reduce_to_stock.json()["items"][0]["available"])
 
+    def test_stock_is_shared_across_different_offers_for_the_same_variant(self):
+        self.variant.stock_quantity = 3
+        self.variant.save(update_fields=["stock_quantity"])
+        second_offer = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("99.90"), is_active=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=second_offer, product=self.product, use_selected_variant=True, quantity=1,
+        )
+
+        first = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk, "quantity": 2,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(first.status_code, 200)
+        second = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": second_offer.pk, "quantity": 2,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(second.status_code, 409)
+        self.assertEqual(second.json()["count"], 2)
+        self.assertEqual(len(second.json()["items"]), 1)
+
+    def test_stock_is_shared_across_offer_accessories(self):
+        self.variant.stock_quantity = 5
+        self.variant.save(update_fields=["stock_quantity"])
+        accessory, accessory_variant, first_item = self._create_offer_accessory(stock=2)
+        second_offer = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("99.90"), is_active=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=second_offer, product=self.product, use_selected_variant=True, quantity=1,
+        )
+        second_item = ProductOfferItem.objects.create(
+            offer=second_offer, product=accessory, variant=accessory_variant, quantity=1,
+        )
+
+        first = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk, "selected_item_ids": [first_item.pk],
+                "quantity": 1,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(first.status_code, 200)
+        second = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": second_offer.pk, "selected_item_ids": [second_item.pk],
+                "quantity": 2,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(second.status_code, 409)
+        self.assertEqual(second.json()["count"], 1)
+        self.assertEqual(len(second.json()["items"]), 1)
+
     def test_cart_rejects_fractional_quantity(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),

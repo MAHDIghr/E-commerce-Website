@@ -276,17 +276,30 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
     if any(item_id not in fixed_items for item_id in selected_item_ids):
         return None
 
-    max_available_values = [variant.stock_quantity // main_items[0].quantity]
+    # Regrouper les composants par variante : plusieurs composants peuvent consommer
+    # le stock du même SKU et ne doivent pas être comptés comme des stocks indépendants.
+    requirements_per_unit = {variant.pk: main_items[0].quantity}
+    stock_levels = {variant.pk: variant.stock_quantity}
     components = []
     for item_id in selected_item_ids:
         item = fixed_items[item_id]
         accessory = _accessory_option(item)
         if accessory is None:
             return None
-        max_available_values.append(item.variant.stock_quantity // item.quantity)
+        requirements_per_unit[item.variant_id] = requirements_per_unit.get(item.variant_id, 0) + item.quantity
+        stock_levels[item.variant_id] = item.variant.stock_quantity
         components.append(accessory)
 
+    max_available_values = [
+        stock_levels[variant_id] // per_unit
+        for variant_id, per_unit in requirements_per_unit.items()
+        if per_unit > 0
+    ]
     max_available = min(max_available_values, default=0)
+    stock_requirements = {
+        str(variant_id): per_unit * quantity
+        for variant_id, per_unit in requirements_per_unit.items()
+    }
     media = ProductMedia.objects.filter(
         product_id=variant.product_id, media_type=ProductMedia.IMAGE,
     ).order_by("-is_primary", "position", "pk").first()
@@ -311,6 +324,32 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
         "line_total": f"{offer.price * quantity:.2f}",
         "available_quantity": min(max_available, MAX_CART_QUANTITY),
         "available": available,
+        # Métadonnées internes pour agréger le stock entre toutes les lignes du panier.
+        "stock_requirements_per_unit": requirements_per_unit,
+        "stock_levels": stock_levels,
+        "stock_requirements": stock_requirements,
+    }
+
+
+def _cart_stock_conflicts(state):
+    """Retourne les variantes dont le panier cumule plus d'unités que le stock réel."""
+    usage = {}
+    stock_levels = {}
+    for key, quantity in state.items():
+        try:
+            variant_id, offer_id, selected_ids = _cart_key_parts(key)
+        except (TypeError, ValueError):
+            continue
+        details = _line_details(variant_id, offer_id, quantity, selected_ids)
+        if details is None:
+            continue
+        for variant_key, required in details["stock_requirements"].items():
+            variant_pk = int(variant_key)
+            usage[variant_pk] = usage.get(variant_pk, 0) + required
+            stock_levels[variant_pk] = details["stock_levels"][variant_pk]
+    return {
+        variant_id for variant_id, used in usage.items()
+        if used > stock_levels.get(variant_id, 0)
     }
 
 
@@ -389,7 +428,7 @@ def _cart_payload(request):
     if raw_state != state:
         request.session[CART_SESSION_KEY] = state
         request.session.modified = True
-    items = []
+    details_by_key = {}
     stale_keys = []
     for key, quantity in state.items():
         try:
@@ -401,13 +440,41 @@ def _cart_payload(request):
         if details is None:
             stale_keys.append(key)
             continue
-        items.append(details)
+        details_by_key[key] = details
 
     if stale_keys:
         for key in stale_keys:
             state.pop(key, None)
         request.session[CART_SESSION_KEY] = state
         request.session.modified = True
+        details_by_key = {key: details for key, details in details_by_key.items() if key in state}
+
+    # Le stock est mutualisé entre toutes les lignes du panier, accessoires sélectionnés inclus.
+    total_usage = {}
+    stock_levels = {}
+    for details in details_by_key.values():
+        for variant_key, required in details["stock_requirements"].items():
+            variant_id = int(variant_key)
+            total_usage[variant_id] = total_usage.get(variant_id, 0) + required
+            stock_levels[variant_id] = details["stock_levels"][variant_id]
+
+    items = []
+    for details in details_by_key.values():
+        quantity = details["quantity"]
+        effective_capacity = MAX_CART_QUANTITY
+        for variant_id, units_per_offer in details["stock_requirements_per_unit"].items():
+            other_lines_usage = total_usage.get(variant_id, 0) - units_per_offer * quantity
+            remaining_for_line = stock_levels.get(variant_id, 0) - other_lines_usage
+            effective_capacity = min(
+                effective_capacity,
+                max(0, remaining_for_line // units_per_offer),
+            )
+        details["available_quantity"] = effective_capacity
+        details["available"] = quantity <= effective_capacity
+        details.pop("stock_requirements_per_unit", None)
+        details.pop("stock_levels", None)
+        details.pop("stock_requirements", None)
+        items.append(details)
 
     subtotal = sum((Decimal(item["line_total"]) for item in items), Decimal("0.00"))
     count = sum(item["quantity"] for item in items)
@@ -476,9 +543,15 @@ def cart_mutation(request):
         details = _line_details(variant_id, offer_id, combined_quantity, selected_item_ids)
         if details is None:
             return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
-        if not details["available"]:
-            return JsonResponse({"error": "Le stock disponible ne permet pas cette quantité."}, status=409)
-        state[key] = combined_quantity
+        proposed_state = dict(state)
+        proposed_state[key] = combined_quantity
+        conflicts = _cart_stock_conflicts(proposed_state)
+        affected_variants = {int(variant_id) for variant_id in details["stock_requirements"]}
+        if conflicts & affected_variants:
+            return JsonResponse({
+                "error": "Le stock disponible ne permet pas cette quantité pour l'ensemble du panier. Réduisez une autre ligne ou cette quantité."
+            }, status=409)
+        state = proposed_state
 
     elif action in {"update", "remove"}:
         if key not in state:
@@ -495,10 +568,19 @@ def cart_mutation(request):
             details = _line_details(variant_id, offer_id, quantity, selected_item_ids)
             if details is None:
                 return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
-            if not details["available"] and quantity >= state[key]:
-                return JsonResponse({"error": "Le stock disponible ne permet pas cette quantité."}, status=409)
-            # Autoriser une baisse progressive même si le stock a baissé depuis l'ajout initial.
-            state[key] = quantity
+            if quantity >= state[key]:
+                proposed_state = dict(state)
+                proposed_state[key] = quantity
+                conflicts = _cart_stock_conflicts(proposed_state)
+                affected_variants = {int(variant_id) for variant_id in details["stock_requirements"]}
+                if conflicts & affected_variants:
+                    return JsonResponse({
+                        "error": "Le stock disponible ne permet pas cette quantité pour l'ensemble du panier. Réduisez une autre ligne ou cette quantité."
+                    }, status=409)
+                state = proposed_state
+            else:
+                # Toujours autoriser une diminution pour corriger un panier devenu indisponible.
+                state[key] = quantity
     else:
         return JsonResponse({"error": "Action de panier inconnue."}, status=400)
 

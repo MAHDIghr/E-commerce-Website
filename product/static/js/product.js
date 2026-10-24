@@ -17,7 +17,7 @@
      * Cette initialisation est placée avant la galerie pour ne pas dépendre
      * de ses interactions secondaires.
      */
-    $(".js-add, .js-buy").forEach((button) => {
+    $$(".js-add, .js-buy").forEach((button) => {
         button.addEventListener("click", async (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -184,7 +184,7 @@
         const stock = Number(colorIn().dataset.stock);
         const required = Math.max(1, Number(offerIn().dataset.mainQuantity || 1));
         const available = stock >= required;
-        $(".js-add, .js-buy").forEach((button) => {
+        $$(".js-add, .js-buy").forEach((button) => {
             button.disabled = !available;
             button.setAttribute("aria-disabled", String(!available));
         });
