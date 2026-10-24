@@ -98,7 +98,10 @@ def search_suggestions(request):
             continue
         media = next(iter(product.media_items.all()), None)
         image = (media.image.url if media and media.image else media.source_url) if media else ""
-        offer = product.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        offer = product.offers.filter(
+            is_active=True, items__product_id=product.pk,
+            items__use_selected_variant=True, items__variant__isnull=True,
+        ).distinct().order_by("-is_featured", "position", "pk").first()
         if offer is None:
             continue
         results.append({
