@@ -181,17 +181,53 @@
     sync();
     updateAvailability();
 
-    /* ---------- Ajout au panier (réutilise addToCart de base.js) ---------- */
-    $$(".js-add").forEach((btn) => btn.addEventListener("click", async () => {
-        const label = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = "Ajout…";
-        const added = await addToCart({ variantId: Number(colorIn().value), offerId: Number(offerIn().value) });
-        btn.disabled = false;
-        btn.textContent = added ? "Ajouté ✓" : label;
-        if (added) {
-            btn.classList.add("is-done");
-            window.setTimeout(() => { btn.textContent = label; btn.classList.remove("is-done"); }, 1400);
+    /* ---------- Ajout au panier : offre et variante sélectionnées ---------- */
+    $$(".js-add").forEach((button) => button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (button.disabled) return;
+
+        const variantId = Number(colorIn()?.value);
+        const offerId = Number(offerIn()?.value);
+        if (!Number.isSafeInteger(variantId) || variantId < 1 || !Number.isSafeInteger(offerId) || offerId < 1) {
+            const message = "Choisissez une variante et une offre disponible avant de continuer.";
+            const status = $("#variant-stock-status");
+            if (status) status.textContent = message;
+            if (typeof showCartStatus === "function") showCartStatus(message, true);
+            return;
+        }
+        if (typeof addToCart !== "function") {
+            const message = "Le panier n'a pas pu être initialisé. Rechargez la page et réessayez.";
+            if (typeof showCartStatus === "function") showCartStatus(message, true);
+            return;
+        }
+
+        const originalMarkup = button.innerHTML;
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        button.textContent = "Ajout en cours…";
+        try {
+            const added = await addToCart({ variantId, offerId });
+            if (added) {
+                button.classList.add("is-done");
+                button.textContent = "Ajouté ✓";
+            } else {
+                button.innerHTML = originalMarkup;
+            }
+        } catch (error) {
+            if (typeof showCartStatus === "function") {
+                showCartStatus(error?.message || "L'ajout au panier a échoué. Réessayez.", true);
+            }
+            button.innerHTML = originalMarkup;
+        } finally {
+            button.removeAttribute("aria-busy");
+            const stock = Number(colorIn()?.dataset.stock || 0);
+            const required = Math.max(1, Number(offerIn()?.dataset.mainQuantity || 1));
+            button.disabled = stock < required;
+            window.setTimeout(() => {
+                if (!button.isConnected) return;
+                button.classList.remove("is-done");
+                button.innerHTML = originalMarkup;
+            }, 1400);
         }
     }));
 
