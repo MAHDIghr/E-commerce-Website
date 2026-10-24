@@ -58,15 +58,25 @@ class CatalogModelTests(TestCase):
         with self.assertRaises(ValidationError):
             item.full_clean()
 
-    def test_media_variant_must_belong_to_same_product(self):
-        other = Product.objects.create(category=self.category, name="Portefeuille", slug="portefeuille")
+    def test_media_belongs_to_product_without_variant_association(self):
         media = ProductMedia(
-            product=other, variant=self.variant,
+            product=self.product,
             source_url="https://cdn.example.test/portefeuille.webp",
-            alt_text="Portefeuille beige",
+            alt_text="Cabas camel",
+        )
+        media.full_clean()
+        media.save()
+        self.assertEqual(media.product, self.product)
+        self.assertTrue(media.is_primary is False)
+
+    def test_offer_reference_price_must_exceed_offer_price(self):
+        offer = ProductOffer(
+            product=self.product, title="Essentiel",
+            badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("45.00"), reference_price=Decimal("45.00"),
         )
         with self.assertRaises(ValidationError):
-            media.full_clean()
+            offer.full_clean()
 
 
 class CatalogViewTests(TestCase):
