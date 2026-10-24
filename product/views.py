@@ -100,6 +100,11 @@ def detail(request, slug):
             "badge": offer_obj.badge,
             "featured": offer_obj.is_featured,
             "includes_selected_variant": any(item.use_selected_variant for item in offer_items),
+            "uses_variant_price": (
+                len(offer_items) == 1
+                and offer_items[0].use_selected_variant
+                and offer_items[0].quantity == 1
+            ),
             "main_quantity": sum(item.quantity for item in offer_items if item.use_selected_variant),
         })
 
