@@ -183,7 +183,8 @@ const cartClearButton = document.querySelector("#cart-clear");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
 const FREE_SHIPPING_THRESHOLD = 80;
-let cartSnapshot = { items: [], count: 0, subtotal: "0.00" }, cartRequestPending = false;
+let cartSnapshot = { items: [], count: 0, subtotal: "0.00" };
+let cartMutationQueue = Promise.resolve();
 function csrfToken() { const m = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/); return m ? decodeURIComponent(m[1]) : ""; }
 function showCartStatus(message, isError = false) {
     if (!cartStatus) return; cartStatus.textContent = message || "";
@@ -238,11 +239,19 @@ function applyCartPayload(payload) {
     renderCartBadge(); renderCartDrawer(); updateShippingProgress(); document.dispatchEvent(new CustomEvent("cart:updated"));
 }
 async function refreshCartUI() { try { applyCartPayload(await cartRequest(cartApiUrl)); } catch (e) { showCartStatus(e.message || "Le panier est momentanément indisponible.", true); } }
-async function mutateCart(payload) {
-    if (cartRequestPending) return null; cartRequestPending = true; showCartStatus("");
-    try { const result = await cartRequest(cartMutationUrl, "POST", payload); applyCartPayload(result); return result; }
-    catch (e) { showCartStatus(e.message || "Le panier n'a pas pu être mis à jour.", true); throw e; }
-    finally { cartRequestPending = false; }
+function mutateCart(payload) {
+    /* Sérialise les mutations pour éviter les pertes d'état lors de clics rapprochés. */
+    const operation = cartMutationQueue.then(async () => {
+        showCartStatus("");
+        const result = await cartRequest(cartMutationUrl, "POST", payload);
+        applyCartPayload(result);
+        return result;
+    });
+    cartMutationQueue = operation.catch(() => null);
+    return operation.catch((error) => {
+        showCartStatus(error.message || "Le panier n'a pas pu être mis à jour.", true);
+        throw error;
+    });
 }
 async function addToCart(product) {
     try {
