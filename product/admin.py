@@ -1,6 +1,8 @@
 """Administration des données du catalogue."""
 from django.contrib import admin
 from django import forms
+from django.core.exceptions import ValidationError
+from django.forms.models import BaseInlineFormSet
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
@@ -58,8 +60,35 @@ class ProductOfferInline(admin.TabularInline):
     ordering = ("position", "pk")
 
 
+class ProductOfferItemInlineFormSet(BaseInlineFormSet):
+    """Empêche d'enregistrer une offre sans un composant principal unique."""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        items = [
+            form.cleaned_data for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get("DELETE")
+        ]
+        main_items = [item for item in items if item.get("use_selected_variant")]
+        if len(main_items) != 1:
+            raise ValidationError("Une offre doit contenir exactement un composant principal utilisant la variante choisie sur la fiche.")
+
+        main = main_items[0]
+        if (
+            main.get("product") is None
+            or main["product"].pk != self.instance.product_id
+            or main.get("variant") is not None
+            or not main.get("quantity")
+        ):
+            raise ValidationError("Le composant principal doit être le produit de l'offre, sans variante fixe, avec une quantité positive.")
+
+
 class ProductOfferItemInline(admin.TabularInline):
     model = ProductOfferItem
+    formset = ProductOfferItemInlineFormSet
     extra = 1
     fields = ("product", "variant", "use_selected_variant", "quantity", "position")
 
