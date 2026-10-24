@@ -415,7 +415,8 @@ function renderOfferAccessories(offer) {
     if (!offerPickerAccessories || !offerPickerAccessoryList) return;
     offerPickerAccessoryList.replaceChildren();
     const accessories = Array.isArray(offer && offer.accessories) ? offer.accessories : [];
-    offerPickerAccessories.hidden = accessories.length === 0;
+    const hasAvailableAccessory = accessories.some((accessory) => accessory && accessory.available);
+    offerPickerAccessories.hidden = !hasAvailableAccessory;
     if (!accessories.length) return;
 
     accessories.forEach((accessory) => {
