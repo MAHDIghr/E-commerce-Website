@@ -261,8 +261,13 @@ function updateShippingProgress() {
     if (!shippingFill || !shippingText) return;
     const subtotal = Number(cartSnapshot.subtotal || 0);
     const threshold = Number(cartSnapshot.free_shipping_threshold || FREE_SHIPPING_THRESHOLD);
-    shippingFill.style.width = String(threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0) + "%";
-    shippingText.textContent = threshold > 0 && subtotal >= threshold ? "🎉 Livraison gratuite débloquée !" : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " pour la livraison offerte";
+    const progress = threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0;
+    shippingFill.style.width = progress + "%";
+    shippingFill.setAttribute("aria-valuemax", String(threshold));
+    shippingFill.setAttribute("aria-valuenow", String(Math.min(subtotal, threshold)));
+    shippingText.textContent = threshold > 0 && subtotal >= threshold
+        ? "✦ Livraison offerte débloquée !"
+        : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " pour la livraison offerte";
 }
 function renderCartDrawer() {
     if (!cartItemsContainer) return;
@@ -318,8 +323,25 @@ async function updateQuantity(key, quantity) {
     try { await mutateCart({ action: "update", ...parts, quantity }); } catch (e) {}
 }
 async function removeFromCart(key) { try { await mutateCart({ action: "remove", ...cartKeyParts(key) }); } catch (e) {} }
-function openCart() { if (!cartDrawer) return; cartDrawer.classList.add("is-open"); if (cartBackdrop) cartBackdrop.classList.add("is-open"); cartDrawer.setAttribute("aria-hidden", "false"); }
-function closeCart() { if (!cartDrawer) return; cartDrawer.classList.remove("is-open"); if (cartBackdrop) cartBackdrop.classList.remove("is-open"); cartDrawer.setAttribute("aria-hidden", "true"); }
+let lastCartTrigger = null;
+function openCart() {
+    if (!cartDrawer) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.matches('[data-action="open-cart"], .js-add')) lastCartTrigger = active;
+    cartDrawer.classList.add("is-open");
+    if (cartBackdrop) cartBackdrop.classList.add("is-open");
+    cartDrawer.setAttribute("aria-hidden", "false");
+    document.body.classList.add("cart-open");
+    window.requestAnimationFrame(() => cartClose && cartClose.focus());
+}
+function closeCart() {
+    if (!cartDrawer) return;
+    cartDrawer.classList.remove("is-open");
+    if (cartBackdrop) cartBackdrop.classList.remove("is-open");
+    cartDrawer.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("cart-open");
+    if (lastCartTrigger && lastCartTrigger.isConnected) lastCartTrigger.focus();
+}
 function bumpCartIcon() { cartActionButtons.forEach((b) => { b.classList.remove("is-bumping"); void b.offsetWidth; b.classList.add("is-bumping"); }); }
 cartActionButtons.forEach((button) => button.addEventListener("click", openCart));
 if (cartClose) cartClose.addEventListener("click", closeCart);
