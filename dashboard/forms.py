@@ -8,6 +8,10 @@ from product.models import Category, Product, ProductMedia, ProductOffer, Produc
 
 
 class DashboardFormMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.apply_dashboard_classes()
+
     def apply_dashboard_classes(self):
         for field in self.fields.values():
             field.widget.attrs["class"] = (field.widget.attrs.get("class", "") + " field-control").strip()
@@ -27,7 +31,6 @@ class CategoryForm(DashboardFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.apply_dashboard_classes()
 
 
 class ProductForm(DashboardFormMixin, forms.ModelForm):
@@ -45,9 +48,12 @@ class ProductForm(DashboardFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.apply_dashboard_classes()
         self.fields["category"].queryset = Category.objects.order_by("position", "name")
         self.fields["published_at"].input_formats = ("%Y-%m-%dT%H:%M",)
+
+
+class DashboardInlineForm(DashboardFormMixin, forms.ModelForm):
+    pass
 
 
 class MediaFormSetBase(BaseInlineFormSet):
@@ -75,7 +81,7 @@ class OfferFormSetBase(BaseInlineFormSet):
 VariantFormSet = inlineformset_factory(
     Product, ProductVariant,
     fields=("sku", "color_name", "color_slug", "color_code", "stock_quantity", "is_active", "position"),
-    extra=0, min_num=1, validate_min=True, can_delete=True,
+    extra=0, min_num=1, validate_min=True, can_delete=True, form=DashboardInlineForm,
 )
 VariantFormSet.form.base_fields["sku"].label = "Référence interne de la variante"
 VariantFormSet.form.base_fields["sku"].help_text = "Identifiant unique de cette déclinaison, par exemple SAC-CAMEL."
@@ -84,7 +90,7 @@ VariantFormSet.form.base_fields["position"].label = "Ordre d'affichage des coule
 MediaFormSet = inlineformset_factory(
     Product, ProductMedia,
     fields=("variant", "media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position"),
-    extra=0, can_delete=True, formset=MediaFormSetBase,
+    extra=0, can_delete=True, form=DashboardInlineForm, formset=MediaFormSetBase,
 )
 MediaFormSet.form.base_fields["position"].label = "Ordre d'affichage des médias"
 MediaFormSet.form.base_fields["source_url"].label = "URL HTTPS de l'image ou de la vidéo"
@@ -96,5 +102,5 @@ OfferFormSet = inlineformset_factory(
     Product, ProductOffer,
     fields=("badge", "display_delivery_label", "price", "is_featured", "is_active"),
     extra=0, min_num=1, validate_min=True, max_num=3, validate_max=True, can_delete=True,
-    formset=OfferFormSetBase,
+    form=DashboardInlineForm, formset=OfferFormSetBase,
 )
