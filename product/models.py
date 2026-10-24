@@ -77,8 +77,6 @@ class Category(models.Model):
         super().clean()
         _require_https(self.image_url, "image_url")
         _validate_uploaded_image(self.image, "image")
-        _validate_uploaded_image(self.image, "image")
-        _validate_uploaded_image(self.image, "image")
 
     def __str__(self):
         return self.name
@@ -317,6 +315,7 @@ class ProductCraftDetail(models.Model):
     def clean(self):
         super().clean()
         _require_https(self.image_url, "image_url")
+        _validate_uploaded_image(self.image, "image")
 
     def __str__(self):
         return self.title
@@ -338,6 +337,7 @@ class ProductUsage(models.Model):
     def clean(self):
         super().clean()
         _require_https(self.image_url, "image_url")
+        _validate_uploaded_image(self.image, "image")
 
     def __str__(self):
         return self.title
