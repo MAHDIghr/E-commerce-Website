@@ -71,8 +71,7 @@ Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale 
 
 Dans cette branche, les éléments suivants ne sont pas un système e-commerce complet tant qu'une implémentation serveur dédiée n'a pas été développée et vérifiée :
 
-- panier persistant côté serveur ;
-- réservation ou décrémentation transactionnelle du stock ;
+- réservation ou décrémentation transactionnelle du stock au moment de la commande ;
 - création et gestion des commandes ;
 - calcul serveur des taxes, frais de livraison, réductions et totaux ;
 - application sécurisée de codes promotionnels ;
@@ -668,7 +667,7 @@ L'existence de ces tests n'est pas une preuve de réussite. Lance les commandes 
 - [ ] Une URL externe HTTPS existante continue de fonctionner si elle est utilisée.
 - [ ] Un produit inactif ne peut pas être consulté publiquement.
 - [ ] Les avis non approuvés ne sont pas affichés.
-- [ ] La section « Notre sélection signature » n'a pas été modifiée intentionnellement dans le cadre du travail backend.
+- [ ] La sélection signature est administrable, chaque carte possède une image dédiée et mène à sa fiche produit.
 - [ ] Les nouveautés sont filtrées avec `is_new`.
 - [ ] Les images s'affichent sur téléphone et sur grand écran.
 - [ ] En production, les fichiers média sont accessibles par leur URL publique, sans rendre les fichiers privés accessibles.
@@ -689,9 +688,9 @@ Les sujets suivants doivent être traités comme des chantiers séparés, avec l
 
 ### Priorité 2 — rendre le parcours d'achat réellement opérationnel
 
-- Concevoir un panier côté serveur ou une session de panier validée côté serveur.
-- Recalculer les prix, remises, quantités et frais côté serveur.
-- Valider les stocks et prévenir les commandes concurrentes sur les dernières unités.
+- Transformer le panier en commande avec des lignes et des prix figés au moment de l'achat.
+- Calculer côté serveur les taxes, frais de livraison et réductions réellement applicables.
+- Réserver/décrémenter le stock de façon transactionnelle et prévenir les commandes concurrentes sur les dernières unités.
 - Créer des modèles de commande et de lignes de commande avec un état explicite.
 - Intégrer un prestataire de paiement en mode test, vérifier ses webhooks et traiter les paiements de manière idempotente.
 - Mettre en place les e-mails de commande, les erreurs, les remboursements et la journalisation.
@@ -795,7 +794,7 @@ La sélection publique des produits reste centralisée dans `product.selectors.p
 
 - Le catalogue reçoit ses données depuis Django via `json_script`, mécanisme qui échappe le contenu JSON pour son insertion dans le HTML.
 - Le JavaScript crée les cartes à partir des données fournies par le serveur ; les filtres de catégorie utilisent les slugs réellement reçus.
-- Les montants et le stock affichés sont informatifs. Le panier actuel côté navigateur ne constitue pas une validation de commande : ne pas considérer ses valeurs comme fiables.
+- Le panier est conservé dans la session Django ; les prix et stocks sont recalculés côté serveur. Le panier ne réserve pas le stock et ne constitue pas une commande.
 - Les templates Django doivent continuer à utiliser l'échappement automatique ; ne pas injecter les noms, descriptions ou avis en HTML brut.
 - Les catégories inactives et les produits non publiables ne doivent pas être exposés dans les listes publiques.
 - Les médias externes doivent rester limités à des sources de confiance en HTTPS. En production, la configuration du serveur web doit également empêcher l'exécution de fichiers téléversés.
@@ -828,7 +827,7 @@ Le conteneur du catalogue reçoit un modèle d'URL produit généré par Django 
 
 ### 17.6 Périmètre préservé
 
-La section **« Notre sélection signature »** de l'accueil n'a pas été modifiée. Le checkout, les commandes et les paiements réels restent hors périmètre : aucun lien ou comportement de navigation ne doit être interprété comme une preuve qu'un parcours de commande complet est opérationnel.
+La section **« Notre sélection signature »** est désormais alimentée par le modèle `home.SignatureSelection`. Le checkout, les commandes et les paiements réels restent hors périmètre : aucun lien ou comportement de navigation ne doit être interprété comme la preuve qu'un parcours de commande complet est opérationnel.
 
 
 ## 18. Diagnostic de publication et vérification de l'administration
@@ -938,7 +937,7 @@ python manage.py check --settings=config.settings.development
 python manage.py test product --settings=config.settings.development
 ```
 
-La migration 0004_review_featured ajoute le champ de mise en avant et sa contrainte d’intégrité. Elle doit être appliquée séparément avec python manage.py migrate --settings=config.settings.development. La publication sur GitHub ne signifie pas que la migration a été appliquée sur l’hébergement de production.
+La migration 0004_review_featured ajoute le champ de mise en avant des avis. La migration `home.0001_initial` ajoute la sélection signature. Exécutez `python manage.py migrate --settings=config.settings.development` pour appliquer les migrations en attente. La publication sur GitHub ne signifie pas que les migrations ont été appliquées sur l’hébergement de production.
 
 ## Panier invité
 
@@ -946,20 +945,37 @@ Le panier utilise la session Django côté serveur. Le navigateur ne peut envoye
 
 - GET /boutique/panier/ renvoie le contenu et les totaux calculés côté serveur.
 - POST /boutique/panier/modifier/ accepte les actions add, update, remove et clear, avec protection CSRF Django.
-- Les quantités sont limitées à 10 par ligne et au stock disponible. Le panier ne réserve pas le stock.
+- Les quantités sont limitées à 10 par ligne, les lignes à 30 par panier, et les quantités doivent être des entiers stricts. Une addition qui ferait dépasser la limite d'une ligne est rejetée sans effacer la quantité déjà enregistrée.
+- Les offres sont contrôlées avec leurs composants et le stock de chaque variante ; les montants des offres utilisant directement la variante suivent le prix actuel de cette variante.
+- Les mutations reçues depuis l'interface sont sérialisées côté JavaScript pour éviter que des clics rapprochés se remplacent. Le serveur reste la source de vérité ; aucune mutation ne réserve le stock.
 - Les lignes devenues invalides (produit non publié, variante inactive ou offre supprimée) sont retirées lors de la relecture.
 - Le tiroir du panier et les badges sont alimentés par la réponse serveur. Le prix affiché n’est pas une preuve de prix définitif pour une commande.
 - Le checkout reste une maquette front-end : aucun paiement, aucune commande et aucun frais de livraison ne sont calculés ou confirmés par cette fonctionnalité.
+
+## Sélection signature
+
+La section « Notre sélection signature » est gérée depuis **Django Admin → Sélection signature → Ajouter une carte de la sélection signature**.
+
+- Choisir le produit à ouvrir au clic.
+- Téléverser une image dédiée à cette carte : elle est stockée sous `MEDIA_ROOT/home/signature/` et reste indépendante des médias de la fiche produit.
+- Renseigner le texte alternatif, l'ordre d'affichage et l'état « Afficher sur l'accueil ».
+- Un produit ne peut apparaître qu'une fois dans cette sélection.
+- Seules les cartes actives dont le produit satisfait les conditions de publication sont affichées.
+- Le carrousel conserve ses classes et son comportement visuel existants ; les cartes deviennent des liens vers la fiche produit associée.
+
+La migration `home.0001_initial` crée le modèle `SignatureSelection`. Appliquez-la avec `python manage.py migrate --settings=config.settings.development` après avoir récupéré la branche. Les images téléversées sont des fichiers médias : elles doivent être incluses dans la stratégie de sauvegarde et servies par la configuration média de l'environnement.
 
 ## Recherche catalogue
 
 La recherche est disponible depuis l’overlay global et la page boutique. Elle propose des suggestions après deux caractères, limite les requêtes et ne renvoie que des produits satisfaisant les conditions de publication. La recherche du catalogue combine les termes saisis sur le nom, le slug, la description courte/complète, la ligne de marque, l’accroche et la catégorie. Les filtres du catalogue peuvent ensuite être combinés aux résultats de recherche.
 
-### Recette panier et recherche
+### Recette panier, sélection signature et recherche
 
 ```powershell
 python manage.py check --settings=config.settings.development
-python manage.py test shop --settings=config.settings.development
+python manage.py makemigrations --check --dry-run --settings=config.settings.development
+python manage.py migrate --settings=config.settings.development
+python manage.py test home shop product --settings=config.settings.development
 ```
 
 Ces commandes doivent être exécutées dans l’environnement local du projet. Aucun test ni déploiement n’est réputé réussi sans résultat effectivement observé.
