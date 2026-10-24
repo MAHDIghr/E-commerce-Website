@@ -216,7 +216,7 @@ def _line_details(variant_id, offer_id, quantity):
         if variant.color_name:
             title += f" ({variant.color_name})"
     media = ProductMedia.objects.filter(
-        product_id=variant.product_id, variant__isnull=True, media_type=ProductMedia.IMAGE,
+        product_id=variant.product_id, media_type=ProductMedia.IMAGE,
     ).order_by("-is_primary", "position", "pk").first()
     image = (media.image.url if media and media.image else media.source_url) if media else ""
     available = max_available >= quantity and max_available > 0
