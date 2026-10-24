@@ -241,7 +241,7 @@ function buildCartItemNode(item) {
     name.appendChild(productLink);
     const price = document.createElement("p");
     price.className = "cart-item__price";
-    price.textContent = `${formatPrice(Number(item.unit_price))} / article`;
+    price.textContent = `${formatPrice(Number(item.unit_price))} / offre`;
     const qtyWrap = document.createElement("div"); qtyWrap.className = "cart-item__qty";
     const minus = document.createElement("button"); minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", "Diminuer la quantité"); minus.addEventListener("click", async () => { minus.disabled = true; await updateQuantity(item.key, item.quantity - 1); if (minus.isConnected) minus.disabled = false; });
     const qty = document.createElement("span"); qty.textContent = String(item.quantity);
@@ -254,7 +254,18 @@ function buildCartItemNode(item) {
     total.className = "cart-item__total";
     total.textContent = formatPrice(Number(item.line_total));
     actions.appendChild(total);
-    details.append(name, price, qtyWrap, remove);
+    details.append(name, price);
+    if (Array.isArray(item.components) && item.components.length) {
+        const components = document.createElement("p");
+        components.className = "cart-item__components";
+        components.textContent = "Comprend : " + item.components.map((component) =>
+            (component.quantity > 1 ? `${component.quantity} × ` : "")
+            + component.name
+            + (component.variant_name ? ` — ${component.variant_name}` : "")
+        ).join(" · ");
+        details.appendChild(components);
+    }
+    details.append(qtyWrap, remove);
     row.append(img, details, actions);
     if (!item.available) { const warning = document.createElement("p"); warning.className = "cart-item__warning"; warning.textContent = item.available_quantity > 0 ? "Stock insuffisant : réduisez la quantité." : "Indisponible : retirez cet article pour continuer."; details.appendChild(warning); }
     return row;
@@ -328,8 +339,13 @@ const offerPickerProduct = document.querySelector("#offer-picker-product");
 const offerPickerStatus = document.querySelector("#offer-picker-status");
 const offerPickerClose = document.querySelector('[data-action="close-offer-picker"]');
 let resolveOfferPicker = null;
+let offerPickerCancelHandler = null;
 
 function finishOfferPicker(value) {
+    if (offerPicker && offerPickerCancelHandler) {
+        offerPicker.removeEventListener("cancel", offerPickerCancelHandler);
+        offerPickerCancelHandler = null;
+    }
     if (offerPicker && offerPicker.open) offerPicker.close();
     const resolve = resolveOfferPicker;
     resolveOfferPicker = null;
@@ -393,10 +409,11 @@ function chooseProductOffer(product, offers) {
 
     return new Promise((resolve) => {
         resolveOfferPicker = resolve;
-        offerPicker.addEventListener("cancel", (event) => {
+        offerPickerCancelHandler = (event) => {
             event.preventDefault();
             finishOfferPicker(null);
-        }, { once: true });
+        };
+        offerPicker.addEventListener("cancel", offerPickerCancelHandler);
         offerPicker.showModal();
         const selected = offerPicker.querySelector('input[name="selected-offer"]:checked');
         if (selected) selected.focus({ preventScroll: true });
