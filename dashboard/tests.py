@@ -57,18 +57,18 @@ class AutomaticOfferTests(TestCase):
         self.assertTrue(item.use_selected_variant)
         self.assertIsNone(item.variant_id)
 
-    def test_first_active_variant_initializes_automatic_essential_offer(self):
+    def test_active_variant_does_not_create_a_variant_price(self):
         category = Category.objects.create(name="Accessoires", slug="accessoires-auto-offer")
         product = Product.objects.create(
             category=category, name="Portefeuille test", slug="portefeuille-test-auto-offer",
         )
         variant = ProductVariant.objects.create(
             product=product, sku="PORTEFEUILLE-AUTO-001",
-            price=Decimal("24.90"), stock_quantity=3, is_active=True,
+            stock_quantity=3, is_active=True,
         )
 
         offer = ensure_default_offer(product)
-        self.assertTrue(offer.is_active)
-        self.assertEqual(offer.price, variant.price)
+        self.assertFalse(offer.is_active)
+        self.assertEqual(offer.price, Decimal("0.00"))
         self.assertEqual(offer.title, "Essentiel")
         self.assertTrue(offer.items.filter(product=product, use_selected_variant=True).exists())
