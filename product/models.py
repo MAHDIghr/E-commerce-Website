@@ -362,7 +362,7 @@ class ProductOffer(models.Model):
 
     def clean(self):
         super().clean()
-        if self.reference_price is not None and self.reference_price <= self.price:
+        if self.reference_price is not None and self.price is not None and self.reference_price <= self.price:
             raise ValidationError({
                 "reference_price": "Le prix de référence doit être supérieur au prix de l'offre pour représenter une réduction."
             })
