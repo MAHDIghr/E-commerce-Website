@@ -41,7 +41,7 @@ class CartAndSearchTests(TestCase):
             reverse("shop:cart_mutation"),
             data=json.dumps({
                 "action": "add", "variant_id": self.variant.pk,
-                "offer_id": 0, "quantity": 1, "price": "0.01",
+                "offer_id": self.offer.pk, "quantity": 1, "price": "0.01",
             }),
             content_type="application/json",
         )
@@ -115,7 +115,7 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(client.get(reverse("shop:cart_api")).status_code, 200)
         response = client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 1}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 403)
@@ -132,7 +132,7 @@ class CartAndSearchTests(TestCase):
     def test_cart_enforces_stock_limit(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 5}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 5}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 409)
@@ -143,13 +143,13 @@ class CartAndSearchTests(TestCase):
         self.variant.save(update_fields=["stock_quantity"])
         first = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 8}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 8}),
             content_type="application/json",
         )
         self.assertEqual(first.status_code, 200)
         second = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 3}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 3}),
             content_type="application/json",
         )
         self.assertEqual(second.status_code, 400)
@@ -158,7 +158,7 @@ class CartAndSearchTests(TestCase):
     def test_cart_quantity_can_be_reduced_after_stock_decreases(self):
         add = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 4}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 4}),
             content_type="application/json",
         )
         self.assertEqual(add.status_code, 200)
@@ -183,7 +183,7 @@ class CartAndSearchTests(TestCase):
     def test_cart_rejects_fractional_quantity(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 1.5}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1.5}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
