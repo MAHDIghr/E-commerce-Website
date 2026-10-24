@@ -160,6 +160,10 @@
     /* ---------- Carte produit ---------- */
     function buildCard(p, index) {
         const card = el("article", "pcard");
+        card.dataset.productSlug = p.id;
+        card.dataset.variantId = String(p.variantId);
+        const grid = document.querySelector("#product-grid");
+        card.dataset.offersUrl = (grid && grid.dataset.offersUrl || "").replace("__product_slug__", encodeURIComponent(p.id));
         card.style.setProperty("--i", String(Math.min(index, 8)));
 
         const media = el("a", "pcard__media");
@@ -198,7 +202,7 @@
         add.addEventListener("click", async () => {
             if (add.disabled) return;
             add.disabled = true;
-            const added = await addToCart({ variantId: p.variantId });
+            const added = await addProductFromCard(add);
             if (added) {
                 add.classList.add("is-added");
                 add.replaceChildren(svgIcon([CHECK]));
