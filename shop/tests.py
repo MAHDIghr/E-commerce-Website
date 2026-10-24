@@ -64,6 +64,28 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(payload["offers"][0]["price"], "89.90")
         self.assertEqual(payload["offers"][0]["component_count"], 1)
 
+    def test_quick_add_offer_lookup_sets_csrf_cookie_and_accepts_server_validated_add(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.get(
+            reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
+            {"variant_id": self.variant.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", client.cookies)
+        token = client.cookies["csrftoken"].value
+
+        added = client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk, "quantity": 1,
+            }),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(added.status_code, 200)
+        self.assertEqual(added.json()["count"], 1)
+
     def test_offer_options_lists_multiple_active_offers_with_server_prices(self):
         second_offer = ProductOffer.objects.create(
             product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
