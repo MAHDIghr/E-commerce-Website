@@ -161,7 +161,10 @@ def _cart_key_parts(key):
     offer_id = _strict_int(parts[1], allow_zero=True)
     selected_ids = []
     if len(parts) == 3 and parts[2]:
-        for raw in parts[2].split(","):
+        raw_ids = parts[2].split(",")
+        if len(raw_ids) > 20:
+            raise ValueError("Clé de panier invalide.")
+        for raw in raw_ids:
             item_id = _strict_int(raw)
             if item_id in selected_ids:
                 raise ValueError("Clé de panier invalide.")
