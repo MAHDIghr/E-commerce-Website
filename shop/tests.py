@@ -120,6 +120,18 @@ class CartAndSearchTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_cart_add_requires_an_explicit_offer(self):
+        response = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk, "quantity": 1,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("offre", response.json()["error"].lower())
+        self.assertEqual(self.client.get(reverse("shop:cart_api")).json()["count"], 0)
+
     def test_cart_rejects_unknown_variant(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),
@@ -192,7 +204,7 @@ class CartAndSearchTests(TestCase):
     def test_cart_can_be_cleared_without_product_identifiers(self):
         self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 1}),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1}),
             content_type="application/json",
         )
         response = self.client.post(
