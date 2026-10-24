@@ -153,7 +153,7 @@ def detail(request, slug):
         offers.append({
             "id": str(offer_obj.pk),
             "title": offer_obj.title,
-            "items": " + ".join(lines) + (" · Accessoires offerts en option" if accessories else ""),
+            "items": " + ".join(lines) + (" · Accessoires inclus — sélection obligatoire" if accessories else ""),
             "accessories": accessories,
             "price": float(offer_obj.price),
             "old": float(old_price) if old_price else None,
