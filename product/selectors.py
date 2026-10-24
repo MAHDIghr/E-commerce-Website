@@ -59,7 +59,10 @@ def product_card_data(queryset):
             for item in product.variants.all()
             if item.is_active and item.color_slug and item.color_code
         ]
-        offer = product.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        offer = product.offers.filter(
+            is_active=True, items__product_id=product.pk,
+            items__use_selected_variant=True, items__variant__isnull=True,
+        ).distinct().order_by("-is_featured", "position", "pk").first()
         if offer is None:
             continue
         products.append({
