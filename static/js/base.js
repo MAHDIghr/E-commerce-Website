@@ -399,11 +399,19 @@ function chooseProductOffer(product, offers) {
 
         const included = document.createElement("span");
         included.className = "offer-picker__included";
-        const parts = (offer.components || []).map((item) =>
-            item.quantity > 1 ? `${item.name} × ${item.quantity}` : item.name
-        );
+        const parts = (offer.components || []).map((item) => {
+            const name = item.variant_name ? `${item.name} — ${item.variant_name}` : item.name;
+            return item.quantity > 1 ? `${name} × ${item.quantity}` : name;
+        });
         included.textContent = parts.join(" · ");
         content.appendChild(included);
+
+        if (offer.delivery_label) {
+            const delivery = document.createElement("span");
+            delivery.className = "offer-picker__included";
+            delivery.textContent = offer.delivery_label;
+            content.appendChild(delivery);
+        }
 
         const saving = Number(offer.saving || 0);
         if (saving > 0) {
