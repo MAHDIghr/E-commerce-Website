@@ -258,7 +258,7 @@ async function addToCart(product) {
     try {
         const result = await mutateCart({ action: "add", variant_id: Number(product.variantId), offer_id: Number(product.offerId || 0), quantity: 1 });
         if (result) { bumpCartIcon(); openCart(); } return Boolean(result);
-    } catch (e) { return false; }
+    } catch (e) { openCart(); return false; }
 }
 function playAddedFeedback(button) {
     if (!button) return; const label = button.textContent; button.classList.add("button--added"); button.textContent = "Ajouté ✓"; button.disabled = true;
