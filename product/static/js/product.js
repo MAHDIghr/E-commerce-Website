@@ -105,28 +105,7 @@
     });
     allThumbs.forEach((t) => t.addEventListener("click", () => go(thumbs.indexOf(t))));
     $$("[data-nav]").forEach((b) => b.addEventListener("click", () => go(cur + +b.dataset.nav)));
-    const filterGallery = (variantId) => {
-        const visible = allMedia.map((item, index) => ({ item, index })).filter(({ item }) =>
-            !item.variant_id || String(item.variant_id) === String(variantId)
-        );
-        const visibleIndexes = new Set(visible.map(({ index }) => index));
-        slides = visible.map(({ index }) => allSlides[index]);
-        thumbs = visible.map(({ index }) => allThumbs[index]);
-        media = visible.map(({ item }) => item);
-        allSlides.forEach((slide, index) => { slide.hidden = !visibleIndexes.has(index); });
-        allThumbs.forEach((thumb, index) => {
-            const visibleThumb = visibleIndexes.has(index);
-            thumb.hidden = !visibleThumb;
-            if (thumb.closest("li")) thumb.closest("li").hidden = !visibleThumb;
-            thumb.removeAttribute("aria-current");
-        });
-        cur = -1;
-        go(0);
-        mark();
-    };
-
-    const initialColor = $('input[name="color"]:checked');
-    filterGallery(initialColor ? initialColor.value : "");
+    // Tous les médias appartiennent au produit : le changement de couleur ne filtre pas la galerie.
 
     /* Vidéo : chargée au clic, muette, avec repli sur le poster si le fichier est absent */
     $$("[data-video]").forEach((b) => b.addEventListener("click", () => {
@@ -214,7 +193,6 @@
     }));
     $$("input[name=color]").forEach((i) => i.addEventListener("change", () => {
         sync();
-        filterGallery(i.value);
         updateAvailability();
     }));
     sync();
