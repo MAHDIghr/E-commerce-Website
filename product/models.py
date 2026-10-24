@@ -99,8 +99,31 @@ class Product(models.Model):
         return self.variants.filter(is_active=True).order_by("position", "pk").first()
 
     @property
+    def essential_offer(self):
+        """Offre Essentiel active, en utilisant le préchargement s'il est disponible."""
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("offers")
+        if prefetched is not None:
+            return next((
+                offer for offer in prefetched
+                if offer.is_active and offer.badge == ProductOffer.BADGE_ESSENTIAL
+            ), None)
+        return self.offers.filter(is_active=True, badge=ProductOffer.BADGE_ESSENTIAL).first()
+
+    @property
+    def display_offer(self):
+        """Offre d'entrée affichée : Essentiel en priorité, sinon l'offre mise en avant."""
+        essential = self.essential_offer
+        if essential is not None:
+            return essential
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("offers")
+        if prefetched is not None:
+            active = [offer for offer in prefetched if offer.is_active]
+            return sorted(active, key=lambda offer: (not offer.is_featured, offer.position, offer.pk))[0] if active else None
+        return self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+
+    @property
     def display_price(self):
-        offer = self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        offer = self.display_offer
         return offer.price if offer else None
 
     @property
@@ -378,6 +401,13 @@ class ProductOffer(models.Model):
         self.position = self.BADGE_ORDER.get(self.badge, 99)
         self.title = dict(self.BADGE_CHOICES).get(self.badge, self.title)
         super().save(*args, **kwargs)
+
+    @property
+    def discount_percentage(self):
+        """Pourcentage arrondi de réduction, nul sans prix de référence valide."""
+        if self.reference_price is None or self.reference_price <= self.price:
+            return 0
+        return round((self.reference_price - self.price) * 100 / self.reference_price)
 
     @property
     def delivery_label(self):
