@@ -32,7 +32,6 @@ class SignatureSelectionTests(TestCase):
             sku="SIGNATURE-TEST",
             color_name="Noir",
             color_slug="noir",
-            price="59.90",
             stock_quantity=5,
             is_active=True,
         )
