@@ -121,6 +121,26 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'class="button button-secondary js-add"')
         self.assertContains(response, 'class="button button-primary js-add"')
 
+    def test_offer_reference_price_displays_discount_and_keeps_other_offers_visible(self):
+        self.offer.reference_price = Decimal("100.00")
+        self.offer.save(update_fields=["reference_price"])
+        medium = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("95.00"), reference_price=Decimal("120.00"),
+            is_active=True, is_featured=False,
+        )
+        ProductOfferItem.objects.create(
+            offer=medium, product=self.product, use_selected_variant=True, quantity=1,
+        )
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        offers = response.context["product"]["offers"]
+        self.assertEqual(len(offers), 2)
+        essential = next(item for item in offers if item["badge"] == ProductOffer.BADGE_ESSENTIAL)
+        self.assertEqual(essential["off"], 20)
+        self.assertEqual(response.context["product"]["max_off"], 20)
+        self.assertContains(response, "Medium")
+
     def test_product_detail_sets_csrf_cookie_and_allows_secure_cart_add(self):
         client = Client(enforce_csrf_checks=True)
         response = client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
