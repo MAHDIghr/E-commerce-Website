@@ -426,7 +426,7 @@ function renderOfferAccessories(offer) {
         checkbox.name = "selected-accessory";
         checkbox.value = String(accessory.item_id);
         checkbox.disabled = !accessory.available;
-        checkbox.setAttribute("aria-label", `Ajouter ${accessory.name} gratuitement`);
+        checkbox.setAttribute("aria-label", `Sélectionner ${accessory.name} (obligatoire)`);
 
         const image = document.createElement("img");
         image.alt = "";
