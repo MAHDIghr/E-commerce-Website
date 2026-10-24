@@ -20,6 +20,8 @@ from product.selectors import product_card_data, published_products
 
 CART_SESSION_KEY = "shop_cart_v1"
 MAX_CART_QUANTITY = 10
+MAX_CART_LINES = 30
+MAX_CART_REQUEST_BYTES = 8192
 FREE_SHIPPING_THRESHOLD = Decimal("80.00")
 
 
@@ -106,23 +108,49 @@ def search_suggestions(request):
     return JsonResponse({"query": query, "results": results})
 
 
+def _strict_int(value, *, allow_zero=False):
+    """Parse un entier JSON sans accepter booléens, flottants ou coercitions ambiguës."""
+    if isinstance(value, bool):
+        raise ValueError("Entier invalide.")
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str) and value.isascii() and value.isdecimal():
+        parsed = int(value)
+    else:
+        raise ValueError("Entier invalide.")
+    if parsed < 0 or (parsed == 0 and not allow_zero):
+        raise ValueError("Entier invalide.")
+    return parsed
+
+
 def _cart_state(request):
+    """Normalise la session et borne le nombre de lignes contrôlées par le client."""
     raw = request.session.get(CART_SESSION_KEY, {})
     if not isinstance(raw, dict):
         return {}
+
     clean = {}
     for key, quantity in raw.items():
-        try:
-            variant_id, offer_id = key.split(":", 1)
-            variant_id, offer_id, quantity = int(variant_id), int(offer_id), int(quantity)
-        except (AttributeError, TypeError, ValueError):
+        if len(clean) >= MAX_CART_LINES:
+            break
+        if not isinstance(key, str) or key.count(":") != 1:
             continue
-        if variant_id > 0 and offer_id >= 0 and 1 <= quantity <= MAX_CART_QUANTITY:
+        variant_raw, offer_raw = key.split(":", 1)
+        try:
+            variant_id = _strict_int(variant_raw)
+            offer_id = _strict_int(offer_raw, allow_zero=True)
+            quantity = _strict_int(quantity)
+        except (TypeError, ValueError):
+            continue
+        if quantity <= MAX_CART_QUANTITY:
             clean[f"{variant_id}:{offer_id}"] = quantity
     return clean
 
-
 def _line_details(variant_id, offer_id, quantity):
+    """Retourne une ligne recalculée depuis le catalogue, ou None si elle n'est plus valide."""
+    if quantity < 1 or quantity > MAX_CART_QUANTITY:
+        return None
+
     variant = ProductVariant.objects.select_related("product", "product__category").filter(
         pk=variant_id, is_active=True,
     ).first()
@@ -137,43 +165,45 @@ def _line_details(variant_id, offer_id, quantity):
         ).first()
         if not offer:
             return None
+
         offer_items = list(offer.items.select_related(
-            "product", "product__category", "variant", "variant__product", "variant__product__category",
-        ))
-        if not offer_items or not any(
-            item.use_selected_variant and item.product_id == variant.product_id and item.variant_id is None
-            for item in offer_items
+            "product", "product__category", "variant", "variant__product",
+            "variant__product__category",
+        ).order_by("position", "pk"))
+        selected_items = [item for item in offer_items if item.use_selected_variant]
+        if (
+            not offer_items
+            or len(selected_items) != 1
+            or selected_items[0].product_id != variant.product_id
+            or selected_items[0].variant_id is not None
         ):
             return None
+
+        max_available_values = []
         for item in offer_items:
+            if item.quantity < 1:
+                return None
             if item.use_selected_variant:
+                if item.product_id != variant.product_id or item.variant_id is not None:
+                    return None
                 component = variant
             else:
                 component = item.variant
                 if (
-                    not component or not component.is_active
+                    component is None
+                    or not component.is_active
                     or component.product_id != item.product_id
                     or not published_products().filter(pk=item.product_id).exists()
                 ):
                     return None
-            if component.stock_quantity < quantity * item.quantity:
-                # Keep the line visible so the client can reduce or remove it.
-                pass
+            max_available_values.append(component.stock_quantity // item.quantity)
 
-    if offer:
+        max_available = min(max_available_values, default=0)
         simple_variant_offer = len(offer_items) == 1 and offer_items[0].use_selected_variant
-        if simple_variant_offer:
-            unit_price = variant.price * offer_items[0].quantity
-        else:
-            unit_price = offer.price
+        unit_price = variant.price * offer_items[0].quantity if simple_variant_offer else offer.price
         title = f"{variant.product.name} — {offer.title}"
         if variant.color_name:
             title += f" ({variant.color_name})"
-        max_available = min(
-            (variant.stock_quantity // item.quantity if item.use_selected_variant
-             else item.variant.stock_quantity // item.quantity)
-            for item in offer_items
-        )
     else:
         unit_price = variant.price
         title = f"{variant.product.name} — {variant.color_name}" if variant.color_name else variant.product.name
@@ -199,7 +229,6 @@ def _line_details(variant_id, offer_id, quantity):
         "available_quantity": min(max_available, MAX_CART_QUANTITY),
         "available": available,
     }
-
 
 def _cart_payload(request):
     state = _cart_state(request)
@@ -239,6 +268,9 @@ def cart_api(request):
 
 @require_POST
 def cart_mutation(request):
+    """Modifie le panier invité après validation stricte de l'action et du catalogue."""
+    if len(request.body) > MAX_CART_REQUEST_BYTES:
+        return JsonResponse({"error": "Requête trop volumineuse."}, status=413)
     try:
         data = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -247,31 +279,43 @@ def cart_mutation(request):
         return JsonResponse({"error": "Requête invalide."}, status=400)
 
     action = data.get("action")
+    if not isinstance(action, str):
+        return JsonResponse({"error": "Action de panier invalide."}, status=400)
+
     state = _cart_state(request)
+    if action == "clear":
+        request.session[CART_SESSION_KEY] = {}
+        request.session.modified = True
+        return JsonResponse(_cart_payload(request))
+
     try:
-        variant_id = int(data.get("variant_id", 0))
-        offer_id = int(data.get("offer_id") or 0)
+        variant_id = _strict_int(data.get("variant_id"))
+        offer_id = _strict_int(data.get("offer_id", 0), allow_zero=True)
     except (TypeError, ValueError):
         return JsonResponse({"error": "Variante ou offre invalide."}, status=400)
     key = f"{variant_id}:{offer_id}"
 
-    if action == "clear":
-        request.session[CART_SESSION_KEY] = {}
-    elif action == "add":
+    if action == "add":
         try:
-            quantity = int(data.get("quantity", 1))
+            quantity = _strict_int(data.get("quantity", 1))
         except (TypeError, ValueError):
             return JsonResponse({"error": "Quantité invalide."}, status=400)
-        if variant_id <= 0 or offer_id < 0 or quantity < 1 or quantity > MAX_CART_QUANTITY:
-            return JsonResponse({"error": "Variante, offre ou quantité invalide."}, status=400)
+        if quantity > MAX_CART_QUANTITY:
+            return JsonResponse({"error": "La quantité maximale est de 10 par ligne."}, status=400)
         current = state.get(key, 0)
-        details = _line_details(variant_id, offer_id, current + quantity)
+        combined_quantity = current + quantity
+        if combined_quantity > MAX_CART_QUANTITY:
+            return JsonResponse({"error": "La quantité maximale est de 10 par ligne."}, status=400)
+        if key not in state and len(state) >= MAX_CART_LINES:
+            return JsonResponse({"error": "Le panier contient déjà le nombre maximal de références."}, status=409)
+
+        details = _line_details(variant_id, offer_id, combined_quantity)
         if details is None:
             return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
         if not details["available"]:
             return JsonResponse({"error": "Le stock disponible ne permet pas cette quantité."}, status=409)
-        state[key] = current + quantity
-        request.session[CART_SESSION_KEY] = state
+        state[key] = combined_quantity
+
     elif action in {"update", "remove"}:
         if key not in state:
             return JsonResponse({"error": "Article introuvable dans le panier."}, status=404)
@@ -279,20 +323,20 @@ def cart_mutation(request):
             state.pop(key, None)
         else:
             try:
-                quantity = int(data.get("quantity", 0))
+                quantity = _strict_int(data.get("quantity"))
             except (TypeError, ValueError):
                 return JsonResponse({"error": "Quantité invalide."}, status=400)
-            if quantity < 1 or quantity > MAX_CART_QUANTITY:
-                return JsonResponse({"error": "La quantité doit être comprise entre 1 et 10."}, status=400)
+            if quantity > MAX_CART_QUANTITY:
+                return JsonResponse({"error": "La quantité maximale est de 10 par ligne."}, status=400)
             details = _line_details(variant_id, offer_id, quantity)
             if details is None:
                 return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
             if not details["available"]:
                 return JsonResponse({"error": "Le stock disponible ne permet pas cette quantité."}, status=409)
             state[key] = quantity
-        request.session[CART_SESSION_KEY] = state
     else:
         return JsonResponse({"error": "Action de panier inconnue."}, status=400)
 
+    request.session[CART_SESSION_KEY] = state
     request.session.modified = True
     return JsonResponse(_cart_payload(request))
