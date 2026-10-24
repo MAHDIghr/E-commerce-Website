@@ -17,7 +17,7 @@
      * Cette initialisation est placée avant la galerie pour ne pas dépendre
      * de ses interactions secondaires.
      */
-    $$(".js-add").forEach((button) => {
+    $(".js-add, .js-buy").forEach((button) => {
         button.addEventListener("click", async (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -47,7 +47,15 @@
             button.setAttribute("aria-busy", "true");
             button.textContent = "Ajout en cours…";
             try {
-                const added = await addToCart({ variantId, offerId });
+                const offerDetails = (data.offers || []).find((item) => Number(item.id) === offerId);
+                let selectedItemIds = [];
+                if (offerDetails && Array.isArray(offerDetails.accessories) && offerDetails.accessories.length) {
+                    if (typeof chooseProductOffer !== "function") throw new Error("La sélection des accessoires n'est pas disponible. Actualisez la page.");
+                    const selection = await chooseProductOffer({ name: data.name }, [offerDetails]);
+                    if (!selection || !selection.offerId) return;
+                    selectedItemIds = selection.selectedItemIds || [];
+                }
+                const added = await addToCart({ variantId, offerId, selectedItemIds });
                 if (added) {
                     button.classList.add("is-done");
                     button.textContent = "Ajouté ✓";
@@ -176,7 +184,7 @@
         const stock = Number(colorIn().dataset.stock);
         const required = Math.max(1, Number(offerIn().dataset.mainQuantity || 1));
         const available = stock >= required;
-        $$(".js-add").forEach((button) => {
+        $(".js-add, .js-buy").forEach((button) => {
             button.disabled = !available;
             button.setAttribute("aria-disabled", String(!available));
         });
@@ -198,7 +206,7 @@
     sync();
     updateAvailability();
 
-    /* Les CTA .js-add sont gérés par le contrôleur partagé du panier (base.js). */
+    /* Les CTA .js-buy et .js-add utilisent le panier partagé ; la fiche gère le sélecteur d’accessoires. */
 
     /* ---------- Barre collante : visible quand aucun CTA de page n'est à l'écran ---------- */
     const sbar = $("#sbar"), seen = new Set();
