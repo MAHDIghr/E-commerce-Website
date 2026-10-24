@@ -5,7 +5,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, ProtectedError, Q
+from django.db.models import Count, Q
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -147,6 +148,8 @@ def product_delete(request, pk):
     name = product.name
     try:
         with transaction.atomic():
+            # Supprimer d'abord les offres propres au produit et leurs composants.
+            product.offers.all().delete()
             product.delete()
     except ProtectedError:
         messages.error(request, f"« {name} » ne peut pas être supprimé : il est utilisé comme article complémentaire dans une autre offre. Modifiez d’abord cette composition.")
