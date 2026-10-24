@@ -237,6 +237,108 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["count"], 0)
 
+    def _create_offer_accessory(self, stock=5):
+        accessory = Product.objects.create(
+            category=self.category,
+            name="Porte-cartes beige",
+            slug="porte-cartes-beige-offert",
+            is_active=True,
+        )
+        accessory_variant = ProductVariant.objects.create(
+            product=accessory, sku="PORTE-CARTES-BEIGE-OFFER", color_name="Beige",
+            stock_quantity=stock,
+        )
+        ProductMedia.objects.create(
+            product=accessory, media_type=ProductMedia.IMAGE,
+            source_url="https://cdn.example.test/porte-cartes.webp",
+            alt_text="Porte-cartes beige", is_primary=True,
+        )
+        standalone_offer = ProductOffer.objects.create(
+            product=accessory, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("19.90"), reference_price=Decimal("24.90"), is_active=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=standalone_offer, product=accessory,
+            use_selected_variant=True, quantity=1,
+        )
+        offer_item = ProductOfferItem.objects.create(
+            offer=self.offer, product=accessory, variant=accessory_variant, quantity=1,
+        )
+        return accessory, accessory_variant, offer_item
+
+    def test_offer_options_expose_optional_accessory_as_free_with_original_price(self):
+        accessory, accessory_variant, offer_item = self._create_offer_accessory()
+        response = self.client.get(
+            reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
+            {"variant_id": self.variant.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        offer = response.json()["offers"][0]
+        self.assertEqual(len(offer["accessories"]), 1)
+        gift = offer["accessories"][0]
+        self.assertEqual(gift["item_id"], offer_item.pk)
+        self.assertEqual(gift["name"], accessory.name)
+        self.assertEqual(gift["image"], "https://cdn.example.test/porte-cartes.webp")
+        self.assertEqual(gift["original_price"], "24.90")
+        self.assertEqual(gift["unit_price"], "0.00")
+        self.assertTrue(gift["available"])
+
+    def test_selected_offer_accessory_is_free_and_does_not_change_offer_subtotal(self):
+        accessory, accessory_variant, offer_item = self._create_offer_accessory()
+        response = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add",
+                "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk,
+                "selected_item_ids": [offer_item.pk],
+                "quantity": 1,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["subtotal"], "89.90")
+        self.assertEqual(len(payload["items"]), 1)
+        gift = payload["items"][0]["components"][0]
+        self.assertEqual(gift["name"], accessory.name)
+        self.assertEqual(gift["original_price"], "24.90")
+        self.assertEqual(gift["unit_price"], "0.00")
+        self.assertTrue(gift["is_gift"])
+        self.assertEqual(gift["image"], "https://cdn.example.test/porte-cartes.webp")
+
+    def test_accessory_out_of_stock_does_not_block_the_main_offer(self):
+        accessory, accessory_variant, offer_item = self._create_offer_accessory(stock=0)
+        response = self.client.get(
+            reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
+            {"variant_id": self.variant.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        gift = response.json()["offers"][0]["accessories"][0]
+        self.assertFalse(gift["available"])
+        self.assertEqual(response.json()["offers"][0]["price"], "89.90")
+
+    def test_cart_rejects_accessory_not_configured_for_selected_offer(self):
+        other_offer = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("99.90"), is_active=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=other_offer, product=self.product, use_selected_variant=True, quantity=1,
+        )
+        accessory, accessory_variant, offer_item = self._create_offer_accessory()
+        response = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": other_offer.pk, "selected_item_ids": [offer_item.pk],
+                "quantity": 1,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.client.get(reverse("shop:cart_api")).json()["count"], 0)
+
     def test_search_suggestions_only_return_published_products(self):
         response = self.client.get(reverse("shop:search_suggestions"), {"q": "cabas camel"})
         self.assertEqual(response.status_code, 200)
