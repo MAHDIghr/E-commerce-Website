@@ -177,11 +177,11 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(ProductOffer)
 class ProductOfferAdmin(admin.ModelAdmin):
-    list_display = ("product", "badge", "display_delivery_label", "price", "is_featured", "is_active", "position")
+    list_display = ("product", "badge", "display_delivery_label", "price", "reference_price", "is_featured", "is_active", "position")
     list_filter = ("badge", "display_delivery_label", "is_active", "is_featured")
     search_fields = ("title", "product__name")
     ordering = ("product__name", "position")
-    fields = ("product", "badge", "display_delivery_label", "price", "is_featured", "is_active")
+    fields = ("product", "badge", "display_delivery_label", "price", "reference_price", "is_featured", "is_active")
     inlines = (ProductOfferItemInline,)
 
 
