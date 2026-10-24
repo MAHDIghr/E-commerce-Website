@@ -55,16 +55,14 @@ def product_card_data(queryset):
             for item in product.variants.all()
             if item.is_active and item.color_slug and item.color_code
         ]
-        offer = product.offers.filter(
+        eligible_offers = product.offers.filter(
             is_active=True, items__product_id=product.pk,
             items__use_selected_variant=True, items__variant__isnull=True,
-        ).distinct().order_by("-is_featured", "position", "pk").first()
+        ).distinct()
+        essential_offer = eligible_offers.filter(badge="essential").order_by("position", "pk").first()
+        offer = essential_offer or eligible_offers.order_by("-is_featured", "position", "pk").first()
         if offer is None:
             continue
-        essential_offer = product.offers.filter(
-            is_active=True, badge="essential", items__product_id=product.pk,
-            items__use_selected_variant=True, items__variant__isnull=True,
-        ).distinct().order_by("position", "pk").first()
         reference_price = essential_offer.reference_price if essential_offer else None
         essential_price = essential_offer.price if essential_offer else None
         discount = (
