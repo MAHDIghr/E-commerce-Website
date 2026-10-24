@@ -1,4 +1,5 @@
 from io import BytesIO
+from decimal import Decimal
 import tempfile
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -48,6 +49,7 @@ class SignatureSelectionTests(TestCase):
             price="59.90",
             is_active=True,
         )
+        self.offer = offer
         ProductOfferItem.objects.create(
             offer=offer,
             product=self.product,
@@ -76,6 +78,19 @@ class SignatureSelectionTests(TestCase):
         self.assertContains(response, reverse("product:detail", kwargs={"slug": self.product.slug}))
         self.assertContains(response, self.selection.image.url)
         self.assertNotContains(response, "cdn.example.test/product.webp")
+
+    def test_homepage_discount_uses_essential_offer_reference_price(self):
+        self.product.is_new = True
+        self.product.save(update_fields=["is_new"])
+        self.offer.reference_price = Decimal("75.00")
+        self.offer.save(update_fields=["reference_price"])
+
+        response = self.client.get(reverse("home:home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="product-badge product-badge--sale">-20%</span>')
+        self.assertContains(response, "75.00 €")
+        self.assertContains(response, "59.90 €")
 
     def test_inactive_signature_selection_is_not_rendered(self):
         self.selection.is_active = False
