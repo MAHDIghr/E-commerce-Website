@@ -207,7 +207,7 @@ Les modèles sont définis dans `product/models.py`. Les champs exacts du code c
 |---|---|
 | `Category` | Nom, slug, description, image téléversée ou URL externe, texte alternatif, activation et ordre. |
 | `Product` | Identité, catégorie, descriptions, matière, dimensions, attributs de publication et métadonnées SEO. |
-| `ProductVariant` | SKU unique, couleur, prix de vente, prix de référence facultatif, stock, activation et ordre. |
+| `ProductVariant` | Référence interne unique, couleur, stock, activation et ordre d'affichage. Aucun prix n'est enregistré sur une variante. |
 | `ProductMedia` | Image ou vidéo associée au produit, éventuellement à une variante, texte alternatif, ordre et média principal. |
 | `ProductReason` | Arguments éditoriaux en faveur du produit. |
 | `ProductContentItem` | Éléments de capacité et indication qu'ils rentrent dans le produit. |
@@ -223,7 +223,7 @@ Les modèles sont définis dans `product/models.py`. Les champs exacts du code c
 - Le prix et le stock sont portés par `ProductVariant`, pas par `Product`.
 - Le SKU doit être unique.
 - Le prix de vente doit être positif ou nul.
-- Si un prix de référence est renseigné, une contrainte exige qu'il soit supérieur au prix de vente.
+- Le prix de vente est défini par `ProductOffer.price` ; les couleurs n'ont pas de prix individuel.
 - Le stock est un entier positif ou nul.
 - Les variantes ont un ordre d'affichage et peuvent être désactivées.
 - La couleur peut être décrite par un nom, un slug et un code hexadécimal.
