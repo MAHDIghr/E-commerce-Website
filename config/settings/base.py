@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "shop",
     "product",
     "checkout",
+    "dashboard.apps.DashboardConfig",
 ]
 
 
