@@ -146,6 +146,41 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'id="cta-final">Acheter</button>')
         self.assertContains(response, 'class="button button-primary js-buy"')
 
+    def test_product_detail_exposes_configured_accessories_for_the_optional_gift_popup(self):
+        accessory = Product.objects.create(
+            category=self.category, name="Porte-cartes beige",
+            slug="porte-cartes-beige-detail", is_active=True,
+        )
+        accessory_variant = ProductVariant.objects.create(
+            product=accessory, sku="PORTE-CARTES-BEIGE-DETAIL",
+            color_name="Beige", stock_quantity=3,
+        )
+        ProductMedia.objects.create(
+            product=accessory, media_type=ProductMedia.IMAGE,
+            source_url="https://cdn.example.test/porte-cartes-detail.webp",
+            alt_text="Porte-cartes beige", is_primary=True,
+        )
+        standalone_offer = ProductOffer.objects.create(
+            product=accessory, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("19.90"), reference_price=Decimal("24.90"),
+        )
+        ProductOfferItem.objects.create(
+            offer=standalone_offer, product=accessory,
+            use_selected_variant=True, quantity=1,
+        )
+        ProductOfferItem.objects.create(
+            offer=self.offer, product=accessory, variant=accessory_variant, quantity=1,
+        )
+
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        gift = response.context["product"]["offers"][0]["accessories"][0]
+        self.assertEqual(gift["name"], accessory.name)
+        self.assertEqual(gift["original_price"], 24.90)
+        self.assertEqual(gift["image"], "https://cdn.example.test/porte-cartes-detail.webp")
+        self.assertTrue(gift["available"])
+        self.assertContains(response, "Accessoires offerts en option")
+
     def test_featured_offer_is_selected_without_hiding_other_active_offers(self):
         self.offer.is_featured = False
         self.offer.save(update_fields=["is_featured"])
