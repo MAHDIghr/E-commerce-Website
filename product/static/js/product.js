@@ -43,7 +43,6 @@
             }
 
             const originalMarkup = button.innerHTML;
-            const originalDisabled = button.disabled;
             button.disabled = true;
             button.setAttribute("aria-busy", "true");
             button.textContent = "Ajout en cours…";
