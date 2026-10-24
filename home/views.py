@@ -19,7 +19,6 @@ def home(request):
         Prefetch(
             "media_items",
             queryset=ProductMedia.objects.filter(
-                variant__isnull=True,
                 media_type=ProductMedia.IMAGE,
             ).order_by("-is_primary", "position", "pk"),
         ),
