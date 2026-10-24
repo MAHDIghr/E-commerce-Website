@@ -133,48 +133,28 @@
             </div>
         </div>
 
-        <!-- ⬇️ STRUCTURE DU CARROUSEL — IDENTIQUE À test.html ⬇️ -->
+        <!-- Carrousel signature : les cartes sont administrées depuis Django Admin. -->
         <section class="carousel-section">
             <div class="carousel-wrapper">
                 <div class="carousel-scene">
                     <div class="carousel" id="carousel">
-
-                        
-                        <article class="card">
+                        {% for selection in signature_selections %}
+                        <a
+                            class="card"
+                            href="{% url 'product:detail' slug=selection.product.slug %}"
+                            aria-label="Découvrir {{ selection.product.name }}"
+                        >
                             <img
-                                src="{% static 'images/sac1.png' %}"
-                                alt="Sac 1"
+                                src="{{ selection.image.url }}"
+                                alt="{{ selection.alt_text|default:selection.product.name }}"
+                                loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+                                decoding="async"
+                                draggable="false"
                             >
-                        </article>
-
-                        <article class="card">
-                            <img
-                                src="{% static 'images/sac2.png' %}"
-                                alt="Sac 2"
-                            >
-                        </article>
-
-                        <article class="card">
-                            <img
-                                src="{% static 'images/sac3.png' %}"
-                                alt="Sac 3"
-                            >
-                        </article>
-
-                        <article class="card">
-                            <img
-                                src="{% static 'images/sac1.png' %}"
-                                alt="Sac 1"
-                            >
-                        </article>
-
-                        <article class="card">
-                            <img
-                                src="{% static 'images/sac2.png' %}"
-                                alt="Sac 2"
-                            >
-                        </article>
-
+                        </a>
+                        {% empty %}
+                        <p class="empty-catalog">Notre sélection signature sera bientôt disponible.</p>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -187,7 +167,6 @@
                 </button>
             </div>
         </section>
-        <!-- ⬆️ FIN DU CARROUSEL ⬆️ -->
 
     </section>
 
