@@ -84,7 +84,13 @@
         {% endfor %}
       </fieldset>
 
-      <button type="button" class="button button-primary button-block cta js-add" id="cta">Ajouter au panier</button>
+      <div class="buy__actions" aria-label="Actions d'achat">
+        <button type="button" class="button button-primary button-block cta js-buy" id="cta">Acheter</button>
+        <button type="button" class="button button-secondary cta-icon js-add" id="cta-add" aria-label="Ajouter au panier" title="Ajouter au panier">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>
+          <span class="visually-hidden">Ajouter au panier</span>
+        </button>
+      </div>
       <ul class="trust">
         <li>Paiement sécurisé</li><li>Retours gratuits sous 30 jours</li><li>Service client 7j/7</li><li>Expédition sous 24 h</li>
       </ul>
@@ -164,14 +170,14 @@
 <section class="final"><div class="p-wrap">
   <h2>Prêt à l'adopter ?</h2>
   <p>Retours gratuits sous 30 jours.</p>
-  <button type="button" class="button button-secondary js-add" id="cta-final">Ajouter au panier</button>
+  <button type="button" class="button button-primary js-buy" id="cta-final">Acheter</button>
 </div></section>
 {% endblock %}
 
 {% block after_main %}
 <div class="sbar" id="sbar" aria-label="Achat rapide" inert>
   <p><strong id="sbar-price">{{ product.selected.price_label }}</strong><span id="sbar-offer">{{ product.selected.title }}</span></p>
-  <button type="button" class="button button-primary js-add">Ajouter au panier</button>
+  <button type="button" class="button button-primary js-buy">Acheter</button>
 </div>
 <dialog class="lb" id="lb" aria-label="Galerie en plein écran">
   <p class="lb__n"></p>
