@@ -46,7 +46,6 @@ def detail(request, slug):
         "poster": item.poster_url or (item.image.url if item.image else item.source_url),
         "thumb": item.poster_url or (item.image.url if item.image else item.source_url),
         "alt": item.alt_text,
-        "variant_id": str(item.variant_id) if item.variant_id else "",
     } for item in media_items]
 
     offers = []
@@ -82,15 +81,21 @@ def detail(request, slug):
         if not lines or invalid_offer:
             continue
         # Aucun prix n'est stocké sur les variantes : une offre porte son propre prix.
-        old_price = None
-        off = 0
+        old_price = offer_obj.reference_price
+        if old_price is not None and old_price <= offer_obj.price:
+            old_price = None
+        off = (
+            round((old_price - offer_obj.price) * 100 / old_price)
+            if old_price is not None and old_price > 0
+            else 0
+        )
         offers.append({
             "id": str(offer_obj.pk),
             "title": offer_obj.title,
             "items": " + ".join(lines),
             "price": float(offer_obj.price),
             "old": float(old_price) if old_price else None,
-            "reference_total": None,
+            "reference_total": float(old_price) if old_price is not None else None,
             "price_label": _eur(offer_obj.price),
             "old_label": _eur(old_price) if old_price else "",
             "save_label": _eur(old_price - offer_obj.price) if old_price else "",
