@@ -17,7 +17,7 @@
      * Cette initialisation est placée avant la galerie pour ne pas dépendre
      * de ses interactions secondaires.
      */
-    $(".js-add").forEach((button) => {
+    $$(".js-add").forEach((button) => {
         button.addEventListener("click", async (event) => {
             event.preventDefault();
             event.stopPropagation();
