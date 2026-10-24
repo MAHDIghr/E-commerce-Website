@@ -186,6 +186,7 @@ const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier
 const FREE_SHIPPING_THRESHOLD = 80;
 let cartSnapshot = { items: [], count: 0, subtotal: "0.00" };
 let cartMutationQueue = Promise.resolve();
+let cartReady = Promise.resolve();
 function csrfToken() { const m = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/); return m ? decodeURIComponent(m[1]) : ""; }
 function showCartStatus(message, isError = false) {
     if (!cartStatus) return; cartStatus.textContent = message || "";
@@ -243,6 +244,7 @@ async function refreshCartUI() { try { applyCartPayload(await cartRequest(cartAp
 function mutateCart(payload) {
     /* Sérialise les mutations pour éviter les pertes d'état lors de clics rapprochés. */
     const operation = cartMutationQueue.then(async () => {
+        await cartReady;
         showCartStatus("");
         const result = await cartRequest(cartMutationUrl, "POST", payload);
         applyCartPayload(result);
@@ -285,7 +287,7 @@ document.querySelectorAll('[data-action="add-to-cart"], [data-action="quick-add"
         if (added) playAddedFeedback(button); else button.disabled = false;
     });
 });
-refreshCartUI();
+cartReady = refreshCartUI();
 
 
 const LANG_KEY = "site_lang";
