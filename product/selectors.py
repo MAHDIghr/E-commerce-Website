@@ -38,9 +38,11 @@ def product_card_data(queryset):
             continue
 
         media_items = list(product.media_items.all())
-        media = next((item for item in media_items if item.is_primary and item.media_type == ProductMedia.IMAGE), None)
+        media = next((item for item in media_items if item.is_primary), None)
         if media is None:
             media = next((item for item in media_items if item.media_type == ProductMedia.IMAGE), None)
+        if media is None:
+            media = next(iter(media_items), None)
 
         approved_reviews = [
             review for review in product.reviews.all() if review.is_approved
@@ -89,6 +91,9 @@ def product_card_data(queryset):
             "isNew": bool(product.is_new),
             "pop": 0,
             "best": bool(product.is_best_seller),
-            "img": (media.image.url if media and media.image else media.source_url) if media else "",
+            "img": (
+                media.poster_url if media and media.media_type == ProductMedia.VIDEO and media.poster_url
+                else (media.image.url if media and media.image else media.source_url) if media else ""
+            ),
         })
     return products
