@@ -14,7 +14,7 @@ from .models import (
 class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
     extra = 1
-    fields = ("sku", "color_name", "color_slug", "color_code", "price", "compare_at_price", "stock_quantity", "is_active", "position")
+    fields = ("sku", "color_name", "color_slug", "color_code", "stock_quantity", "is_active", "position")
 
 
 class ProductMediaInline(admin.TabularInline):
@@ -124,7 +124,7 @@ class ProductAdmin(admin.ModelAdmin):
 
         variants = list(obj.variants.all())
         if not any(variant.is_active for variant in variants):
-            issues.append("Aucune variante active : ajoutez ou activez une variante avec prix et stock.")
+            issues.append("Aucune variante active : ajoutez ou activez une variante avec couleur et stock.")
 
         common_images = [
             media for media in obj.media_items.all()
