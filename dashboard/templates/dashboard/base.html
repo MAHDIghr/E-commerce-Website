@@ -1,0 +1,53 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#f2f4ef">
+  <title>{% block title %}Dashboard{% endblock %} · My Line Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/dashboard.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{% url 'dashboard:home' %}" aria-label="My Line Collection, tableau de bord">
+      <span class="brand-mark">M</span><span>My Line <small>COLLECTION · ADMIN</small></span>
+    </a>
+    <nav aria-label="Navigation principale">
+      <p class="nav-label">PILOTAGE</p>
+      <a class="nav-link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" href="{% url 'dashboard:home' %}"><span>◫</span> Vue d’ensemble</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'products' or request.resolver_match.url_name == 'product_add' or request.resolver_match.url_name == 'product_edit' %}is-active{% endif %}" href="{% url 'dashboard:products' %}"><span>◇</span> Produits</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'categories' or request.resolver_match.url_name == 'category_edit' %}is-active{% endif %}" href="{% url 'dashboard:categories' %}"><span>▦</span> Catégories</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'offers' %}is-active{% endif %}" href="{% url 'dashboard:offers' %}"><span>✳</span> Offres commerciales</a>
+      <p class="nav-label nav-label-spaced">CONTENU & CONTRÔLE</p>
+      <a class="nav-link" href="{% url 'admin:product_review_changelist' %}"><span>☆</span> Avis clients</a>
+      <a class="nav-link" href="{% url 'admin:product_product_changelist' %}"><span>↗</span> Contenus avancés</a>
+      <a class="nav-link" href="{% url 'admin:index' %}"><span>⚙</span> Administration Django</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="secure-note"><span class="secure-dot"></span><div><strong>Accès protégé</strong><small>Session administrateur</small></div></div>
+      <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button class="logout-button" type="submit">↪ Déconnexion</button></form>
+    </div>
+  </aside>
+  <div class="sidebar-scrim" id="sidebarScrim" hidden></div>
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Ouvrir la navigation">☰</button>
+      <div class="crumb">Espace privé <span>/</span> <strong>{% block section %}Vue d’ensemble{% endblock %}</strong></div>
+      <div class="topbar-user"><span class="avatar">{{ request.user.get_username|slice:":1"|upper }}</span><span><strong>{{ request.user.get_username }}</strong><small>Administrateur</small></span></div>
+    </header>
+    {% if messages %}<div class="messages" role="status" aria-live="polite">{% for message in messages %}<p class="message message-{{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    <div class="content">{% block content %}{% endblock %}</div>
+    <footer class="footer">My Line Collection <span>•</span> Espace d’administration sécurisé</footer>
+  </main>
+</div>
+<script src="{% static 'dashboard/dashboard.js' %}" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
