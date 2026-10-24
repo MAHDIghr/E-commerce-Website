@@ -5,7 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import ProtectedError, Q
+from django.db.models import Count, ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -13,7 +13,6 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, Review
 from .forms import CategoryForm, MediaFormSet, OfferFormSet, ProductForm, VariantFormSet
-from .services import ensure_default_offer
 
 
 def is_dashboard_admin(user):
@@ -114,7 +113,6 @@ def product_edit(request, pk=None):
                         offer=offer, product=product, use_selected_variant=True,
                         defaults={"quantity": 1, "position": 0},
                     )
-                ensure_default_offer(product)
             messages.success(request, "Produit créé avec ses offres et médias." if is_new else "Produit et offres mis à jour.")
             return redirect("dashboard:products")
     else:
@@ -155,7 +153,7 @@ def categories(request):
     else:
         form = CategoryForm()
     return render(request, "dashboard/categories.html", {
-        "categories": Category.objects.annotate(product_count=models.Count("products")).order_by("position", "name"),
+        "categories": Category.objects.annotate(product_count=Count("products")).order_by("position", "name"),
         "form": form,
     })
 
