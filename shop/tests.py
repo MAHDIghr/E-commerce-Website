@@ -50,6 +50,50 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["subtotal"], "89.90")
         self.assertEqual(payload["items"][0]["unit_price"], "89.90")
+        self.assertEqual(payload["items"][0]["components"][0]["name"], self.product.name)
+
+    def test_offer_options_returns_the_single_available_offer_for_quick_add(self):
+        response = self.client.get(
+            reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
+            {"variant_id": self.variant.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["product"]["slug"], self.product.slug)
+        self.assertEqual(len(payload["offers"]), 1)
+        self.assertEqual(payload["offers"][0]["id"], self.offer.pk)
+        self.assertEqual(payload["offers"][0]["price"], "89.90")
+        self.assertEqual(payload["offers"][0]["component_count"], 1)
+
+    def test_offer_options_lists_multiple_active_offers_with_server_prices(self):
+        second_offer = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("79.90"), is_active=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=second_offer, product=self.product, use_selected_variant=True, quantity=1,
+        )
+        response = self.client.get(
+            reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
+            {"variant_id": self.variant.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual([offer["id"] for offer in payload["offers"]], [self.offer.pk, second_offer.pk])
+        self.assertEqual(payload["offers"][1]["price"], "79.90")
+
+    def test_offer_options_rejects_variant_from_another_product(self):
+        other = Product.objects.create(
+            category=self.category, name="Autre sac", slug="autre-sac", is_active=True,
+        )
+        other_variant = ProductVariant.objects.create(
+            product=other, sku="AUTRE-SAC-TEST", price=Decimal("20.00"), stock_quantity=2,
+        )
+        response = self.client.get(
+            reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
+            {"variant_id": other_variant.pk},
+        )
+        self.assertEqual(response.status_code, 404)
 
     def test_selected_variant_offer_uses_current_variant_price(self):
         self.variant.price = Decimal("99.90")
