@@ -561,6 +561,58 @@ if (cartClose) cartClose.addEventListener("click", closeCart);
 if (cartBackdrop) cartBackdrop.addEventListener("click", closeCart);
 if (cartClearButton) cartClearButton.addEventListener("click", async () => { try { await mutateCart({ action: "clear" }); showCartStatus("Le panier a été vidé."); } catch (e) {} });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCart(); closeSearch(); } });
+/* CTA fiche produit : délégation globale pour rester fonctionnel même si une
+   interaction secondaire de product.js échoue pendant son initialisation. */
+document.addEventListener("click", async (event) => {
+    const button = event.target instanceof Element ? event.target.closest(".js-add") : null;
+    if (!button || button.disabled) return;
+    event.preventDefault();
+
+    const variant = document.querySelector('input[name="color"]:checked');
+    const offer = document.querySelector('input[name="offer"]:checked');
+    const variantId = Number(variant && variant.value);
+    const offerId = Number(offer && offer.value);
+    const status = document.querySelector("#variant-stock-status");
+    if (!Number.isSafeInteger(variantId) || variantId < 1 || !Number.isSafeInteger(offerId) || offerId < 1) {
+        const message = "Choisissez une variante et une offre disponible avant de continuer.";
+        if (status) status.textContent = message;
+        showCartStatus(message, true);
+        return;
+    }
+
+    const originalMarkup = button.innerHTML;
+    const originalDisabled = button.disabled;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Ajout en cours…";
+    lastCartTrigger = button;
+    try {
+        const added = await addToCart({ variantId, offerId });
+        if (added) {
+            button.classList.add("is-done");
+            button.textContent = "Ajouté ✓";
+        } else {
+            button.innerHTML = originalMarkup;
+        }
+    } catch (error) {
+        const message = error && error.message || "L'ajout au panier a échoué. Réessayez.";
+        if (status) status.textContent = message;
+        showCartStatus(message, true);
+        button.innerHTML = originalMarkup;
+    } finally {
+        button.removeAttribute("aria-busy");
+        const availableStock = Number(variant && variant.dataset.stock || 0);
+        const required = Math.max(1, Number(offer && offer.dataset.mainQuantity || 1));
+        button.disabled = !variant || availableStock < required;
+        window.setTimeout(() => {
+            if (!button.isConnected) return;
+            button.classList.remove("is-done");
+            button.innerHTML = originalMarkup;
+            button.disabled = !variant || availableStock < required;
+        }, 1400);
+    }
+});
+
 document.querySelectorAll('[data-action="add-to-cart"], [data-action="quick-add"]').forEach((button) => {
     button.addEventListener("click", async (event) => {
         event.preventDefault();
