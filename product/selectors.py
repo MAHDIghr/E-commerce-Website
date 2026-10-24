@@ -53,12 +53,22 @@ def product_card_data(queryset):
             for item in product.variants.all()
             if item.is_active and item.color_slug and item.color_code
         ]
-        active_offers = product.offers.filter(
-            is_active=True, items__product_id=product.pk,
-            items__use_selected_variant=True, items__variant__isnull=True,
-        ).distinct()
-        essential_offer = active_offers.filter(badge="essential").first()
-        offer = essential_offer or active_offers.order_by("-is_featured", "position", "pk").first()
+        active_offers = product._active_offers()
+        valid_offers = [
+            candidate for candidate in active_offers
+            if sum(
+                1 for item in candidate.items.all()
+                if item.use_selected_variant
+                and item.product_id == product.pk
+                and item.variant_id is None
+                and item.quantity > 0
+            ) == 1
+        ]
+        essential_offer = next((candidate for candidate in valid_offers if candidate.badge == "essential"), None)
+        offer = essential_offer or next(
+            (candidate for candidate in valid_offers if candidate.is_featured),
+            valid_offers[0] if valid_offers else None,
+        )
         if offer is None:
             continue
         products.append({
