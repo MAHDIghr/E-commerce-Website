@@ -92,11 +92,13 @@ class Product(models.Model):
 
     @property
     def default_variant(self):
+        """Choisit d'abord une variante active en stock, sans masquer le produit si tout est épuisé."""
         variants = getattr(self, "_prefetched_objects_cache", {}).get("variants")
         if variants is not None:
             active = [variant for variant in variants if variant.is_active]
-            return active[0] if active else None
-        return self.variants.filter(is_active=True).order_by("position", "pk").first()
+            return next((variant for variant in active if variant.stock_quantity > 0), active[0] if active else None)
+        queryset = self.variants.filter(is_active=True).order_by("position", "pk")
+        return queryset.filter(stock_quantity__gt=0).first() or queryset.first()
 
     def _active_offers(self):
         cached = getattr(self, "_prefetched_objects_cache", {}).get("offers")
