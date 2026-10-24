@@ -212,6 +212,7 @@ def _accessory_option(item):
     component = item.variant
     if (
         item.use_selected_variant
+        or item.quantity < 1
         or component is None
         or not component.is_active
         or component.product_id != item.product_id
