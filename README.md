@@ -950,6 +950,9 @@ Le panier utilise la session Django côté serveur. Le navigateur ne peut envoye
 - Les mutations reçues depuis l'interface sont sérialisées côté JavaScript pour éviter que des clics rapprochés se remplacent. Le serveur reste la source de vérité ; aucune mutation ne réserve le stock.
 - Les lignes devenues invalides (produit non publié, variante inactive ou offre supprimée) sont retirées lors de la relecture.
 - Le tiroir du panier et les badges sont alimentés par la réponse serveur. Le prix affiché n’est pas une preuve de prix définitif pour une commande.
+- Les trois boutons d’ajout de la fiche produit (CTA principal, CTA de fin de page et barre d’achat collante) sont initialisés via `querySelectorAll`. Un sélecteur simple `querySelector` suivi de `forEach` interrompait le script avant l’attachement des événements.
+- Le tiroir distingue explicitement l’état vide de l’état avec articles : la liste, la progression de livraison et le récapitulatif sont masqués ou affichés selon la réponse serveur. Le nombre d’articles, les images, les quantités et les totaux sont synchronisés depuis cette réponse.
+- Le tiroir a une mise en page mobile-first, des liens vers les fiches produits, une progression accessible vers le seuil de livraison offerte, une navigation clavier et un retour du focus à l’élément déclencheur.
 - Le checkout reste une maquette front-end : aucun paiement, aucune commande et aucun frais de livraison ne sont calculés ou confirmés par cette fonctionnalité.
 
 ## Sélection signature
