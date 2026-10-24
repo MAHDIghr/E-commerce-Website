@@ -1,5 +1,5 @@
 """Page d'accueil : les sections commerciales sont issues des modèles."""
-from django.db.models import Prefetch
+from django.db.models import F, Prefetch
 from django.shortcuts import render
 
 from product.models import Category, ProductMedia, ProductOffer, ProductVariant, Review
@@ -16,7 +16,15 @@ def home(request):
     ).select_related("product", "product__category").order_by("position", "pk")
     new_products = published_products().filter(is_new=True).select_related("category").prefetch_related(
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
-        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).order_by("-is_featured", "position", "pk")),
+        Prefetch(
+            "offers",
+            queryset=ProductOffer.objects.filter(
+                is_active=True,
+                items__product_id=F("product_id"),
+                items__use_selected_variant=True,
+                items__variant__isnull=True,
+            ).distinct().order_by("-is_featured", "position", "pk"),
+        ),
         Prefetch(
             "media_items",
             queryset=ProductMedia.objects.filter(
