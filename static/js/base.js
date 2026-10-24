@@ -328,8 +328,17 @@ async function addToCart(product) {
     } catch (e) { openCart(); return false; }
 }
 function playAddedFeedback(button) {
-    if (!button) return; const label = button.textContent; button.classList.add("button--added"); button.textContent = "Ajouté ✓"; button.disabled = true;
-    window.setTimeout(() => { button.classList.remove("button--added"); button.disabled = false; button.textContent = label; }, 1200);
+    if (!button) return;
+    const originalMarkup = button.innerHTML;
+    button.classList.add("button--added");
+    button.textContent = "Ajouté ✓";
+    button.disabled = true;
+    window.setTimeout(() => {
+        if (!button.isConnected) return;
+        button.classList.remove("button--added");
+        button.disabled = false;
+        button.innerHTML = originalMarkup;
+    }, 1200);
 }
 
 const offerPicker = document.querySelector("#offer-picker");
