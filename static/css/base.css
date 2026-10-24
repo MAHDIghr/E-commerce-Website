@@ -1270,3 +1270,15 @@ body.cart-open { overflow: hidden; }
     .offer-picker__accessory img { width: 52px; height: 64px; }
     .offer-picker__accessory-prices { grid-column: 3; display: flex; justify-content: flex-start; align-items: baseline; gap: .45rem; }
 }
+
+/* Accessoires offerts affichés sous la ligne de l'offre dans le panier */
+.cart-item__components { display: grid; gap: .45rem; margin: .55rem 0 0; padding: 0; list-style: none; }
+.cart-item__gift { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: .5rem; padding: .4rem; border-radius: 8px; background: var(--color-bg-alt); }
+.cart-item__gift-image { width: 42px; height: 50px; border-radius: 5px; object-fit: cover; background: var(--color-surface); }
+.cart-item__gift-image[hidden] { display: none; }
+.cart-item__gift-details { display: grid; gap: .2rem; min-width: 0; }
+.cart-item__gift-details > strong { font-size: .72rem; line-height: 1.35; font-weight: 600; }
+.cart-item__gift-prices { display: flex; align-items: baseline; flex-wrap: wrap; gap: .35rem; }
+.cart-item__gift-prices del { color: var(--color-ink-muted); font-size: .68rem; }
+.cart-item__gift-prices > strong { color: var(--color-success); font-size: .72rem; }
+.cart-item__gift-prices em { color: var(--color-success); font-size: .62rem; font-style: normal; font-weight: 800; letter-spacing: .04em; }
