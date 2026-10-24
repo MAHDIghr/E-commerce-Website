@@ -379,6 +379,8 @@ def cart_mutation(request):
     key = f"{variant_id}:{offer_id}"
 
     if action == "add":
+        if offer_id == 0:
+            return JsonResponse({"error": "Sélectionnez une offre avant d'ajouter ce produit au panier."}, status=400)
         try:
             quantity = _strict_int(data.get("quantity", 1))
         except (TypeError, ValueError):
