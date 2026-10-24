@@ -101,7 +101,7 @@ def detail(request, slug):
             "save_label": _eur(old_price - offer_obj.price) if old_price else "",
             "off": off,
             "ship": offer_obj.get_display_delivery_label_display(),
-            "badge": offer_obj.badge,
+            "badge": offer_obj.get_badge_display(),
             "featured": offer_obj.is_featured,
             "includes_selected_variant": any(item.use_selected_variant for item in offer_items),
             "uses_variant_price": False,
