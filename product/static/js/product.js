@@ -214,9 +214,10 @@
                 button.innerHTML = originalMarkup;
             }
         } catch (error) {
-            if (typeof showCartStatus === "function") {
-                showCartStatus(error?.message || "L'ajout au panier a échoué. Réessayez.", true);
-            }
+            const message = error?.message || "L'ajout au panier a échoué. Réessayez.";
+            const status = $("#variant-stock-status");
+            if (status) status.textContent = message;
+            if (typeof showCartStatus === "function") showCartStatus(message, true);
             button.innerHTML = originalMarkup;
         } finally {
             button.removeAttribute("aria-busy");
