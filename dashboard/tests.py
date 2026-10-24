@@ -108,6 +108,50 @@ class DashboardCatalogManagementTests(TestCase):
         self.assertRedirects(response, reverse("dashboard:products"), fetch_redirect_response=False)
         self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
 
+    def test_product_can_save_variants_and_offers_before_adding_media(self):
+        response = self.client.post(reverse("dashboard:product_add"), {
+            "name": "Sac progressif",
+            "slug": "sac-progressif",
+            "category": self.category.pk,
+            "short_description": "Un sac de test",
+            "variants-TOTAL_FORMS": "1",
+            "variants-INITIAL_FORMS": "0",
+            "variants-MIN_NUM_FORMS": "1",
+            "variants-MAX_NUM_FORMS": "1000",
+            "variants-0-sku": "SAC-PROGRESSIF-CAMEL",
+            "variants-0-color_name": "Camel",
+            "variants-0-color_slug": "camel",
+            "variants-0-color_code": "#B07A4A",
+            "variants-0-stock_quantity": "5",
+            "variants-0-is_active": "on",
+            "variants-0-position": "0",
+            "offers-TOTAL_FORMS": "1",
+            "offers-INITIAL_FORMS": "0",
+            "offers-MIN_NUM_FORMS": "1",
+            "offers-MAX_NUM_FORMS": "3",
+            "offers-0-badge": ProductOffer.BADGE_ESSENTIAL,
+            "offers-0-display_delivery_label": ProductOffer.DELIVERY_PAID,
+            "offers-0-price": "49.90",
+            "offers-0-reference_price": "69.90",
+            "offers-0-is_featured": "on",
+            "offers-0-is_active": "on",
+            "media-TOTAL_FORMS": "0",
+            "media-INITIAL_FORMS": "0",
+            "media-MIN_NUM_FORMS": "0",
+            "media-MAX_NUM_FORMS": "1000",
+            "save_action": "continue",
+        })
+        product = Product.objects.get(slug="sac-progressif")
+        self.assertRedirects(
+            response,
+            reverse("dashboard:product_edit", args=[product.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(product.variants.count(), 1)
+        self.assertEqual(product.offers.count(), 1)
+        self.assertEqual(product.offers.get().reference_price, Decimal("69.90"))
+        self.assertEqual(product.media_items.count(), 0)
+
     def test_offers_page_filters_by_product_and_badge(self):
         offer = ProductOffer.objects.create(
             product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
