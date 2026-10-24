@@ -20,7 +20,20 @@ def _detail_queryset():
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
         Prefetch("media_items", queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk")),
         "reasons", "content_items", "craft_details", "usages", "faqs",
-        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items__product", "items__variant")),
+        Prefetch(
+            "offers",
+            queryset=ProductOffer.objects.filter(is_active=True).prefetch_related(
+                "items__variant",
+                Prefetch(
+                    "items__product__media_items",
+                    queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk"),
+                ),
+                Prefetch(
+                    "items__product__offers",
+                    queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items"),
+                ),
+            ),
+        ),
         Prefetch("reviews", queryset=Review.objects.filter(is_approved=True).order_by("-created_at")),
     )
 
@@ -79,23 +92,34 @@ def detail(request, slug):
                 ):
                     invalid_offer = True
                     break
-                media_item = ProductMedia.objects.filter(
-                    product_id=item.product_id, media_type=ProductMedia.IMAGE,
-                ).order_by("-is_primary", "position", "pk").first()
+                media_item = next(
+                    (
+                        candidate for candidate in item.product.media_items.all()
+                        if candidate.media_type == ProductMedia.IMAGE
+                    ),
+                    None,
+                )
                 accessory_image = (
                     media_item.image.url if media_item and media_item.image else media_item.source_url
                 ) if media_item else ""
-                accessory_offers = ProductOffer.objects.filter(
-                    product_id=item.product_id, is_active=True,
-                    items__product_id=item.product_id, items__use_selected_variant=True,
-                    items__variant__isnull=True,
-                ).distinct()
-                essential = accessory_offers.filter(
-                    badge=ProductOffer.BADGE_ESSENTIAL,
-                ).order_by("position", "pk").first()
-                standalone_offer = essential or accessory_offers.order_by(
-                    "-is_featured", "position", "pk",
-                ).first()
+                accessory_offers = [
+                    candidate for candidate in item.product.offers.all()
+                    if candidate.is_active and any(
+                        component.product_id == item.product_id
+                        and component.use_selected_variant
+                        and component.variant_id is None
+                        and component.quantity > 0
+                        for component in candidate.items.all()
+                    )
+                ]
+                essential = next(
+                    (candidate for candidate in accessory_offers if candidate.badge == ProductOffer.BADGE_ESSENTIAL),
+                    None,
+                )
+                standalone_offer = essential or next(
+                    (candidate for candidate in accessory_offers if candidate.is_featured),
+                    accessory_offers[0] if accessory_offers else None,
+                )
                 accessories.append({
                     "item_id": item.pk,
                     "product_id": item.product_id,
