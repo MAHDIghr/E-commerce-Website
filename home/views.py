@@ -2,7 +2,7 @@
 from django.db.models import Prefetch
 from django.shortcuts import render
 
-from product.models import Category, ProductMedia, ProductVariant, Review
+from product.models import Category, ProductMedia, ProductOffer, ProductVariant, Review
 from .models import SignatureSelection
 from product.selectors import published_products
 
@@ -18,10 +18,11 @@ def home(request):
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
         Prefetch(
             "media_items",
-            queryset=ProductMedia.objects.filter(
-                variant__isnull=True,
-                media_type=ProductMedia.IMAGE,
-            ).order_by("-is_primary", "position", "pk"),
+            queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk"),
+        ),
+        Prefetch(
+            "offers",
+            queryset=ProductOffer.objects.filter(is_active=True).order_by("position", "pk"),
         ),
     ).order_by("-published_at", "-created_at")[:4]
     featured_reviews = Review.objects.filter(
