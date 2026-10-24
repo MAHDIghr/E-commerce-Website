@@ -566,6 +566,8 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCar
 document.addEventListener("click", async (event) => {
     const button = event.target instanceof Element ? event.target.closest(".js-add") : null;
     if (!button || button.disabled) return;
+    /* La fiche produit possède son propre gestionnaire dédié dans product.js. */
+    if (button.closest("body.page-product")) return;
     event.preventDefault();
 
     const variant = document.querySelector('input[name="color"]:checked');
