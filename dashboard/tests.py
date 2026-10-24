@@ -7,6 +7,7 @@ from django.urls import reverse
 from product.models import (
     Category, Product, ProductOffer, ProductOfferItem, ProductVariant,
 )
+from .services import ensure_default_offer
 
 
 class DashboardAccessTests(TestCase):
@@ -47,7 +48,7 @@ class AutomaticOfferTests(TestCase):
             category=category, name="Sac test", slug="sac-test-auto-offer",
         )
 
-        offer = ProductOffer.objects.get(product=product, badge=ProductOffer.BADGE_ESSENTIAL)
+        offer = ensure_default_offer(product)
         item = ProductOfferItem.objects.get(offer=offer)
 
         self.assertFalse(offer.is_active)
@@ -66,7 +67,7 @@ class AutomaticOfferTests(TestCase):
             price=Decimal("24.90"), stock_quantity=3, is_active=True,
         )
 
-        offer = ProductOffer.objects.get(product=product, badge=ProductOffer.BADGE_ESSENTIAL)
+        offer = ensure_default_offer(product)
         self.assertTrue(offer.is_active)
         self.assertEqual(offer.price, variant.price)
         self.assertEqual(offer.title, "Essentiel")
