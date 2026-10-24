@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.staticfiles import finders
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -105,6 +106,12 @@ class CatalogViewTests(TestCase):
         ProductOfferItem.objects.create(
             offer=self.offer, product=self.product, use_selected_variant=True, quantity=1,
         )
+
+    def test_product_javascript_asset_resolves_and_is_loaded(self):
+        self.assertIsNotNone(finders.find("js/product.js"))
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/static/js/product.js")
 
     def test_product_detail_sets_csrf_cookie_and_allows_secure_cart_add(self):
         client = Client(enforce_csrf_checks=True)
