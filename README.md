@@ -874,7 +874,7 @@ En production, il faut aussi confirmer que l'administration et le site utilisent
 - Une offre est toujours rattachée à un produit principal.
 - Chaque produit doit disposer d'au moins une offre active contenant une ligne qui référence le produit principal avec **« Utiliser la variante choisie sur la fiche »** activé et sans variante fixe.
 - Trois badges au maximum sont proposés : **Essentiel**, **Medium**, **Premium**.
-- Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement.
+- Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement. Le prix appartient uniquement à l'offre, jamais à la variante de couleur.
 - Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. Cette mention décrit l'offre ; elle ne calcule pas encore les frais réels de livraison au checkout.
 - Une offre peut inclure d'autres produits. Chaque ligne doit sélectionner le produit et, pour un produit complémentaire, une variante appartenant à ce produit.
 - Un produit sans offre active valide est exclu du catalogue public. La fiche produit ne doit pas remplacer une offre invalide par un prix de variante présenté comme une offre commerciale.
@@ -961,7 +961,7 @@ Le panier utilise la session Django côté serveur. Le navigateur ne peut envoye
 - Les lignes de panier exposent les composants de l'offre pour rendre la composition lisible. La sélection interactive d'articles alternatifs dans une offre multi-articles nécessite encore de définir les choix autorisés pour chaque offre avant d'ajouter le modèle métier correspondant.
 - Les trois boutons d’ajout de la fiche produit (CTA principal, CTA de fin de page et barre d’achat collante) sont initialisés via `querySelectorAll`. Un sélecteur simple `querySelector` suivi de `forEach` interrompait le script avant l’attachement des événements.
 - L’ajout depuis la fiche produit transmet explicitement la variante et l’offre sélectionnées. Les erreurs serveur sont remontées à l’interface au lieu d’être silencieusement transformées en échec sans diagnostic.
-- Les boutons rapides de l’accueil et du catalogue interrogent `/boutique/offres/<slug>/`. Une seule offre disponible est ajoutée directement ; plusieurs offres ouvrent une boîte de dialogue accessible avec prix serveur, composition connue, badge et économie calculée à partir des prix courants des composants.
+- Les boutons rapides de l’accueil et du catalogue interrogent `/boutique/offres/<slug>/`. Une seule offre disponible est ajoutée directement ; plusieurs offres ouvrent une boîte de dialogue accessible avec prix serveur, composition connue et badge. Les économies ne sont affichées que lorsqu'une référence tarifaire explicite existe.
 - Les tests Django couvrent la récupération des offres, plusieurs offres actives, le rejet d’une variante qui ne correspond pas au produit, ainsi que la présence des trois CTA de la fiche produit. Ils doivent encore être exécutés localement.
 - Le tiroir distingue explicitement l’état vide de l’état avec articles : la liste, la progression de livraison et le récapitulatif sont masqués ou affichés selon la réponse serveur. Le nombre d’articles, les images, les quantités et les totaux sont synchronisés depuis cette réponse.
 - Le tiroir a une mise en page mobile-first, des liens vers les fiches produits, une progression accessible vers le seuil de livraison offerte, une navigation clavier et un retour du focus à l’élément déclencheur.
