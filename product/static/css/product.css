@@ -216,3 +216,26 @@ body.page-product .site-footer{padding-bottom:4.5rem}
 .review-admin-note h3 { margin: 0 0 .4rem; font-size: 1.15rem; }
 .review-admin-note p { margin: 0; color: var(--color-ink-soft); font-size: .88rem; }
 .review-admin-note .review-admin-note__small { margin-top: .55rem; color: var(--color-ink-muted); font-size: .78rem; }
+
+/* Hiérarchie des actions : achat immédiat mis en avant, ajout au panier compact */
+.buy__actions { display: flex; align-items: stretch; gap: .65rem; margin-top: .25rem; }
+.buy__actions .cta { flex: 1; min-width: 0; }
+.buy__actions .cta-icon {
+    flex: 0 0 54px;
+    width: 54px;
+    min-width: 54px;
+    min-height: 54px;
+    display: grid;
+    place-items: center;
+    padding: .65rem;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+}
+.buy__actions .cta-icon:hover { border-color: var(--color-ink); background: var(--color-bg-alt); }
+.buy__actions .cta-icon .icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.buy__actions .cta-icon:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.buy__actions .cta-icon.is-done { background: var(--color-success); color: #fff; }
+.final .js-buy { min-width: min(100%, 280px); }
+@media (min-width: 900px) {
+    .buy__actions .cta-icon { flex-basis: 58px; width: 58px; min-width: 58px; min-height: 58px; }
+}
