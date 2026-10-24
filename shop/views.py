@@ -339,8 +339,9 @@ def cart_mutation(request):
             details = _line_details(variant_id, offer_id, quantity)
             if details is None:
                 return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
-            if not details["available"]:
+            if not details["available"] and quantity >= state[key]:
                 return JsonResponse({"error": "Le stock disponible ne permet pas cette quantité."}, status=409)
+            # Autoriser une baisse progressive même si le stock a baissé depuis l'ajout initial.
             state[key] = quantity
     else:
         return JsonResponse({"error": "Action de panier inconnue."}, status=400)
