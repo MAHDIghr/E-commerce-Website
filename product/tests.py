@@ -60,6 +60,23 @@ class CatalogModelTests(TestCase):
         with self.assertRaises(ValidationError):
             offer.full_clean()
 
+    def test_catalog_card_price_and_discount_are_anchored_to_essential_offer(self):
+        ProductOffer.objects.create(
+            product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("89.90"), reference_price=Decimal("119.90"),
+        )
+        ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("99.90"),
+        )
+        ProductOffer.objects.create(
+            product=self.product, title="Premium", badge=ProductOffer.BADGE_PREMIUM,
+            price=Decimal("109.90"), is_featured=True,
+        )
+        self.assertEqual(self.product.display_price, Decimal("89.90"))
+        self.assertEqual(self.product.display_reference_price, Decimal("119.90"))
+        self.assertEqual(self.product.display_discount_percent, 25)
+
     def test_offer_item_rejects_variant_from_another_product(self):
         other = Product.objects.create(category=self.category, name="Portefeuille", slug="portefeuille")
         ProductVariant.objects.create(product=other, sku="PORTFOLIO-BEIGE")
