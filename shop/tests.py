@@ -101,6 +101,31 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(second.status_code, 400)
         self.assertEqual(self.client.get(reverse("shop:cart_api")).json()["count"], 8)
 
+    def test_cart_quantity_can_be_reduced_after_stock_decreases(self):
+        add = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 4}),
+            content_type="application/json",
+        )
+        self.assertEqual(add.status_code, 200)
+        self.variant.stock_quantity = 2
+        self.variant.save(update_fields=["stock_quantity"])
+
+        reduce_once = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({"action": "update", "variant_id": self.variant.pk, "quantity": 3}),
+            content_type="application/json",
+        )
+        self.assertEqual(reduce_once.status_code, 200)
+        self.assertFalse(reduce_once.json()["items"][0]["available"])
+        reduce_to_stock = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({"action": "update", "variant_id": self.variant.pk, "quantity": 2}),
+            content_type="application/json",
+        )
+        self.assertEqual(reduce_to_stock.status_code, 200)
+        self.assertTrue(reduce_to_stock.json()["items"][0]["available"])
+
     def test_cart_rejects_fractional_quantity(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),
