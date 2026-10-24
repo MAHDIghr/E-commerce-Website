@@ -50,6 +50,16 @@ class CatalogModelTests(TestCase):
             ProductOffer.BADGE_ESSENTIAL, ProductOffer.BADGE_MEDIUM, ProductOffer.BADGE_PREMIUM,
         ])
 
+    def test_offer_reference_price_must_exceed_offer_price(self):
+        offer = ProductOffer(
+            product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("89.90"), reference_price=Decimal("119.90"),
+        )
+        offer.full_clean()
+        offer.reference_price = Decimal("89.90")
+        with self.assertRaises(ValidationError):
+            offer.full_clean()
+
     def test_offer_item_rejects_variant_from_another_product(self):
         other = Product.objects.create(category=self.category, name="Portefeuille", slug="portefeuille")
         ProductVariant.objects.create(product=other, sku="PORTFOLIO-BEIGE")
@@ -109,6 +119,14 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'class="button button-primary button-block cta js-add"')
         self.assertContains(response, 'class="button button-secondary js-add"')
         self.assertContains(response, 'class="button button-primary js-add"')
+
+    def test_product_detail_displays_reference_price_and_discount(self):
+        self.offer.reference_price = Decimal("119.90")
+        self.offer.save(update_fields=["reference_price"])
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "119,90 €")
+        self.assertContains(response, "-25 %")
 
     def test_product_detail_sets_csrf_cookie_and_allows_secure_cart_add(self):
         client = Client(enforce_csrf_checks=True)
