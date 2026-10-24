@@ -4,7 +4,7 @@
 {% block meta_description %}{{ product.seo_description|default:product.tagline }}{% endblock %}
 {% block body_class %}page-product{% endblock %}
 {% block extra_css %}
-{% if product.media %}<link rel="preload" as="image" href="{{ product.media.0.src }}" fetchpriority="high">{% endif %}
+{% if product.media and product.media.0.type != "video" %}<link rel="preload" as="image" href="{{ product.media.0.src }}" fetchpriority="high">{% endif %}
 <link rel="stylesheet" href="{% static 'css/product.css' %}">
 {% endblock %}
 
