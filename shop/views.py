@@ -159,6 +159,7 @@ def _line_details(variant_id, offer_id, quantity):
 
     offer = None
     offer_items = []
+    components = []
     if offer_id:
         offer = ProductOffer.objects.filter(
             pk=offer_id, product_id=variant.product_id, is_active=True,
@@ -197,6 +198,11 @@ def _line_details(variant_id, offer_id, quantity):
                 ):
                     return None
             max_available_values.append(component.stock_quantity // item.quantity)
+            components.append({
+                "name": item.product.name,
+                "quantity": item.quantity,
+                "variant_name": component.color_name or "",
+            })
 
         max_available = min(max_available_values, default=0)
         simple_variant_offer = (
@@ -227,6 +233,7 @@ def _line_details(variant_id, offer_id, quantity):
         "name": title,
         "variant_name": variant.color_name,
         "image": image,
+        "components": components,
         "quantity": quantity,
         "unit_price": f"{unit_price:.2f}",
         "line_total": f"{unit_price * quantity:.2f}",
