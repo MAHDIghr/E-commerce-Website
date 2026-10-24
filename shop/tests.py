@@ -51,6 +51,21 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(payload["subtotal"], "89.90")
         self.assertEqual(payload["items"][0]["unit_price"], "89.90")
 
+    def test_selected_variant_offer_uses_current_variant_price(self):
+        self.variant.price = Decimal("99.90")
+        self.variant.save(update_fields=["price"])
+        response = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk, "quantity": 1,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["subtotal"], "99.90")
+        self.assertEqual(response.json()["items"][0]["unit_price"], "99.90")
+
     def test_cart_rejects_unknown_variant(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),
