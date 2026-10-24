@@ -11,7 +11,7 @@ from .models import Product, ProductMedia
 
 
 def published_products():
-    """Produits actifs, catégorie active, date atteinte, image commune et variante active."""
+    """Produits actifs, catégorie active, date atteinte, média image et variante active."""
     now = timezone.now()
     return Product.objects.filter(
         Q(
