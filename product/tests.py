@@ -27,7 +27,7 @@ class CatalogModelTests(TestCase):
         self.variant = ProductVariant.objects.create(
             product=self.product, sku="CABAS-CAMEL", color_name="Camel",
             color_slug="camel", color_code="#B07A4A",
-            price=Decimal("89.90"), stock_quantity=4,
+            stock_quantity=4,
         )
 
     def test_offer_badge_controls_title_and_order(self):
@@ -50,17 +50,9 @@ class CatalogModelTests(TestCase):
             ProductOffer.BADGE_ESSENTIAL, ProductOffer.BADGE_MEDIUM, ProductOffer.BADGE_PREMIUM,
         ])
 
-    def test_variant_rejects_reference_price_not_above_sale_price(self):
-        variant = ProductVariant(
-            product=self.product, sku="CABAS-CAMEL-INVALID",
-            price=Decimal("89.90"), compare_at_price=Decimal("79.90"),
-        )
-        with self.assertRaises(ValidationError):
-            variant.full_clean()
-
     def test_offer_item_rejects_variant_from_another_product(self):
         other = Product.objects.create(category=self.category, name="Portefeuille", slug="portefeuille")
-        ProductVariant.objects.create(product=other, sku="PORTFOLIO-BEIGE", price=Decimal("20.00"))
+        ProductVariant.objects.create(product=other, sku="PORTFOLIO-BEIGE")
         offer = ProductOffer.objects.create(product=self.product, title="Cabas + portefeuille", price=Decimal("99.90"))
         item = ProductOfferItem(offer=offer, product=other, variant=self.variant, quantity=1)
         with self.assertRaises(ValidationError):
@@ -91,7 +83,7 @@ class CatalogViewTests(TestCase):
         self.variant = ProductVariant.objects.create(
             product=self.product, sku="CABAS-CAMEL", color_name="Camel",
             color_slug="camel", color_code="#B07A4A",
-            price=Decimal("89.90"), stock_quantity=4,
+            stock_quantity=4,
         )
         ProductMedia.objects.create(
             product=self.product, media_type=ProductMedia.IMAGE,
@@ -226,7 +218,7 @@ class CatalogViewTests(TestCase):
         )
         ProductVariant.objects.create(
             product=regular_product, sku="PORTFOLIO-CLASSIQUE",
-            price=Decimal("24.90"), stock_quantity=3,
+            stock_quantity=3,
         )
         ProductMedia.objects.create(
             product=regular_product, media_type=ProductMedia.IMAGE,
