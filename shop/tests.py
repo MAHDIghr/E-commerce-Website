@@ -244,8 +244,12 @@ class CartAndSearchTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(second.status_code, 409)
-        self.assertEqual(second.json()["count"], 2)
-        self.assertEqual(len(second.json()["items"]), 1)
+        self.assertIn("error", second.json())
+        # L'ajout refusé ne doit pas modifier la ligne déjà présente dans le panier.
+        cart = self.client.get(reverse("shop:cart_api")).json()
+        self.assertEqual(cart["count"], 2)
+        self.assertEqual(len(cart["items"]), 1)
+        self.assertEqual(cart["items"][0]["quantity"], 2)
 
     def test_stock_is_shared_across_offer_accessories(self):
         self.variant.stock_quantity = 5
@@ -282,8 +286,13 @@ class CartAndSearchTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(second.status_code, 409)
-        self.assertEqual(second.json()["count"], 1)
-        self.assertEqual(len(second.json()["items"]), 1)
+        self.assertIn("error", second.json())
+        # Le panier conserve uniquement l'offre acceptée, avec son cadeau sélectionné.
+        cart = self.client.get(reverse("shop:cart_api")).json()
+        self.assertEqual(cart["count"], 1)
+        self.assertEqual(len(cart["items"]), 1)
+        self.assertEqual(cart["items"][0]["quantity"], 1)
+        self.assertEqual(len(cart["items"][0]["components"]), 1)
 
     def test_cart_rejects_fractional_quantity(self):
         response = self.client.post(
