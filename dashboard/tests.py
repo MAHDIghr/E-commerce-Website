@@ -28,6 +28,17 @@ class DashboardAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Vue d’ensemble")
 
+    def test_staff_user_cannot_access_django_admin(self):
+        user = get_user_model().objects.create_user(
+            username="admin-staff-only", password="StrongTestPassword!2026", is_staff=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("admin:login"), response.url)
+
     def test_staff_user_without_superuser_flag_cannot_sign_in(self):
         user = get_user_model().objects.create_user(
             username="staff-only", password="StrongTestPassword!2026", is_staff=True,
