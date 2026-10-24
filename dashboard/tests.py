@@ -108,6 +108,13 @@ class DashboardCatalogManagementTests(TestCase):
         self.assertRedirects(response, reverse("dashboard:products"), fetch_redirect_response=False)
         self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
 
+    def test_product_form_has_product_level_media_and_reference_price(self):
+        response = self.client.get(reverse("dashboard:product_add"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Prix de référence")
+        self.assertContains(response, "Les médias appartiennent au produit")
+        self.assertNotContains(response, 'name="media-0-variant"')
+
     def test_offers_page_filters_by_product_and_badge(self):
         offer = ProductOffer.objects.create(
             product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,

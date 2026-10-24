@@ -51,6 +51,26 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(payload["subtotal"], "89.90")
         self.assertEqual(payload["items"][0]["unit_price"], "89.90")
 
+    def test_catalog_discount_uses_essential_reference_price_even_when_another_offer_is_featured(self):
+        self.offer.reference_price = Decimal("100.00")
+        self.offer.is_featured = False
+        self.offer.save(update_fields=["reference_price", "is_featured"])
+        medium = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("79.90"), reference_price=Decimal("120.00"),
+            is_active=True, is_featured=True,
+        )
+        ProductOfferItem.objects.create(
+            offer=medium, product=self.product, use_selected_variant=True, quantity=1,
+        )
+        response = self.client.get(reverse("shop:catalog"))
+        self.assertEqual(response.status_code, 200)
+        card = response.context["catalog_data"]["products"][0]
+        self.assertEqual(card["price"], 89.90)
+        self.assertEqual(card["old"], 100.0)
+        self.assertEqual(card["off"], 10)
+        self.assertEqual(card["offerId"], self.offer.pk)
+
     def test_offer_options_returns_the_single_available_offer_for_quick_add(self):
         response = self.client.get(
             reverse("shop:offer_options", kwargs={"slug": self.product.slug}),

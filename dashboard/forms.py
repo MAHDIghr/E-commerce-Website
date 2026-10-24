@@ -76,6 +76,16 @@ class OfferFormSetBase(BaseInlineFormSet):
         ]
         if len(featured_forms) > 1:
             raise ValidationError("Une seule offre peut être mise en avant par produit.")
+        active_badges = [
+            form.cleaned_data.get("badge")
+            for form in self.forms
+            if form.cleaned_data
+            and not form.cleaned_data.get("DELETE")
+            and form.cleaned_data.get("is_active")
+            and form.cleaned_data.get("badge")
+        ]
+        if len(active_badges) != len(set(active_badges)):
+            raise ValidationError("Chaque badge (Essentiel, Medium ou Premium) ne peut être utilisé qu'une seule fois parmi les offres actives.")
 
 
 VariantFormSet = inlineformset_factory(
@@ -89,7 +99,7 @@ VariantFormSet.form.base_fields["position"].label = "Ordre d'affichage des coule
 
 MediaFormSet = inlineformset_factory(
     Product, ProductMedia,
-    fields=("variant", "media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position"),
+    fields=("media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position"),
     extra=0, can_delete=True, form=DashboardInlineForm, formset=MediaFormSetBase,
 )
 MediaFormSet.form.base_fields["position"].label = "Ordre d'affichage des médias"
@@ -99,9 +109,11 @@ MediaFormSet.form.base_fields["is_primary"].label = "Média principal du produit
 
 OfferFormSet = inlineformset_factory(
     Product, ProductOffer,
-    fields=("badge", "display_delivery_label", "price", "is_featured", "is_active"),
+    fields=("badge", "display_delivery_label", "price", "reference_price", "is_featured", "is_active"),
     extra=0, min_num=1, validate_min=True, max_num=3, validate_max=True, can_delete=True,
     form=DashboardInlineForm, formset=OfferFormSetBase,
 )
 
-OfferFormSet.form.base_fields["is_featured"].label = "Offre mise en avant (un seul choix)"
+OfferFormSet.form.base_fields["reference_price"].label = "Prix de référence (€) — facultatif"
+OfferFormSet.form.base_fields["is_featured"].label = "Sélectionnée par défaut / mise en avant (un seul choix)"
+OfferFormSet.form.base_fields["is_featured"].help_text = "Met cette offre en évidence à l'ouverture de la fiche, sans masquer les autres offres."

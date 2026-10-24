@@ -46,7 +46,7 @@ def detail(request, slug):
         "poster": item.poster_url or (item.image.url if item.image else item.source_url),
         "thumb": item.poster_url or (item.image.url if item.image else item.source_url),
         "alt": item.alt_text,
-        "variant_id": str(item.variant_id) if item.variant_id else "",
+        "variant_id": "",
     } for item in media_items]
 
     offers = []
@@ -82,8 +82,11 @@ def detail(request, slug):
         if not lines or invalid_offer:
             continue
         # Aucun prix n'est stocké sur les variantes : une offre porte son propre prix.
-        old_price = None
-        off = 0
+        old_price = offer_obj.reference_price
+        off = (
+            round((old_price - offer_obj.price) * 100 / old_price)
+            if old_price is not None and old_price > offer_obj.price else 0
+        )
         offers.append({
             "id": str(offer_obj.pk),
             "title": offer_obj.title,
@@ -143,7 +146,7 @@ def detail(request, slug):
         } for variant in variants],
         "offers": offers,
         "selected": selected,
-        "max_off": max((item["off"] for item in offers), default=0),
+        "max_off": next((item["off"] for item in offers if item["badge"] == ProductOffer.BADGE_ESSENTIAL), 0),
         "upgrade": "",
         "benefits": [{"t": item.title, "d": item.description} for item in product.reasons.all()],
         "fits": [(item.name, item.fits) for item in product.content_items.all()],

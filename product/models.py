@@ -99,8 +99,31 @@ class Product(models.Model):
         return self.variants.filter(is_active=True).order_by("position", "pk").first()
 
     @property
+    def essential_offer(self):
+        """Offre Essentiel active, en utilisant le préchargement s'il est disponible."""
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("offers")
+        if prefetched is not None:
+            return next((
+                offer for offer in prefetched
+                if offer.is_active and offer.badge == ProductOffer.BADGE_ESSENTIAL
+            ), None)
+        return self.offers.filter(is_active=True, badge=ProductOffer.BADGE_ESSENTIAL).first()
+
+    @property
+    def display_offer(self):
+        """Offre d'entrée affichée : Essentiel en priorité, sinon l'offre mise en avant."""
+        essential = self.essential_offer
+        if essential is not None:
+            return essential
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("offers")
+        if prefetched is not None:
+            active = [offer for offer in prefetched if offer.is_active]
+            return sorted(active, key=lambda offer: (not offer.is_featured, offer.position, offer.pk))[0] if active else None
+        return self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+
+    @property
     def display_price(self):
-        offer = self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        offer = self.display_offer
         return offer.price if offer else None
 
     @property
@@ -151,11 +174,6 @@ class ProductMedia(models.Model):
     MEDIA_TYPES = [(IMAGE, "Image"), (VIDEO, "Vidéo")]
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="media_items", verbose_name="Produit")
-    variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, related_name="media_items",
-        null=True, blank=True, verbose_name="Variante",
-        help_text="Laisser vide pour un média commun à toutes les variantes.",
-    )
     media_type = models.CharField("Type", max_length=10, choices=MEDIA_TYPES, default=IMAGE)
     image = models.ImageField("Image téléversée", upload_to="products/%Y/%m/", blank=True)
     source_url = models.URLField("URL externe du média", max_length=1000, blank=True, help_text="Facultatif pour une image téléversée ; utile pour les vidéos ou les médias externes.")
@@ -166,7 +184,7 @@ class ProductMedia(models.Model):
 
     class Meta:
         ordering = ("-is_primary", "position", "pk")
-        indexes = [models.Index(fields=("product", "variant", "position"), name="media_product_variant_pos_idx")]
+        indexes = [models.Index(fields=("product", "position"), name="media_product_position_idx")]
         constraints = [
             models.UniqueConstraint(
                 fields=("product",),
@@ -181,8 +199,6 @@ class ProductMedia(models.Model):
         super().clean()
         _require_https(self.source_url, "source_url")
         _require_https(self.poster_url, "poster_url")
-        if self.variant_id and self.product_id and self.variant.product_id != self.product_id:
-            raise ValidationError({"variant": "La variante doit appartenir au produit sélectionné."})
         if self.media_type == self.IMAGE and not (self.image or self.source_url):
             raise ValidationError({"image": "Téléversez une image ou renseignez une URL externe."})
         if self.media_type == self.VIDEO and not self.source_url:
@@ -333,7 +349,15 @@ class ProductOffer(models.Model):
     badge = models.CharField("Badge", max_length=20, choices=BADGE_CHOICES, default=BADGE_ESSENTIAL)
     display_delivery_label = models.CharField("Type de livraison", max_length=10, choices=DELIVERY_CHOICES, default=DELIVERY_PAID, help_text="Ce choix décrit l'offre et ne calcule pas les frais de livraison.")
     price = models.DecimalField("Prix de l'offre (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
-    is_featured = models.BooleanField("Offre mise en avant", default=False)
+    reference_price = models.DecimalField(
+        "Prix de référence (€)", max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))], null=True, blank=True,
+        help_text="Facultatif. Saisissez un prix supérieur au prix de l'offre pour afficher une réduction.",
+    )
+    is_featured = models.BooleanField(
+        "Offre sélectionnée par défaut / mise en avant", default=False,
+        help_text="Met cette offre en évidence à l'ouverture de la fiche, sans masquer les autres offres.",
+    )
     is_active = models.BooleanField("Active", default=True, db_index=True)
     position = models.PositiveIntegerField("Ordre d'affichage des offres (automatique)", default=0, editable=False)
 
@@ -341,6 +365,10 @@ class ProductOffer(models.Model):
         ordering = ("position", "pk")
         constraints = [
             models.CheckConstraint(condition=Q(price__gte=0), name="offer_price_nonnegative"),
+            models.CheckConstraint(
+                condition=Q(reference_price__isnull=True) | Q(reference_price__gt=models.F("price")),
+                name="offer_reference_price_gt_price",
+            ),
             models.UniqueConstraint(
                 fields=("product", "badge"),
                 condition=Q(is_active=True),
@@ -357,6 +385,10 @@ class ProductOffer(models.Model):
 
     def clean(self):
         super().clean()
+        if self.reference_price is not None and self.price is not None and self.reference_price <= self.price:
+            raise ValidationError({
+                "reference_price": "Le prix de référence doit être supérieur au prix de l'offre pour représenter une réduction."
+            })
         if not self.product_id or not self.badge:
             return
         siblings = ProductOffer.objects.filter(product_id=self.product_id, is_active=True)
@@ -369,6 +401,13 @@ class ProductOffer(models.Model):
         self.position = self.BADGE_ORDER.get(self.badge, 99)
         self.title = dict(self.BADGE_CHOICES).get(self.badge, self.title)
         super().save(*args, **kwargs)
+
+    @property
+    def discount_percentage(self):
+        """Pourcentage arrondi de réduction, nul sans prix de référence valide."""
+        if self.reference_price is None or self.reference_price <= self.price:
+            return 0
+        return round((self.reference_price - self.price) * 100 / self.reference_price)
 
     @property
     def delivery_label(self):

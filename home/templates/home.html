@@ -227,7 +227,7 @@
 
             <div class="products-grid">
                 {% for product in new_products %}
-                {% with variant=product.default_variant media=product.media_items.all|first %}
+                {% with variant=product.default_variant media=product.media_items.all|first offer=product.display_offer essential=product.essential_offer %}
                 {% if variant %}
                 <article class="product-card reveal"
                     data-product-id="{{ product.slug }}:default:{{ variant.pk }}"
@@ -235,11 +235,12 @@
                     data-product-slug="{{ product.slug }}"
                     data-offers-url="{% url 'shop:offer_options' slug=product.slug %}"
                     data-product-name="{{ product.name }}{% if variant.color_name %} — {{ variant.color_name }}{% endif %}"
-                    data-product-price="{{ variant.price }}"
-                    data-product-image="{% if media %}{% if media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
+                    data-product-price="{{ offer.price|default_if_none:'' }}"
+                    data-product-image="{% if media %}{% if media.media_type == 'video' and media.poster_url %}{{ media.poster_url }}{% elif media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
                     <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.name }}">
                         <div class="product-badge-stack">
                             {% if product.is_new %}<span class="product-badge">Nouveau</span>{% endif %}
+                            {% if essential and essential.discount_percentage %}<span class="product-badge product-badge--sale">-{{ essential.discount_percentage }}%</span>{% endif %}
                             {% if variant.stock_quantity > 0 and variant.stock_quantity <= 5 %}
                             <span class="product-badge product-badge--stock">Plus que {{ variant.stock_quantity }} en stock</span>
                             {% endif %}
@@ -249,15 +250,15 @@
                                 <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
                             </svg>
                         </button>
-                        {% if media %}{% if media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
+                        {% if media %}{% if media.media_type == 'video' and media.poster_url %}<img src="{{ media.poster_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url and media.media_type == 'image' %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
                     </a>
                     <div class="product-info">
                         <h3>{{ product.name }}</h3>
                         <p class="product-category">{{ product.category.name }}</p>
                         <div class="product-buy">
                             <p class="product-price">
-                                {% if variant.compare_at_price and variant.compare_at_price > variant.price %}<del>{{ variant.compare_at_price|floatformat:2 }} €</del>{% endif %}
-                                {{ variant.price|floatformat:2 }} €
+                                {% if essential and essential.discount_percentage %}<del>{{ essential.reference_price|floatformat:2 }} €</del>{% endif %}
+                                {% if offer %}{{ offer.price|floatformat:2 }} €{% else %}Prix à confirmer{% endif %}
                             </p>
                             <button type="button" class="product-cart" data-action="quick-add" {% if variant.stock_quantity <= 0 %}disabled aria-label="Indisponible"{% else %}aria-label="Ajouter au panier"{% endif %}>
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"></path><path d="M6 6 4.5 3H2"></path><circle cx="9" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>

@@ -11,13 +11,12 @@ from .models import Product, ProductMedia
 
 
 def published_products():
-    """Produits actifs, catégorie active, date atteinte, image commune et variante active."""
+    """Produits actifs, catégorie active, date atteinte, média image et variante active."""
     now = timezone.now()
     return Product.objects.filter(
         Q(
             is_active=True,
             category__is_active=True,
-            media_items__variant__isnull=True,
             media_items__media_type=ProductMedia.IMAGE,
             variants__is_active=True,
             offers__is_active=True,
@@ -39,12 +38,11 @@ def product_card_data(queryset):
             continue
 
         media_items = list(product.media_items.all())
-        media = next(
-            (item for item in media_items if item.variant_id is None and item.media_type == ProductMedia.IMAGE),
-            None,
-        )
+        media = next((item for item in media_items if item.is_primary), None)
         if media is None:
             media = next((item for item in media_items if item.media_type == ProductMedia.IMAGE), None)
+        if media is None:
+            media = next(iter(media_items), None)
 
         approved_reviews = [
             review for review in product.reviews.all() if review.is_approved
@@ -59,12 +57,21 @@ def product_card_data(queryset):
             for item in product.variants.all()
             if item.is_active and item.color_slug and item.color_code
         ]
-        offer = product.offers.filter(
+        eligible_offers = product.offers.filter(
             is_active=True, items__product_id=product.pk,
             items__use_selected_variant=True, items__variant__isnull=True,
-        ).distinct().order_by("-is_featured", "position", "pk").first()
+        ).distinct()
+        essential_offer = eligible_offers.filter(badge="essential").order_by("position", "pk").first()
+        offer = essential_offer or eligible_offers.order_by("-is_featured", "position", "pk").first()
         if offer is None:
             continue
+        reference_price = essential_offer.reference_price if essential_offer else None
+        essential_price = essential_offer.price if essential_offer else None
+        discount = (
+            round((reference_price - essential_price) * 100 / reference_price)
+            if reference_price is not None and essential_price is not None and reference_price > essential_price
+            else 0
+        )
         products.append({
             "id": product.slug,
             "variantId": variant.pk,
@@ -72,7 +79,8 @@ def product_card_data(queryset):
             "name": product.name,
             "cat": product.category.slug,
             "price": float(offer.price),
-            "old": None,
+            "old": float(reference_price) if reference_price is not None and discount else None,
+            "off": discount,
             "offerId": offer.pk,
             "offerTitle": offer.title,
             "colors": [color["slug"] for color in colors],
@@ -83,6 +91,9 @@ def product_card_data(queryset):
             "isNew": bool(product.is_new),
             "pop": 0,
             "best": bool(product.is_best_seller),
-            "img": (media.image.url if media and media.image else media.source_url) if media else "",
+            "img": (
+                media.poster_url if media and media.media_type == ProductMedia.VIDEO and media.poster_url
+                else (media.image.url if media and media.image else media.source_url) if media else ""
+            ),
         })
     return products

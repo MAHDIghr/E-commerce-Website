@@ -176,7 +176,7 @@
         media.appendChild(img);
 
         const tags = el("div", "pcard__tags");
-        if (p.old) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
+        if (p.old) tags.appendChild(el("span", "tag tag--sale", `-${p.off || Math.round((1 - p.price / p.old) * 100)}%`));
         else if (p.isNew) tags.appendChild(el("span", "tag", t().newTag));
         if (p.best) tags.appendChild(el("span", "tag tag--best", t().bestTag));
         if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", t().left(p.stock)));
