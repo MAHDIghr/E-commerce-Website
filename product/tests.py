@@ -137,6 +137,31 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'class="button button-secondary js-add"')
         self.assertContains(response, 'class="button button-primary js-add"')
 
+    def test_featured_offer_is_selected_without_hiding_other_active_offers(self):
+        self.offer.is_featured = False
+        self.offer.save(update_fields=["is_featured"])
+        medium = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("99.90"), is_featured=True,
+        )
+        premium = ProductOffer.objects.create(
+            product=self.product, title="Premium", badge=ProductOffer.BADGE_PREMIUM,
+            price=Decimal("109.90"),
+        )
+        for offer in (medium, premium):
+            ProductOfferItem.objects.create(
+                offer=offer, product=self.product, use_selected_variant=True, quantity=1,
+            )
+
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        displayed_offers = response.context["product"]["offers"]
+        self.assertEqual([offer["title"] for offer in displayed_offers], ["Essentiel", "Medium", "Premium"])
+        self.assertEqual(next(offer["title"] for offer in displayed_offers if offer["featured"]), "Medium")
+        self.assertContains(response, 'name="offer" value="%s"' % self.offer.pk)
+        self.assertContains(response, 'name="offer" value="%s"' % medium.pk)
+        self.assertContains(response, 'name="offer" value="%s"' % premium.pk)
+
     def test_product_detail_displays_reference_price_and_discount(self):
         self.offer.reference_price = Decimal("119.90")
         self.offer.save(update_fields=["reference_price"])
