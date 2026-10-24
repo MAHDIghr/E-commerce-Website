@@ -161,7 +161,7 @@ class ProductMedia(models.Model):
 
     class Meta:
         ordering = ("-is_primary", "position", "pk")
-        indexes = [models.Index(fields=("product", "variant", "position"), name="media_product_variant_pos_idx")]
+        indexes = [models.Index(fields=("product", "position"), name="media_product_position_idx")]
         constraints = [
             models.UniqueConstraint(
                 fields=("product",),
