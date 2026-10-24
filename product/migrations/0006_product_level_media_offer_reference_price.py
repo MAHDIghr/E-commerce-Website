@@ -1,6 +1,7 @@
+from decimal import Decimal
+
 from django.db import migrations, models
 import django.core.validators
-import django.db.models.deletion
 from django.db.models import Q
 
 
@@ -10,6 +11,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveIndex(
+            model_name="productmedia",
+            name="media_product_variant_pos_idx",
+        ),
+        migrations.AddIndex(
+            model_name="productmedia",
+            index=models.Index(fields=["product", "position"], name="media_product_position_idx"),
+        ),
         migrations.AddField(
             model_name="productoffer",
             name="reference_price",
@@ -19,7 +28,7 @@ class Migration(migrations.Migration):
                 help_text="Facultatif. Saisissez un prix supérieur au prix de l'offre pour afficher une réduction.",
                 max_digits=10,
                 null=True,
-                validators=[django.core.validators.MinValueValidator(0)],
+                validators=[django.core.validators.MinValueValidator(Decimal("0.00"))],
                 verbose_name="Prix de référence (€)",
             ),
         ),
