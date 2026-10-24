@@ -72,3 +72,50 @@ class AutomaticOfferTests(TestCase):
         self.assertEqual(offer.price, Decimal("0.00"))
         self.assertEqual(offer.title, "Essentiel")
         self.assertTrue(offer.items.filter(product=product, use_selected_variant=True).exists())
+
+
+class DashboardCatalogManagementTests(TestCase):
+    def setUp(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="catalog-admin", email="catalog@example.test", password="StrongTestPassword!2026"
+        )
+        self.client.force_login(admin_user)
+        self.category = Category.objects.create(name="Sacs test", slug="sacs-dashboard-test")
+        self.product = Product.objects.create(
+            category=self.category, name="Cabas dashboard", slug="cabas-dashboard-test",
+        )
+
+    def test_category_cannot_be_deleted_while_products_are_attached(self):
+        response = self.client.post(reverse("dashboard:category_delete", args=[self.category.pk]))
+        self.assertRedirects(response, reverse("dashboard:categories"), fetch_redirect_response=False)
+        self.assertTrue(Category.objects.filter(pk=self.category.pk).exists())
+
+    def test_empty_category_can_be_deleted(self):
+        empty = Category.objects.create(name="Catégorie vide", slug="categorie-vide-dashboard")
+        response = self.client.post(reverse("dashboard:category_delete", args=[empty.pk]))
+        self.assertRedirects(response, reverse("dashboard:categories"), fetch_redirect_response=False)
+        self.assertFalse(Category.objects.filter(pk=empty.pk).exists())
+
+    def test_product_can_be_deleted_with_its_own_offers(self):
+        offer = ProductOffer.objects.create(
+            product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+            price=Decimal("35.00"), is_active=False,
+        )
+        ProductOfferItem.objects.create(
+            offer=offer, product=self.product, use_selected_variant=True, quantity=1,
+        )
+        response = self.client.post(reverse("dashboard:product_delete", args=[self.product.pk]))
+        self.assertRedirects(response, reverse("dashboard:products"), fetch_redirect_response=False)
+        self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
+
+    def test_offers_page_filters_by_product_and_badge(self):
+        offer = ProductOffer.objects.create(
+            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+            price=Decimal("45.00"), is_active=False,
+        )
+        response = self.client.get(reverse("dashboard:offers"), {
+            "product": self.product.pk, "badge": ProductOffer.BADGE_MEDIUM, "state": "inactive",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "45.00")
+        self.assertEqual(list(response.context["offers"]), [offer])
