@@ -199,8 +199,12 @@ def _line_details(variant_id, offer_id, quantity):
             max_available_values.append(component.stock_quantity // item.quantity)
 
         max_available = min(max_available_values, default=0)
-        simple_variant_offer = len(offer_items) == 1 and offer_items[0].use_selected_variant
-        unit_price = variant.price * offer_items[0].quantity if simple_variant_offer else offer.price
+        simple_variant_offer = (
+            len(offer_items) == 1
+            and offer_items[0].use_selected_variant
+            and offer_items[0].quantity == 1
+        )
+        unit_price = variant.price if simple_variant_offer else offer.price
         title = f"{variant.product.name} — {offer.title}"
         if variant.color_name:
             title += f" ({variant.color_name})"
@@ -231,7 +235,11 @@ def _line_details(variant_id, offer_id, quantity):
     }
 
 def _cart_payload(request):
+    raw_state = request.session.get(CART_SESSION_KEY, {})
     state = _cart_state(request)
+    if raw_state != state:
+        request.session[CART_SESSION_KEY] = state
+        request.session.modified = True
     items = []
     stale_keys = []
     for key, quantity in state.items():
