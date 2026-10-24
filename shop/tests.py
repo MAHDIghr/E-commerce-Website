@@ -361,7 +361,7 @@ class CartAndSearchTests(TestCase):
         )
         return accessory, accessory_variant, offer_item
 
-    def test_offer_options_expose_optional_accessory_as_free_with_original_price(self):
+    def test_offer_options_expose_required_accessory_as_free_with_original_price(self):
         accessory, accessory_variant, offer_item = self._create_offer_accessory()
         response = self.client.get(
             reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
