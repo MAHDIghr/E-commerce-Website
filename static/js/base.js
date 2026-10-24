@@ -169,6 +169,7 @@ if (searchForm && searchInput) {
 /* Panier invité : session Django, prix et disponibilité recalculés côté serveur. */
 
 const cartDrawer = document.querySelector("#cart-drawer");
+if (cartDrawer) cartDrawer.inert = true;
 const cartBackdrop = document.querySelector("#cart-backdrop");
 const cartClose = document.querySelector('[data-action="close-cart"]');
 const cartItemsContainer = document.querySelector("#cart-items");
@@ -325,11 +326,27 @@ async function updateQuantity(key, quantity) {
     try { await mutateCart({ action: "update", ...parts, quantity }); } catch (e) {}
 }
 async function removeFromCart(key) { try { await mutateCart({ action: "remove", ...cartKeyParts(key) }); } catch (e) {} }
+if (cartDrawer) {
+    cartDrawer.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab") return;
+        const focusable = [...cartDrawer.querySelectorAll('a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"])')]
+            .filter((element) => !element.hidden && !element.closest("[hidden]"));
+        if (!focusable.length) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault(); first.focus();
+        }
+    });
+}
+
 let lastCartTrigger = null;
 function openCart() {
     if (!cartDrawer) return;
     const active = document.activeElement;
     if (active instanceof HTMLElement && active.matches('[data-action="open-cart"], .js-add')) lastCartTrigger = active;
+    cartDrawer.inert = false;
     cartDrawer.classList.add("is-open");
     if (cartBackdrop) cartBackdrop.classList.add("is-open");
     cartDrawer.setAttribute("aria-hidden", "false");
@@ -341,6 +358,7 @@ function closeCart() {
     cartDrawer.classList.remove("is-open");
     if (cartBackdrop) cartBackdrop.classList.remove("is-open");
     cartDrawer.setAttribute("aria-hidden", "true");
+    cartDrawer.inert = true;
     document.body.classList.remove("cart-open");
     if (lastCartTrigger && lastCartTrigger.isConnected) lastCartTrigger.focus();
 }
