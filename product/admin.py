@@ -126,12 +126,12 @@ class ProductAdmin(admin.ModelAdmin):
         if not any(variant.is_active for variant in variants):
             issues.append("Aucune variante active : ajoutez ou activez une variante avec couleur et stock.")
 
-        common_images = [
+        product_images = [
             media for media in obj.media_items.all()
             if media.media_type == ProductMedia.IMAGE
             and (bool(media.image) or bool(media.source_url))
         ]
-        if not common_images:
+        if not product_images:
             issues.append(
                 "Aucune image produit valide : ajoutez au moins une image au produit."
             )
