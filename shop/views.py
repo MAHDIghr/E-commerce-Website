@@ -129,6 +129,47 @@ def _strict_int(value, *, allow_zero=False):
     return parsed
 
 
+def _parse_selected_item_ids(value):
+    """Valide la liste d'articles accessoires choisis pour une offre."""
+    if value is None:
+        return []
+    if not isinstance(value, list) or len(value) > 20:
+        raise ValueError("Sélection d'accessoires invalide.")
+    parsed = []
+    for raw in value:
+        item_id = _strict_int(raw)
+        if item_id in parsed:
+            raise ValueError("Un accessoire ne peut pas être sélectionné plusieurs fois.")
+        parsed.append(item_id)
+    return sorted(parsed)
+
+
+def _cart_key(variant_id, offer_id, selected_item_ids=None):
+    selected = sorted(selected_item_ids or [])
+    base = f"{variant_id}:{offer_id}"
+    return f"{base}:{','.join(str(item_id) for item_id in selected)}" if selected else base
+
+
+def _cart_key_parts(key):
+    """Lit les anciennes clés variant:offre et les clés avec accessoires optionnels."""
+    if not isinstance(key, str):
+        raise ValueError("Clé de panier invalide.")
+    parts = key.split(":")
+    if len(parts) not in (2, 3):
+        raise ValueError("Clé de panier invalide.")
+    variant_id = _strict_int(parts[0])
+    offer_id = _strict_int(parts[1], allow_zero=True)
+    selected_ids = []
+    if len(parts) == 3 and parts[2]:
+        for raw in parts[2].split(","):
+            item_id = _strict_int(raw)
+            if item_id in selected_ids:
+                raise ValueError("Clé de panier invalide.")
+            selected_ids.append(item_id)
+        selected_ids.sort()
+    return variant_id, offer_id, selected_ids
+
+
 def _cart_state(request):
     """Normalise la session et borne le nombre de lignes contrôlées par le client."""
     raw = request.session.get(CART_SESSION_KEY, {})
@@ -139,21 +180,67 @@ def _cart_state(request):
     for key, quantity in raw.items():
         if len(clean) >= MAX_CART_LINES:
             break
-        if not isinstance(key, str) or key.count(":") != 1:
-            continue
-        variant_raw, offer_raw = key.split(":", 1)
         try:
-            variant_id = _strict_int(variant_raw)
-            offer_id = _strict_int(offer_raw, allow_zero=True)
+            variant_id, offer_id, selected_ids = _cart_key_parts(key)
             quantity = _strict_int(quantity)
         except (TypeError, ValueError):
             continue
         if quantity <= MAX_CART_QUANTITY:
-            clean[f"{variant_id}:{offer_id}"] = quantity
+            clean[_cart_key(variant_id, offer_id, selected_ids)] = quantity
     return clean
 
-def _line_details(variant_id, offer_id, quantity):
-    """Retourne une ligne recalculée depuis le catalogue, ou None si elle n'est plus valide."""
+
+def _product_reference_price(product):
+    """Prix public de référence d'un accessoire : offre Essentiel, sinon première offre valide."""
+    offers = ProductOffer.objects.filter(
+        product_id=product.pk,
+        is_active=True,
+        items__product_id=product.pk,
+        items__use_selected_variant=True,
+        items__variant__isnull=True,
+    ).distinct()
+    essential = offers.filter(badge=ProductOffer.BADGE_ESSENTIAL).order_by("position", "pk").first()
+    offer = essential or offers.order_by("-is_featured", "position", "pk").first()
+    return offer.price if offer else None
+
+
+def _accessory_option(item):
+    """Construit une option d'accessoire sans jamais lui attribuer un prix client."""
+    component = item.variant
+    if (
+        item.use_selected_variant
+        or component is None
+        or not component.is_active
+        or component.product_id != item.product_id
+        or not item.product.is_published
+        or not item.product.category.is_active
+    ):
+        return None
+    media = ProductMedia.objects.filter(
+        product_id=item.product_id, media_type=ProductMedia.IMAGE,
+    ).order_by("-is_primary", "position", "pk").first()
+    image = (media.image.url if media and media.image else media.source_url) if media else ""
+    reference_price = _product_reference_price(item.product)
+    available_quantity = component.stock_quantity // max(1, item.quantity)
+    return {
+        "item_id": item.pk,
+        "product_id": item.product_id,
+        "slug": item.product.slug,
+        "name": item.product.name,
+        "variant_name": component.color_name or "",
+        "image": image,
+        "quantity": item.quantity,
+        "original_price": f"{reference_price:.2f}" if reference_price is not None else "",
+        "unit_price": "0.00",
+        "is_gift": True,
+        "available": available_quantity > 0,
+        "available_quantity": available_quantity,
+    }
+
+
+def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
+    """Recalcule l'offre et les accessoires sélectionnés depuis la base de données."""
+    selected_item_ids = sorted(selected_item_ids or [])
     if quantity < 1 or quantity > MAX_CART_QUANTITY or not offer_id:
         return None
 
@@ -163,84 +250,70 @@ def _line_details(variant_id, offer_id, quantity):
     if not variant or not published_products().filter(pk=variant.product_id).exists():
         return None
 
-    offer = None
-    offer_items = []
+    offer = ProductOffer.objects.filter(
+        pk=offer_id, product_id=variant.product_id, is_active=True,
+    ).first()
+    if not offer:
+        return None
+
+    offer_items = list(offer.items.select_related(
+        "product", "product__category", "variant", "variant__product",
+    ).order_by("position", "pk"))
+    main_items = [item for item in offer_items if item.use_selected_variant]
+    if (
+        len(main_items) != 1
+        or main_items[0].product_id != variant.product_id
+        or main_items[0].variant_id is not None
+        or main_items[0].quantity < 1
+    ):
+        return None
+
+    fixed_items = {item.pk: item for item in offer_items if not item.use_selected_variant}
+    if any(item_id not in fixed_items for item_id in selected_item_ids):
+        return None
+
+    max_available_values = [variant.stock_quantity // main_items[0].quantity]
     components = []
-    if offer_id:
-        offer = ProductOffer.objects.filter(
-            pk=offer_id, product_id=variant.product_id, is_active=True,
-        ).first()
-        if not offer:
+    for item_id in selected_item_ids:
+        item = fixed_items[item_id]
+        accessory = _accessory_option(item)
+        if accessory is None:
             return None
+        max_available_values.append(item.variant.stock_quantity // item.quantity)
+        components.append(accessory)
 
-        offer_items = list(offer.items.select_related(
-            "product", "product__category", "variant", "variant__product",
-            "variant__product__category",
-        ).order_by("position", "pk"))
-        selected_items = [item for item in offer_items if item.use_selected_variant]
-        if (
-            not offer_items
-            or len(selected_items) != 1
-            or selected_items[0].product_id != variant.product_id
-            or selected_items[0].variant_id is not None
-        ):
-            return None
-
-        max_available_values = []
-        for item in offer_items:
-            if item.quantity < 1:
-                return None
-            if item.use_selected_variant:
-                if item.product_id != variant.product_id or item.variant_id is not None:
-                    return None
-                component = variant
-            else:
-                component = item.variant
-                if (
-                    component is None
-                    or not component.is_active
-                    or component.product_id != item.product_id
-                    or not published_products().filter(pk=item.product_id).exists()
-                ):
-                    return None
-            max_available_values.append(component.stock_quantity // item.quantity)
-            components.append({
-                "name": item.product.name,
-                "quantity": item.quantity,
-                "variant_name": component.color_name or "",
-            })
-
-        max_available = min(max_available_values, default=0)
-        unit_price = offer.price
-        title = f"{variant.product.name} — {offer.title}"
-        if variant.color_name:
-            title += f" ({variant.color_name})"
+    max_available = min(max_available_values, default=0)
     media = ProductMedia.objects.filter(
         product_id=variant.product_id, media_type=ProductMedia.IMAGE,
     ).order_by("-is_primary", "position", "pk").first()
     image = (media.image.url if media and media.image else media.source_url) if media else ""
+    title = f"{variant.product.name} — {offer.title}"
+    if variant.color_name:
+        title += f" ({variant.color_name})"
     available = max_available >= quantity and max_available > 0
     return {
-        "key": f"{variant.pk}:{offer.pk if offer else 0}",
+        "key": _cart_key(variant.pk, offer.pk, selected_item_ids),
         "product_id": variant.product_id,
         "product_slug": variant.product.slug,
         "variant_id": variant.pk,
-        "offer_id": offer.pk if offer else None,
+        "offer_id": offer.pk,
         "name": title,
         "variant_name": variant.color_name,
         "image": image,
         "components": components,
+        "selected_item_ids": selected_item_ids,
         "quantity": quantity,
-        "unit_price": f"{unit_price:.2f}",
-        "line_total": f"{unit_price * quantity:.2f}",
+        "unit_price": f"{offer.price:.2f}",
+        "line_total": f"{offer.price * quantity:.2f}",
         "available_quantity": min(max_available, MAX_CART_QUANTITY),
         "available": available,
     }
 
+
 @require_GET
 @ensure_csrf_cookie
 def offer_options(request, slug):
-    """Expose uniquement les offres réellement ajoutables pour une variante précise."""
+    """Expose les offres valides et leurs accessoires optionnels pour une variante."""
     product = published_products().filter(slug=slug).first()
     if product is None:
         return JsonResponse({"error": "Produit introuvable ou indisponible."}, status=404)
@@ -272,37 +345,30 @@ def offer_options(request, slug):
         details = _line_details(variant.pk, offer.pk, 1)
         if not details or not details["available"]:
             continue
-
-        components = []
         offer_items = list(offer.items.all())
-        reference_total = offer.price
-        for item in offer_items:
-            component = variant if item.use_selected_variant else item.variant
-            if component is None:
-                components = []
-                break
-            components.append({
-                "name": item.product.name,
-                "quantity": item.quantity,
-                "variant_name": component.color_name or "",
-            })
-
-        if not components:
+        main_item = next((item for item in offer_items if item.use_selected_variant), None)
+        if main_item is None or main_item.product_id != product.pk:
             continue
-
-        unit_price = Decimal(details["unit_price"])
-        saving = reference_total - unit_price if reference_total > unit_price else Decimal("0.00")
+        accessories = [
+            option for item in offer_items if not item.use_selected_variant
+            for option in [_accessory_option(item)] if option is not None
+        ]
         offers.append({
             "id": offer.pk,
             "title": offer.title,
             "badge": offer.get_badge_display(),
             "delivery_label": offer.get_display_delivery_label_display(),
             "featured": offer.is_featured,
-            "price": f"{unit_price:.2f}",
-            "reference_total": f"{unit_price:.2f}",
+            "price": f"{offer.price:.2f}",
+            "reference_total": f"{offer.reference_price:.2f}" if offer.reference_price else f"{offer.price:.2f}",
             "saving": "0.00",
-            "components": components,
-            "component_count": sum(component["quantity"] for component in components),
+            "components": [{
+                "name": product.name,
+                "quantity": main_item.quantity,
+                "variant_name": variant.color_name or "",
+            }],
+            "accessories": accessories,
+            "component_count": main_item.quantity,
             "uses_variant_price": False,
         })
 
@@ -322,8 +388,12 @@ def _cart_payload(request):
     items = []
     stale_keys = []
     for key, quantity in state.items():
-        variant_id, offer_id = map(int, key.split(":"))
-        details = _line_details(variant_id, offer_id, quantity)
+        try:
+            variant_id, offer_id, selected_ids = _cart_key_parts(key)
+        except (TypeError, ValueError):
+            stale_keys.append(key)
+            continue
+        details = _line_details(variant_id, offer_id, quantity, selected_ids)
         if details is None:
             stale_keys.append(key)
             continue
@@ -378,9 +448,10 @@ def cart_mutation(request):
     try:
         variant_id = _strict_int(data.get("variant_id"))
         offer_id = _strict_int(data.get("offer_id", 0), allow_zero=True)
+        selected_item_ids = _parse_selected_item_ids(data.get("selected_item_ids", []))
     except (TypeError, ValueError):
-        return JsonResponse({"error": "Variante ou offre invalide."}, status=400)
-    key = f"{variant_id}:{offer_id}"
+        return JsonResponse({"error": "Variante, offre ou sélection d'accessoires invalide."}, status=400)
+    key = _cart_key(variant_id, offer_id, selected_item_ids)
 
     if action == "add":
         if offer_id == 0:
@@ -398,7 +469,7 @@ def cart_mutation(request):
         if key not in state and len(state) >= MAX_CART_LINES:
             return JsonResponse({"error": "Le panier contient déjà le nombre maximal de références."}, status=409)
 
-        details = _line_details(variant_id, offer_id, combined_quantity)
+        details = _line_details(variant_id, offer_id, combined_quantity, selected_item_ids)
         if details is None:
             return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
         if not details["available"]:
@@ -417,7 +488,7 @@ def cart_mutation(request):
                 return JsonResponse({"error": "Quantité invalide."}, status=400)
             if quantity > MAX_CART_QUANTITY:
                 return JsonResponse({"error": "La quantité maximale est de 10 par ligne."}, status=400)
-            details = _line_details(variant_id, offer_id, quantity)
+            details = _line_details(variant_id, offer_id, quantity, selected_item_ids)
             if details is None:
                 return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
             if not details["available"] and quantity >= state[key]:
