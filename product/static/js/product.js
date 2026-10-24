@@ -181,56 +181,7 @@
     sync();
     updateAvailability();
 
-    /* ---------- Ajout au panier : offre et variante sélectionnées ---------- */
-    $$(".js-add").forEach((button) => button.addEventListener("click", async (event) => {
-        event.preventDefault();
-        if (button.disabled) return;
-
-        const variantId = Number(colorIn()?.value);
-        const offerId = Number(offerIn()?.value);
-        if (!Number.isSafeInteger(variantId) || variantId < 1 || !Number.isSafeInteger(offerId) || offerId < 1) {
-            const message = "Choisissez une variante et une offre disponible avant de continuer.";
-            const status = $("#variant-stock-status");
-            if (status) status.textContent = message;
-            if (typeof showCartStatus === "function") showCartStatus(message, true);
-            return;
-        }
-        if (typeof addToCart !== "function") {
-            const message = "Le panier n'a pas pu être initialisé. Rechargez la page et réessayez.";
-            if (typeof showCartStatus === "function") showCartStatus(message, true);
-            return;
-        }
-
-        const originalMarkup = button.innerHTML;
-        button.disabled = true;
-        button.setAttribute("aria-busy", "true");
-        button.textContent = "Ajout en cours…";
-        try {
-            const added = await addToCart({ variantId, offerId });
-            if (added) {
-                button.classList.add("is-done");
-                button.textContent = "Ajouté ✓";
-            } else {
-                button.innerHTML = originalMarkup;
-            }
-        } catch (error) {
-            const message = error?.message || "L'ajout au panier a échoué. Réessayez.";
-            const status = $("#variant-stock-status");
-            if (status) status.textContent = message;
-            if (typeof showCartStatus === "function") showCartStatus(message, true);
-            button.innerHTML = originalMarkup;
-        } finally {
-            button.removeAttribute("aria-busy");
-            const stock = Number(colorIn()?.dataset.stock || 0);
-            const required = Math.max(1, Number(offerIn()?.dataset.mainQuantity || 1));
-            button.disabled = stock < required;
-            window.setTimeout(() => {
-                if (!button.isConnected) return;
-                button.classList.remove("is-done");
-                button.innerHTML = originalMarkup;
-            }, 1400);
-        }
-    }));
+    /* Les CTA .js-add sont gérés par le contrôleur partagé du panier (base.js). */
 
     /* ---------- Barre collante : visible quand aucun CTA de page n'est à l'écran ---------- */
     const sbar = $("#sbar"), seen = new Set();
