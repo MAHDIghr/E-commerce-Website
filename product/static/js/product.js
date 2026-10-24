@@ -182,7 +182,7 @@
     updateAvailability();
 
     /* ---------- Ajout au panier (réutilise addToCart de base.js) ---------- */
-    $(".js-add").forEach((btn) => btn.addEventListener("click", async () => {
+    $$(".js-add").forEach((btn) => btn.addEventListener("click", async () => {
         const label = btn.textContent;
         btn.disabled = true;
         btn.textContent = "Ajout…";
