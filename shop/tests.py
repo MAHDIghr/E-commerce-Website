@@ -53,7 +53,8 @@ class CartAndSearchTests(TestCase):
 
     def test_catalog_discount_uses_essential_reference_price_even_when_another_offer_is_featured(self):
         self.offer.reference_price = Decimal("100.00")
-        self.offer.save(update_fields=["reference_price"])
+        self.offer.is_featured = False
+        self.offer.save(update_fields=["reference_price", "is_featured"])
         medium = ProductOffer.objects.create(
             product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
             price=Decimal("79.90"), reference_price=Decimal("120.00"),
