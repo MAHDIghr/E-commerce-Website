@@ -1077,3 +1077,11 @@ body.cart-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .cart-drawer, .cart-backdrop, .shipping-progress__fill { transition: none !important; }
 }
+
+/* Les styles de composants ne doivent jamais neutraliser l'attribut HTML hidden. */
+.cart-drawer__empty[hidden],
+.cart-drawer__body[hidden],
+.cart-drawer__footer[hidden],
+.shipping-progress[hidden],
+.cart-title-count[hidden],
+.cart-status[hidden] { display: none !important; }
