@@ -20,7 +20,7 @@ class ProductVariantInline(admin.TabularInline):
 class ProductMediaInline(admin.TabularInline):
     model = ProductMedia
     extra = 0
-    fields = ("variant", "media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position")
+    fields = ("media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position")
 
 
 class ProductReasonInline(admin.TabularInline):
@@ -53,7 +53,7 @@ class ProductFAQInline(admin.TabularInline):
 class ProductOfferInline(admin.TabularInline):
     model = ProductOffer
     extra = 0
-    fields = ("badge", "display_delivery_label", "price", "is_featured", "is_active")
+    fields = ("badge", "display_delivery_label", "price", "reference_price", "is_featured", "is_active")
     show_change_link = True
     ordering = ("position", "pk")
 
@@ -128,13 +128,12 @@ class ProductAdmin(admin.ModelAdmin):
 
         common_images = [
             media for media in obj.media_items.all()
-            if media.variant_id is None
-            and media.media_type == ProductMedia.IMAGE
+            if media.media_type == ProductMedia.IMAGE
             and (bool(media.image) or bool(media.source_url))
         ]
         if not common_images:
             issues.append(
-                "Aucune image commune valide : ajoutez un média de type Image et laissez « Variante » vide."
+                "Aucune image produit valide : ajoutez au moins une image au produit."
             )
 
         has_valid_offer = ProductOffer.objects.filter(
@@ -178,11 +177,11 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(ProductOffer)
 class ProductOfferAdmin(admin.ModelAdmin):
-    list_display = ("product", "badge", "display_delivery_label", "price", "is_featured", "is_active", "position")
+    list_display = ("product", "badge", "display_delivery_label", "price", "reference_price", "is_featured", "is_active", "position")
     list_filter = ("badge", "display_delivery_label", "is_active", "is_featured")
     search_fields = ("title", "product__name")
     ordering = ("product__name", "position")
-    fields = ("product", "badge", "display_delivery_label", "price", "is_featured", "is_active")
+    fields = ("product", "badge", "display_delivery_label", "price", "reference_price", "is_featured", "is_active")
     inlines = (ProductOfferItemInline,)
 
 
