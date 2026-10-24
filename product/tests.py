@@ -455,6 +455,20 @@ class UploadedMediaTests(TestCase):
         )
         return SimpleUploadedFile(name, data, content_type="image/png")
 
+    def test_category_rejects_images_larger_than_upload_limit(self):
+        category = Category(
+            name="Catégorie trop lourde",
+            slug="categorie-trop-lourde",
+            image=SimpleUploadedFile(
+                "too-large.png",
+                b"x" * (10 * 1024 * 1024 + 1),
+                content_type="image/png",
+            ),
+        )
+        with self.assertRaises(ValidationError) as error:
+            category.full_clean()
+        self.assertIn("image", error.exception.message_dict)
+
     def test_category_image_is_stored_in_media_categories_folder(self):
         category = Category.objects.create(
             name="Catégorie test",
