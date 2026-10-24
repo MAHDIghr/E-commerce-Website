@@ -2,7 +2,7 @@
 from django.db.models import Prefetch
 from django.shortcuts import render
 
-from product.models import Category, ProductMedia, ProductVariant, Review
+from product.models import Category, ProductMedia, ProductOffer, ProductVariant, Review
 from .models import SignatureSelection
 from product.selectors import published_products
 
@@ -16,6 +16,7 @@ def home(request):
     ).select_related("product", "product__category").order_by("position", "pk")
     new_products = published_products().filter(is_new=True).select_related("category").prefetch_related(
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
+        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).order_by("-is_featured", "position", "pk")),
         Prefetch(
             "media_items",
             queryset=ProductMedia.objects.filter(
