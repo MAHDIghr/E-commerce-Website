@@ -130,7 +130,8 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["subtotal"], "89.90")
         self.assertEqual(response.json()["items"][0]["unit_price"], "89.90")
-        self.assertEqual(response.json()["items"][0]["components"][0]["name"], self.product.name)
+        self.assertEqual(response.json()["items"][0]["components"], [])
+        self.assertIn(self.product.name, response.json()["items"][0]["name"])
 
     def test_cart_mutations_require_csrf(self):
         client = Client(enforce_csrf_checks=True)
