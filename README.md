@@ -1024,7 +1024,7 @@ La connexion réutilise le mécanisme d'authentification Django et ses validateu
 
 ### Automatisation de l'offre initiale
 
-Lorsqu'un nouveau Product est créé, le signal dashboard/signals.py prépare une offre Essentiel inactive, à prix nul provisoire, et ajoute automatiquement le produit principal comme composant utilisant la variante choisie sur la fiche. Quand une variante active est ensuite enregistrée, si cette offre automatique est encore inactive et à zéro, son prix est initialisé à partir du prix de cette variante et elle est activée.
+Lorsqu'un nouveau Product est créé, le service dashboard/services.py prépare une offre Essentiel inactive, à prix nul provisoire, et ajoute automatiquement le produit principal comme composant utilisant la variante choisie sur la fiche. Quand une variante active est ensuite enregistrée, si cette offre automatique est encore inactive et à zéro, son prix est initialisé à partir du prix de cette variante et elle est activée.
 
 Cette automatisation ne remplace pas les règles existantes : les niveaux Medium et Premium, les produits complémentaires, les variantes fixes et la composition détaillée restent à configurer pour les offres qui en ont besoin. Un produit ne devient pas automatiquement publiable : les règles existantes concernant la catégorie active, la variante, l'image commune et la cohérence de l'offre continuent de s'appliquer. Vérifiez le diagnostic de publication avant d'activer un produit.
 
