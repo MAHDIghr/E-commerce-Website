@@ -407,6 +407,37 @@ class CatalogViewTests(TestCase):
         self.assertNotContains(response, "Avis approuvé non sélectionné.")
 
 
+    def test_catalog_chooses_an_in_stock_variant_when_first_variant_is_empty(self):
+        self.variant.stock_quantity = 0
+        self.variant.position = 0
+        self.variant.save(update_fields=["stock_quantity", "position"])
+        available = ProductVariant.objects.create(
+            product=self.product, sku="CABAS-CAMEL-AVAILABLE",
+            color_name="Noisette", color_slug="noisette", color_code="#8B5E3C",
+            stock_quantity=3, position=1,
+        )
+
+        response = self.client.get(reverse("shop:catalog"))
+
+        self.assertEqual(response.status_code, 200)
+        product_card = next(
+            item for item in response.context["catalog_data"]["products"]
+            if item["id"] == self.product.slug
+        )
+        self.assertEqual(product_card["variantId"], available.pk)
+        self.assertEqual(product_card["stock"], 3)
+
+    def test_product_detail_omits_offer_with_multiple_main_components(self):
+        ProductOfferItem.objects.create(
+            offer=self.offer, product=self.product, use_selected_variant=True, quantity=1,
+            position=1,
+        )
+
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+
+        self.assertEqual(response.status_code, 404)
+
+
 
 class UploadedMediaTests(TestCase):
     def setUp(self):
