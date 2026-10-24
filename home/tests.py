@@ -89,8 +89,8 @@ class SignatureSelectionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="product-badge product-badge--sale">-20%</span>')
-        self.assertContains(response, "75.00 €")
-        self.assertContains(response, "59.90 €")
+        self.assertContains(response, "75,00 €")
+        self.assertContains(response, "59,90 €")
 
     def test_inactive_signature_selection_is_not_rendered(self):
         self.selection.is_active = False
