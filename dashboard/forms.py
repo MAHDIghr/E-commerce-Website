@@ -76,6 +76,16 @@ class OfferFormSetBase(BaseInlineFormSet):
         ]
         if len(featured_forms) > 1:
             raise ValidationError("Une seule offre peut être mise en avant par produit.")
+        active_badges = [
+            form.cleaned_data.get("badge")
+            for form in self.forms
+            if form.cleaned_data
+            and not form.cleaned_data.get("DELETE")
+            and form.cleaned_data.get("is_active")
+            and form.cleaned_data.get("badge")
+        ]
+        if len(active_badges) != len(set(active_badges)):
+            raise ValidationError("Chaque badge (Essentiel, Medium ou Premium) ne peut être utilisé qu'une seule fois parmi les offres actives.")
 
 
 VariantFormSet = inlineformset_factory(
