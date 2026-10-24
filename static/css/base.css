@@ -1230,3 +1230,10 @@ body.cart-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .offer-picker__option { transition: none; }
 }
+
+.cart-item__components {
+    margin: .45rem 0 0;
+    color: var(--color-ink-muted);
+    font-size: .7rem;
+    line-height: 1.5;
+}
