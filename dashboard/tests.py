@@ -117,5 +117,6 @@ class DashboardCatalogManagementTests(TestCase):
             "product": self.product.pk, "badge": ProductOffer.BADGE_MEDIUM, "state": "inactive",
         })
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "45.00")
+        self.assertContains(response, "45,00 €")
         self.assertEqual(list(response.context["offers"]), [offer])
+        self.assertEqual(response.context["offers"][0].price, Decimal("45.00"))
