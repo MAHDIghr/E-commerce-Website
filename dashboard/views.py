@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 
 from product.models import Category, Product, ProductOffer, Review
 from .forms import CategoryForm, MediaFormSet, ProductForm, VariantFormSet
+from .services import ensure_default_offer
 
 
 def is_dashboard_admin(user):
@@ -98,6 +99,7 @@ def product_edit(request, pk=None):
                 media.instance = product
                 variants.save()
                 media.save()
+                ensure_default_offer(product)
             messages.success(request, "Produit créé." if is_new else "Produit mis à jour.")
             return redirect("dashboard:products")
     else:
