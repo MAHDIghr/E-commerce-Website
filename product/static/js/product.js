@@ -134,7 +134,7 @@
         $("#color-label").textContent = color.label;
 
         // Les prix barrés des cartes d'offres suivent aussi la variante sélectionnée.
-        $('input[name="offer"]').forEach((input) => {
+        $$('input[name="offer"]').forEach((input) => {
             const offerData = input.dataset;
             let cardOldLabel = offerData.old;
             if (offerData.usesVariantPrice === "true") {
