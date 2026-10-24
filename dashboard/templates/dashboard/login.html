@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#f2f4ef">
+  <title>Connexion sécurisée · My Line Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/dashboard.css' %}">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <a class="brand brand-login" href="/" aria-label="My Line Collection"><span class="brand-mark">M</span><span>My Line <small>COLLECTION · ADMIN</small></span></a>
+    <p class="eyebrow">ESPACE PRIVÉ</p>
+    <h1>Content de vous revoir.</h1>
+    <p class="muted">Connectez-vous pour gérer votre boutique en toute sécurité.</p>
+    {% if form.non_field_errors %}<div class="form-alert" role="alert">Identifiants invalides ou accès non autorisé.</div>{% endif %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="{{ form.username.id_for_label }}">Identifiant</label>
+      {{ form.username }}
+      {% if form.username.errors %}<p class="field-error">{{ form.username.errors|striptags }}</p>{% endif %}
+      <label for="{{ form.password.id_for_label }}">Mot de passe</label>
+      {{ form.password }}
+      {% if form.password.errors %}<p class="field-error">{{ form.password.errors|striptags }}</p>{% endif %}
+      <button class="button button-primary button-wide" type="submit">Accéder au dashboard <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="login-foot"><span>●</span> Connexion réservée au superutilisateur Django</p>
+  </main>
+</body>
+</html>
