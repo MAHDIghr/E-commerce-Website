@@ -1004,3 +1004,51 @@ Ces commandes doivent être exécutées dans l’environnement local du projet. 
 - Le choix final est envoyé au point d'entrée du panier avec les seuls identifiants de variante et d'offre ; la mutation du panier revalide l'offre et le stock.
 - La fiche produit conserve l'offre et la variante sélectionnées à l'écran. Les erreurs d'initialisation ou de validation sont rendues visibles plutôt que de laisser le bouton sembler inactif.
 - La composition déjà configurée dans une offre est affichée dans le panier. La sélection dynamique d'un article parmi plusieurs choix possibles au sein d'une offre reste une évolution distincte : elle nécessite de définir les choix autorisés dans l'administration et de persister cette composition dans l'identité de ligne du panier.
+
+
+## 21. Dashboard privé My Line Collection
+
+### Objectif et accès
+
+L'application dashboard/ fournit un espace de gestion distinct de l'interface publique, accessible sous /gestion/. La connexion se fait sous /gestion/connexion/. L'accès est limité aux comptes Django actifs et superutilisateurs (is_active=True et is_superuser=True) ; le statut is_staff seul ne suffit pas. Les vues vérifient cette règle côté serveur.
+
+La connexion réutilise le mécanisme d'authentification Django et ses validateurs de mot de passe. Les formulaires utilisent le jeton CSRF, la déconnexion se fait par POST, et la session du dashboard expire après 30 minutes d'inactivité. La page est exclue de l'indexation via noindex,nofollow ; cette directive n'est pas une mesure de contrôle d'accès.
+
+### Fonctionnalités de cette première version
+
+- Vue d'ensemble : compteurs calculés à partir de la base (produits, produits activés, catégories, offres actives, avis à modérer) et derniers produits modifiés.
+- Produits : recherche, création et modification depuis un formulaire regroupant l'identité, la catégorie, les descriptions, les paramètres de publication, les variantes et les images communes.
+- Catégories : création, liste et modification, avec téléversement d'image et paramètres de visibilité.
+- Offres : liste de toutes les offres et raccourcis vers leur édition existante dans Django Admin.
+- Gestion avancée : accès direct à Django Admin pour les compositions d'offres et les contenus détaillés des fiches produits. Cette première version ne remplace pas encore tous les formulaires spécialisés de Django Admin ; elle rassemble les opérations courantes et conserve les outils avancés existants.
+
+### Automatisation de l'offre initiale
+
+Lorsqu'un nouveau Product est créé, le signal dashboard/signals.py prépare une offre Essentiel inactive, à prix nul provisoire, et ajoute automatiquement le produit principal comme composant utilisant la variante choisie sur la fiche. Quand une variante active est ensuite enregistrée, si cette offre automatique est encore inactive et à zéro, son prix est initialisé à partir du prix de cette variante et elle est activée.
+
+Cette automatisation ne remplace pas les règles existantes : les niveaux Medium et Premium, les produits complémentaires, les variantes fixes et la composition détaillée restent à configurer pour les offres qui en ont besoin. Un produit ne devient pas automatiquement publiable : les règles existantes concernant la catégorie active, la variante, l'image commune et la cohérence de l'offre continuent de s'appliquer. Vérifiez le diagnostic de publication avant d'activer un produit.
+
+### Sécurité et déploiement
+
+- Garder /admin/ et /gestion/ accessibles uniquement via HTTPS en production.
+- Conserver DEBUG=False, les cookies sécurisés, les hôtes autorisés et les origines CSRF strictement configurés.
+- Utiliser un mot de passe unique et robuste pour le superutilisateur, ne pas partager ce compte et activer une protection supplémentaire au niveau de l'hébergement / reverse proxy contre les tentatives de connexion répétées.
+- Ne pas exposer les fichiers média ou les sauvegardes de base de données autrement que prévu ; sauvegarder la base et les médias avant toute mise en production.
+- Le dashboard réutilise les modèles existants : aucune migration de base n'est ajoutée par cette fonctionnalité.
+- Les fichiers CSS et JavaScript sont des ressources statiques versionnées. Exécuter collectstatic lors du déploiement de production.
+
+### Recette locale
+
+Après avoir récupéré la branche :
+
+```powershell
+python manage.py check --settings=config.settings.development
+python manage.py test dashboard product --settings=config.settings.development
+python manage.py runserver --settings=config.settings.development
+```
+
+Ouvrir http://127.0.0.1:8000/gestion/connexion/, puis se connecter avec le compte superutilisateur créé pour le projet. Les tests doivent être exécutés dans l'environnement Django du dépôt ; la présence des fichiers sur GitHub ne prouve pas que les tests ont passé ni que le déploiement de production est effectué.
+
+### Évolutions prévues, hors périmètre de cette version
+
+Les graphiques, les statistiques de ventes, les marges, les exports, les journaux d'activité et un éditeur visuel complet de composition des offres sont des évolutions distinctes. Aucun chiffre de vente fictif n'est affiché dans cette première version.
