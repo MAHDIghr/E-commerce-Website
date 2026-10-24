@@ -96,7 +96,6 @@ MediaFormSet.form.base_fields["position"].label = "Ordre d'affichage des médias
 MediaFormSet.form.base_fields["source_url"].label = "URL HTTPS de l'image ou de la vidéo"
 MediaFormSet.form.base_fields["poster_url"].label = "URL HTTPS de la vignette vidéo"
 MediaFormSet.form.base_fields["is_primary"].label = "Média principal du produit (un seul choix)"
-OfferFormSet.form.base_fields["is_featured"].label = "Offre mise en avant (un seul choix)"
 
 OfferFormSet = inlineformset_factory(
     Product, ProductOffer,
@@ -104,3 +103,5 @@ OfferFormSet = inlineformset_factory(
     extra=0, min_num=1, validate_min=True, max_num=3, validate_max=True, can_delete=True,
     form=DashboardInlineForm, formset=OfferFormSetBase,
 )
+
+OfferFormSet.form.base_fields["is_featured"].label = "Offre mise en avant (un seul choix)"
