@@ -201,7 +201,7 @@ def _product_reference_price(product):
     ).distinct()
     essential = offers.filter(badge=ProductOffer.BADGE_ESSENTIAL).order_by("position", "pk").first()
     offer = essential or offers.order_by("-is_featured", "position", "pk").first()
-    return offer.price if offer else None
+    return (offer.reference_price if offer.reference_price is not None and offer.reference_price > offer.price else offer.price) if offer else None
 
 
 def _accessory_option(item):
