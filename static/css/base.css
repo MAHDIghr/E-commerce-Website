@@ -1237,3 +1237,36 @@ body.cart-open { overflow: hidden; }
     font-size: .7rem;
     line-height: 1.5;
 }
+
+/* Accessoires offerts dans le sélecteur d'offre */
+.offer-picker__accessories[hidden] { display: none; }
+.offer-picker__accessories { border-top: 1px solid var(--color-line); }
+.offer-picker__accessories-intro { margin: -.35rem 0 .8rem; color: var(--color-ink-muted); font-size: .78rem; line-height: 1.5; }
+.offer-picker__accessory-list { display: grid; gap: .65rem; }
+.offer-picker__accessory {
+    display: grid;
+    grid-template-columns: auto 64px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    background: #fff;
+}
+.offer-picker__accessory input { width: 18px; height: 18px; accent-color: var(--color-accent-dark); }
+.offer-picker__accessory img { width: 64px; height: 76px; border-radius: 7px; object-fit: cover; background: var(--color-bg-alt); }
+.offer-picker__accessory img[hidden] { display: none; }
+.offer-picker__accessory-copy { display: grid; gap: .2rem; min-width: 0; }
+.offer-picker__accessory-copy strong { font-size: .82rem; line-height: 1.35; }
+.offer-picker__accessory-copy small { color: var(--color-ink-muted); font-size: .72rem; }
+.offer-picker__accessory-prices { display: grid; justify-items: end; gap: .2rem; white-space: nowrap; }
+.offer-picker__accessory-prices del { color: var(--color-ink-muted); font-size: .72rem; }
+.offer-picker__accessory-prices strong { color: var(--color-success); font-size: .83rem; }
+.offer-picker__accessory-prices em { color: var(--color-success); font-size: .66rem; font-style: normal; font-weight: 700; }
+.offer-picker__accessory.is-unavailable { opacity: .55; }
+.offer-picker__accessory.is-unavailable .offer-picker__accessory-copy::after { content: "Temporairement indisponible"; color: var(--color-danger, #a33); font-size: .7rem; }
+@media (max-width: 520px) {
+    .offer-picker__accessory { grid-template-columns: auto 52px minmax(0, 1fr); gap: .55rem; padding: .6rem; }
+    .offer-picker__accessory img { width: 52px; height: 64px; }
+    .offer-picker__accessory-prices { grid-column: 3; display: flex; justify-content: flex-start; align-items: baseline; gap: .45rem; }
+}
