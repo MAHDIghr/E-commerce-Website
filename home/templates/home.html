@@ -235,7 +235,7 @@
                     data-product-slug="{{ product.slug }}"
                     data-offers-url="{% url 'shop:offer_options' slug=product.slug %}"
                     data-product-name="{{ product.name }}{% if variant.color_name %} — {{ variant.color_name }}{% endif %}"
-                    data-product-price="{{ product.display_price|default_if_none:'' }}"
+                    data-product-price="{{ product.display_price }}"
                     data-product-image="{% if media %}{% if media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
                     <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.name }}">
                         <div class="product-badge-stack">
