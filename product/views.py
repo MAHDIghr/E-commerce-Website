@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from .models import Product, ProductMedia, ProductOffer, ProductVariant, Review
@@ -25,6 +26,7 @@ def _detail_queryset():
 
 
 @require_GET
+@ensure_csrf_cookie
 def detail(request, slug):
     """Affiche une fiche publiée et ses avis créés/modérés depuis Django Admin."""
     try:
