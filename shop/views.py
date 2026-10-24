@@ -299,11 +299,7 @@ def offer_options(request, slug):
             "saving": f"{saving:.2f}",
             "components": components,
             "component_count": sum(component["quantity"] for component in components),
-            "uses_variant_price": (
-                len(offer_items) == 1
-                and offer_items[0].quantity == 1
-                and offer_items[0].use_selected_variant
-            ),
+            "uses_variant_price": False,
         })
 
     return JsonResponse({
