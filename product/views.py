@@ -52,7 +52,6 @@ def detail(request, slug):
     offers = []
     for offer_obj in product.offers.all():
         lines = []
-        reference_total = Decimal("0.00")
         offer_items = list(offer_obj.items.all())
         invalid_offer = not any(item.use_selected_variant for item in offer_items)
         for item in offer_items:
@@ -79,21 +78,19 @@ def detail(request, slug):
                     break
                 component_variant = item.variant
             lines.append(f"{item.product.name} × {item.quantity}" if item.quantity > 1 else item.product.name)
-            # Le prix de référence du lot est la somme des prix de vente actuels,
-            # pas la somme de prix barrés potentiellement déjà remisés.
-            reference_total += component_variant.price * item.quantity
         # Les offres incomplètes ou incohérentes ne sont jamais exposées au client.
         if not lines or invalid_offer:
             continue
-        old_price = reference_total if reference_total > offer_obj.price else None
-        off = round((1 - offer_obj.price / old_price) * 100) if old_price else 0
+        # Aucun prix n'est stocké sur les variantes : une offre porte son propre prix.
+        old_price = None
+        off = 0
         offers.append({
             "id": str(offer_obj.pk),
             "title": offer_obj.title,
             "items": " + ".join(lines),
             "price": float(offer_obj.price),
             "old": float(old_price) if old_price else None,
-            "reference_total": float(reference_total),
+            "reference_total": None,
             "price_label": _eur(offer_obj.price),
             "old_label": _eur(old_price) if old_price else "",
             "save_label": _eur(old_price - offer_obj.price) if old_price else "",
@@ -131,7 +128,6 @@ def detail(request, slug):
         "slug": product.slug,
         "name": product.name,
         "brand_line": product.brand_line,
-        "default_variant_price": str(default_variant.price),
         "usage_section_title": product.usage_section_title,
         "tagline": product.tagline or product.short_description,
         "seo_title": product.seo_title,
@@ -143,10 +139,6 @@ def detail(request, slug):
             "id": str(variant.pk),
             "label": variant.color_name or "Standard",
             "hex": variant.color_code or "#b07a4a",
-            "price": str(variant.price),
-            "price_label": _eur(variant.price),
-            "old_label": _eur(variant.compare_at_price) if variant.compare_at_price and variant.compare_at_price > variant.price else "",
-            "off": round((1 - variant.price / variant.compare_at_price) * 100) if variant.compare_at_price and variant.compare_at_price > variant.price else 0,
             "stock": variant.stock_quantity,
         } for variant in variants],
         "offers": offers,
