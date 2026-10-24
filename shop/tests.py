@@ -201,14 +201,14 @@ class CartAndSearchTests(TestCase):
 
         reduce_once = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "update", "variant_id": self.variant.pk, "quantity": 3}),
+            data=json.dumps({"action": "update", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 3}),
             content_type="application/json",
         )
         self.assertEqual(reduce_once.status_code, 200)
         self.assertFalse(reduce_once.json()["items"][0]["available"])
         reduce_to_stock = self.client.post(
             reverse("shop:cart_mutation"),
-            data=json.dumps({"action": "update", "variant_id": self.variant.pk, "quantity": 2}),
+            data=json.dumps({"action": "update", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 2}),
             content_type="application/json",
         )
         self.assertEqual(reduce_to_stock.status_code, 200)
