@@ -1,7 +1,7 @@
 import json
 from decimal import Decimal
 
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
@@ -65,6 +65,16 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["subtotal"], "99.90")
         self.assertEqual(response.json()["items"][0]["unit_price"], "99.90")
+
+    def test_cart_mutations_require_csrf(self):
+        client = Client(enforce_csrf_checks=True)
+        self.assertEqual(client.get(reverse("shop:cart_api")).status_code, 200)
+        response = client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({"action": "add", "variant_id": self.variant.pk, "quantity": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
 
     def test_cart_rejects_unknown_variant(self):
         response = self.client.post(
