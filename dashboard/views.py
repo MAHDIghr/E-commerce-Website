@@ -4,7 +4,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, LogoutView
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -25,7 +25,7 @@ class AdminOnlyAuthenticationForm(AuthenticationForm):
     def confirm_login_allowed(self, user):
         super().confirm_login_allowed(user)
         if not user.is_superuser:
-            raise PermissionDenied("Accès réservé à l'administrateur du site.")
+            raise ValidationError("Identifiants invalides ou accès non autorisé.", code="invalid_login")
 
 
 class DashboardLoginView(LoginView):
