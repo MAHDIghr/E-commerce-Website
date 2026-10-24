@@ -83,39 +83,30 @@ def product_edit(request, pk=None):
     instance = get_object_or_404(Product, pk=pk) if pk is not None else Product()
     is_new = instance.pk is None
     if request.method == "POST":
+        save_continue = request.POST.get("save_action") == "continue"
         form = ProductForm(request.POST, instance=instance)
         variants = VariantFormSet(request.POST, instance=instance, prefix="variants")
-        media = MediaFormSet(request.POST, request.FILES, instance=instance, prefix="media")
         offers = OfferFormSet(request.POST, instance=instance, prefix="offers")
+        # L'étape de préparation ne traite pas les médias : le produit et ses
+        # variantes doivent d'abord exister en base pour permettre leur gestion.
+        media = (
+            MediaFormSet(instance=instance, prefix="media")
+            if save_continue
+            else MediaFormSet(request.POST, request.FILES, instance=instance, prefix="media")
+        )
         form_valid = form.is_valid()
         variants_valid = variants.is_valid()
-        media_valid = media.is_valid()
         offers_valid = offers.is_valid()
-        if form_valid and variants_valid and media_valid and offers_valid:
+        media_valid = True if save_continue else media.is_valid()
+
+        if form_valid and variants_valid and offers_valid and media_valid:
             with transaction.atomic():
                 product = form.save()
                 variants.instance = product
-                media.instance = product
                 offers.instance = product
                 variants.save()
-                primary_form = next((
-                    item for item in media.forms
-                    if item.cleaned_data and item.cleaned_data.get("is_primary") and not item.cleaned_data.get("DELETE")
-                ), None)
-                # Libérer la contrainte unique avant de promouvoir un autre média.
-                if primary_form:
-                    product.media_items.update(is_primary=False)
-                media.save()
-                if primary_form and primary_form.instance.pk:
-                    product.media_items.exclude(pk=primary_form.instance.pk).update(is_primary=False)
-                    primary_form.instance.is_primary = True
-                    primary_form.instance.save(update_fields=("is_primary",))
-                else:
-                    # Même si une requête modifiée coche plusieurs cases, une seule média reste principal.
-                    primary = product.media_items.filter(is_primary=True).order_by("position", "pk").first()
-                    if primary:
-                        product.media_items.exclude(pk=primary.pk).update(is_primary=False)
                 offers.save()
+
                 for offer in product.offers.all():
                     ProductOfferItem.objects.filter(
                         offer=offer, product=product, use_selected_variant=False,
@@ -131,7 +122,37 @@ def product_edit(request, pk=None):
                     elif main_item.variant_id is not None:
                         main_item.variant = None
                         main_item.save(update_fields=("variant",))
-            messages.success(request, "Produit créé avec ses offres et médias." if is_new else "Produit et offres mis à jour.")
+
+                if not save_continue:
+                    media.instance = product
+                    primary_form = next((
+                        item for item in media.forms
+                        if item.cleaned_data and item.cleaned_data.get("is_primary")
+                        and not item.cleaned_data.get("DELETE")
+                    ), None)
+                    # Libérer la contrainte unique avant de promouvoir un autre média.
+                    if primary_form:
+                        product.media_items.update(is_primary=False)
+                    media.save()
+                    if primary_form and primary_form.instance.pk:
+                        product.media_items.exclude(pk=primary_form.instance.pk).update(is_primary=False)
+                        primary_form.instance.is_primary = True
+                        primary_form.instance.save(update_fields=("is_primary",))
+                    else:
+                        primary = product.media_items.filter(is_primary=True).order_by("position", "pk").first()
+                        if primary:
+                            product.media_items.exclude(pk=primary.pk).update(is_primary=False)
+
+            if save_continue:
+                messages.success(
+                    request,
+                    "Informations, variantes et offres enregistrées. Vous pouvez maintenant ajouter les photos et vidéos.",
+                )
+                return redirect("dashboard:product_edit", pk=product.pk)
+            messages.success(
+                request,
+                "Produit créé avec ses offres et médias." if is_new else "Produit et offres mis à jour.",
+            )
             return redirect("dashboard:products")
     else:
         form = ProductForm(instance=instance)
@@ -142,7 +163,6 @@ def product_edit(request, pk=None):
         "form": form, "variants": variants, "media": media, "offers": offers,
         "product": instance, "is_new": is_new,
     })
-
 
 @dashboard_admin_required
 @require_POST
