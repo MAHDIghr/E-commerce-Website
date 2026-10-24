@@ -1,0 +1,21 @@
+<dialog class="offer-picker" id="offer-picker" aria-labelledby="offer-picker-title">
+    <div class="offer-picker__header">
+        <div>
+            <p class="offer-picker__eyebrow">MY LINE COLLECTION · VOTRE SÉLECTION</p>
+            <h2 id="offer-picker-title">Choisissez votre offre</h2>
+            <p class="offer-picker__intro" id="offer-picker-product">Une offre adaptée à vos envies.</p>
+        </div>
+        <button type="button" class="offer-picker__close" data-action="close-offer-picker" aria-label="Fermer la sélection des offres">×</button>
+    </div>
+    <form id="offer-picker-form">
+        <fieldset class="offer-picker__fieldset">
+            <legend class="visually-hidden">Offres disponibles</legend>
+            <div class="offer-picker__options" id="offer-picker-options"></div>
+        </fieldset>
+        <p class="offer-picker__status" id="offer-picker-status" role="status" aria-live="polite" hidden></p>
+        <div class="offer-picker__footer">
+            <p><span aria-hidden="true">◇</span> Prix et disponibilité vérifiés avant l’ajout au panier.</p>
+            <button type="submit" class="button button-primary button-block" id="offer-picker-submit">Ajouter l’offre au panier</button>
+        </div>
+    </form>
+</dialog>
