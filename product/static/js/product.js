@@ -171,52 +171,25 @@
     const sync = () => {
         const o = offerIn().dataset;
         const color = colorIn().dataset;
-        const usesVariantPrice = o.usesVariantPrice === "true";
-        let priceLabel = usesVariantPrice ? color.priceLabel : o.label;
-        let oldLabel = usesVariantPrice ? color.oldLabel : o.old;
-        let discount = usesVariantPrice ? color.off : o.off;
-
-        // Pour un lot incluant le sac choisi, le prix de référence suit la variante sélectionnée.
-        if (!usesVariantPrice && o.includesSelectedVariant === "true" && o.referenceTotal !== "") {
-            const mainQuantity = Math.max(1, Number(o.mainQuantity || 1));
-            const reference = Number(o.referenceTotal) + (Number(color.price) - Number(o.baseVariantPrice)) * mainQuantity;
-            const offerPrice = Number(o.price);
-            if (Number.isFinite(reference) && reference > offerPrice) {
-                oldLabel = reference.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
-                discount = Math.round((1 - offerPrice / reference) * 100);
-            } else {
-                oldLabel = "";
-                discount = 0;
-            }
-        }
+        const priceLabel = o.label;
+        const oldLabel = o.old || "";
+        const discount = Number(o.off || 0);
 
         $("#price-now").textContent = priceLabel;
         $("#price-old").lastChild.textContent = oldLabel;
         $("#price-old").hidden = !oldLabel;
-        $("#price-off").textContent = Number(discount) > 0 ? `-${discount} %` : "";
-        $("#price-off").hidden = Number(discount) <= 0;
+        $("#price-off").textContent = discount > 0 ? `-${discount} %` : "";
+        $("#price-off").hidden = discount <= 0;
         $("#sbar-price").textContent = priceLabel;
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = color.label;
 
-        // Les prix barrés des cartes d'offres suivent aussi la variante sélectionnée.
+        // Le prix est propre à l'offre choisie et ne varie pas avec la couleur.
         $$('input[name="offer"]').forEach((input) => {
-            const offerData = input.dataset;
-            let cardOldLabel = offerData.old;
-            if (offerData.usesVariantPrice === "true") {
-                cardOldLabel = color.oldLabel;
-            } else if (offerData.includesSelectedVariant === "true" && offerData.referenceTotal !== "") {
-                const quantity = Math.max(1, Number(offerData.mainQuantity || 1));
-                const reference = Number(offerData.referenceTotal)
-                    + (Number(color.price) - Number(offerData.baseVariantPrice)) * quantity;
-                cardOldLabel = Number.isFinite(reference) && reference > Number(offerData.price)
-                    ? reference.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"
-                    : "";
-            }
             const oldPrice = input.closest(".offer").querySelector(".offer__price del");
             if (oldPrice) {
-                oldPrice.textContent = cardOldLabel || "";
-                oldPrice.hidden = !cardOldLabel;
+                oldPrice.textContent = input.dataset.old || "";
+                oldPrice.hidden = !input.dataset.old;
             }
         });
     };
