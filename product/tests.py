@@ -146,6 +146,19 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'id="cta-final">Acheter</button>')
         self.assertContains(response, 'class="button button-primary js-buy"')
 
+        # Régression : querySelector renvoyait un seul élément et cassait les CTA au chargement.
+        script_path = finders.find("js/product.js")
+        with open(script_path, encoding="utf-8") as script_file:
+            script_source = script_file.read()
+        self.assertEqual(script_source.count('$(".js-add, .js-buy").forEach'), 2)
+
+        css_path = finders.find("css/product.css")
+        with open(css_path, encoding="utf-8") as css_file:
+            css_source = css_file.read()
+        self.assertIn(".buy__actions .cta-icon {", css_source)
+        self.assertIn("background: var(--color-ink);", css_source)
+        self.assertIn("color: #fff;", css_source)
+
     def test_product_detail_exposes_configured_accessories_for_the_optional_gift_popup(self):
         accessory = Product.objects.create(
             category=self.category, name="Porte-cartes beige",
