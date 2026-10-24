@@ -1,7 +1,7 @@
 """Modèles métier du catalogue My Line Collection.
 
-Les prix et les stocks sont portés par les variantes, jamais par Product.
-Les contenus éditoriaux restent rattachés au produit afin d'être administrables.
+Les prix sont portés exclusivement par les offres commerciales. Les variantes décrivent
+les déclinaisons de couleur et leur stock. Les contenus éditoriaux restent rattachés au produit.
 """
 from decimal import Decimal
 import re
@@ -100,8 +100,8 @@ class Product(models.Model):
 
     @property
     def display_price(self):
-        variant = self.default_variant
-        return variant.price if variant else None
+        offer = self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        return offer.price if offer else None
 
     @property
     def approved_reviews(self):
@@ -114,12 +114,6 @@ class ProductVariant(models.Model):
     color_name = models.CharField("Couleur", max_length=80, blank=True)
     color_slug = models.SlugField("Identifiant de couleur", max_length=80, blank=True)
     color_code = models.CharField("Code couleur", max_length=7, blank=True)
-    price = models.DecimalField("Prix de vente (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
-    compare_at_price = models.DecimalField(
-        "Prix de référence (€)", max_digits=10, decimal_places=2, null=True, blank=True,
-        validators=[MinValueValidator(Decimal("0.00"))],
-        help_text="Facultatif. Ne doit être renseigné que si le prix de référence est justifié.",
-    )
     stock_quantity = models.PositiveIntegerField("Stock", default=0)
     is_active = models.BooleanField("Active", default=True, db_index=True)
     position = models.PositiveIntegerField("Position", default=0)
@@ -133,11 +127,6 @@ class ProductVariant(models.Model):
                 name="unique_product_color_slug",
             ),
             models.CheckConstraint(condition=Q(stock_quantity__gte=0), name="variant_stock_nonnegative"),
-            models.CheckConstraint(condition=Q(price__gte=0), name="variant_price_nonnegative"),
-            models.CheckConstraint(
-                condition=Q(compare_at_price__isnull=True) | Q(compare_at_price__gt=models.F("price")),
-                name="variant_ref_price_gt_sale",
-            ),
         ]
         indexes = [models.Index(fields=("product", "is_active", "position"), name="variant_product_active_pos_idx")]
         verbose_name = "variante"
@@ -145,8 +134,6 @@ class ProductVariant(models.Model):
 
     def clean(self):
         super().clean()
-        if self.compare_at_price is not None and self.price is not None and self.compare_at_price <= self.price:
-            raise ValidationError({"compare_at_price": "Le prix de référence doit être supérieur au prix de vente."})
         if self.color_code and not re.fullmatch(r"#[0-9a-fA-F]{6}", self.color_code):
             raise ValidationError({"color_code": "Utilisez un code hexadécimal au format #RRGGBB."})
 
