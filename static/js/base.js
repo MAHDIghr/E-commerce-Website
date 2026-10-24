@@ -168,7 +168,6 @@ if (searchForm && searchInput) {
 
 /* Panier invité : session Django, prix et disponibilité recalculés côté serveur. */
 
-const cartTrigger = document.querySelector('[data-action="open-cart"]');
 const cartDrawer = document.querySelector("#cart-drawer");
 const cartBackdrop = document.querySelector("#cart-backdrop");
 const cartClose = document.querySelector('[data-action="close-cart"]');
@@ -274,7 +273,7 @@ async function removeFromCart(key) { try { await mutateCart({ action: "remove", 
 function openCart() { if (!cartDrawer) return; cartDrawer.classList.add("is-open"); if (cartBackdrop) cartBackdrop.classList.add("is-open"); cartDrawer.setAttribute("aria-hidden", "false"); }
 function closeCart() { if (!cartDrawer) return; cartDrawer.classList.remove("is-open"); if (cartBackdrop) cartBackdrop.classList.remove("is-open"); cartDrawer.setAttribute("aria-hidden", "true"); }
 function bumpCartIcon() { cartActionButtons.forEach((b) => { b.classList.remove("is-bumping"); void b.offsetWidth; b.classList.add("is-bumping"); }); }
-if (cartTrigger) cartTrigger.addEventListener("click", openCart);
+cartActionButtons.forEach((button) => button.addEventListener("click", openCart));
 if (cartClose) cartClose.addEventListener("click", closeCart);
 if (cartBackdrop) cartBackdrop.addEventListener("click", closeCart);
 if (cartClearButton) cartClearButton.addEventListener("click", async () => { try { await mutateCart({ action: "clear" }); showCartStatus("Le panier a été vidé."); } catch (e) {} });
