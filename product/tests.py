@@ -86,7 +86,7 @@ class CatalogViewTests(TestCase):
             category=self.category, name="Cabas camel", slug="cabas-camel",
             is_active=True, is_new=True,
         )
-        ProductVariant.objects.create(
+        self.variant = ProductVariant.objects.create(
             product=self.product, sku="CABAS-CAMEL", color_name="Camel",
             color_slug="camel", color_code="#B07A4A",
             price=Decimal("89.90"), stock_quantity=4,
@@ -96,14 +96,32 @@ class CatalogViewTests(TestCase):
             source_url="https://cdn.example.test/cabas.webp",
             alt_text="Cabas camel de face", is_primary=True,
         )
-        offer = ProductOffer.objects.create(
+        self.offer = ProductOffer.objects.create(
             product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
             display_delivery_label=ProductOffer.DELIVERY_PAID, price=Decimal("89.90"),
             is_featured=True,
         )
         ProductOfferItem.objects.create(
-            offer=offer, product=self.product, use_selected_variant=True, quantity=1,
+            offer=self.offer, product=self.product, use_selected_variant=True, quantity=1,
         )
+
+    def test_product_detail_sets_csrf_cookie_and_allows_secure_cart_add(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", client.cookies)
+        token = client.cookies["csrftoken"].value
+        cart_response = client.post(
+            reverse("shop:cart_mutation"),
+            data=__import__("json").dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk, "quantity": 1,
+            }),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(cart_response.status_code, 200)
+        self.assertEqual(cart_response.json()["count"], 1)
 
     def test_catalog_receives_database_products_and_categories(self):
         response = self.client.get(reverse("shop:catalog"))
