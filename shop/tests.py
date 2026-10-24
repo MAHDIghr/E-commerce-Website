@@ -36,6 +36,21 @@ class CartAndSearchTests(TestCase):
         )
         self.offer = offer
 
+    def test_cart_api_exposes_fields_consumed_by_cart_bar(self):
+        response = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add", "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk, "quantity": 2,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["items"][0]
+        self.assertEqual(item["quantity"], 2)
+        self.assertEqual(item["unit_price"], "89.90")
+        self.assertEqual(item["line_total"], "179.80")
+
     def test_cart_uses_server_price_and_ignores_client_price(self):
         response = self.client.post(
             reverse("shop:cart_mutation"),
