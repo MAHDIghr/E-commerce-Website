@@ -58,15 +58,14 @@ class CatalogModelTests(TestCase):
         with self.assertRaises(ValidationError):
             item.full_clean()
 
-    def test_media_variant_must_belong_to_same_product(self):
-        other = Product.objects.create(category=self.category, name="Portefeuille", slug="portefeuille")
+    def test_product_media_is_independent_of_variants(self):
         media = ProductMedia(
-            product=other, variant=self.variant,
-            source_url="https://cdn.example.test/portefeuille.webp",
-            alt_text="Portefeuille beige",
+            product=self.product,
+            source_url="https://cdn.example.test/cabas.webp",
+            alt_text="Cabas camel",
         )
-        with self.assertRaises(ValidationError):
-            media.full_clean()
+        media.full_clean()
+        self.assertFalse(hasattr(media, "variant"))
 
 
 class CatalogViewTests(TestCase):
@@ -161,10 +160,7 @@ class CatalogViewTests(TestCase):
         self.assertEqual(detail.status_code, 404)
 
     def test_product_without_common_image_is_not_published(self):
-        variant = self.product.variants.first()
-        media = self.product.media_items.get()
-        media.variant = variant
-        media.save(update_fields=["variant"])
+        self.product.media_items.all().delete()
         response = self.client.get(reverse("shop:catalog"))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, '"id": "cabas-camel"')
@@ -188,16 +184,14 @@ class CatalogViewTests(TestCase):
         variant = self.product.variants.first()
         variant.is_active = False
         variant.save(update_fields=["is_active"])
-        media = self.product.media_items.get()
-        media.variant = variant
-        media.save(update_fields=["variant"])
+        self.product.media_items.all().delete()
 
         model_admin = ProductAdmin(Product, admin.site)
         diagnostic = str(model_admin.catalog_publication_diagnostics(self.product))
         self.assertIn("Produit désactivé", diagnostic)
         self.assertIn("Catégorie inactive", diagnostic)
         self.assertIn("Aucune variante active", diagnostic)
-        self.assertIn("Aucune image commune valide", diagnostic)
+        self.assertIn("Aucune image produit valide", diagnostic)
         self.assertIn("Aucune offre active valide", diagnostic)
         self.assertIn("cochez « Nouveauté »", diagnostic)
 
