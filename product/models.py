@@ -13,6 +13,44 @@ from django.db.models import F, Q
 from urllib.parse import urlparse
 
 from django.utils import timezone
+from PIL import Image, UnidentifiedImageError
+
+
+MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_IMAGE_DIMENSION = 6000
+MAX_UPLOAD_IMAGE_PIXELS = 25_000_000
+
+
+def _validate_uploaded_image(image_file, field_name):
+    """Limite taille et dimensions des images reçues via les formulaires Django."""
+    if not image_file:
+        return
+    try:
+        if image_file.size > MAX_UPLOAD_IMAGE_BYTES:
+            raise ValidationError({
+                field_name: "L'image dépasse la taille maximale autorisée de 10 Mo."
+            })
+        image_file.open("rb")
+        with Image.open(image_file) as image:
+            width, height = image.size
+            if (
+                width > MAX_UPLOAD_IMAGE_DIMENSION
+                or height > MAX_UPLOAD_IMAGE_DIMENSION
+                or width * height > MAX_UPLOAD_IMAGE_PIXELS
+            ):
+                raise ValidationError({
+                    field_name: "Les dimensions de l'image dépassent les limites autorisées (6 000 px par côté et 25 mégapixels)."
+                })
+            image.verify()
+    except ValidationError:
+        raise
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise ValidationError({field_name: "Le fichier envoyé n'est pas une image valide."}) from exc
+    finally:
+        try:
+            image_file.seek(0)
+        except (AttributeError, OSError):
+            pass
 
 
 def _require_https(value, field_name):
@@ -38,6 +76,9 @@ class Category(models.Model):
     def clean(self):
         super().clean()
         _require_https(self.image_url, "image_url")
+        _validate_uploaded_image(self.image, "image")
+        _validate_uploaded_image(self.image, "image")
+        _validate_uploaded_image(self.image, "image")
 
     def __str__(self):
         return self.name
@@ -214,6 +255,7 @@ class ProductMedia(models.Model):
     def clean(self):
         super().clean()
         _require_https(self.source_url, "source_url")
+        _validate_uploaded_image(self.image, "image")
         _require_https(self.poster_url, "poster_url")
         if self.media_type == self.IMAGE and not (self.image or self.source_url):
             raise ValidationError({"image": "Téléversez une image ou renseignez une URL externe."})
