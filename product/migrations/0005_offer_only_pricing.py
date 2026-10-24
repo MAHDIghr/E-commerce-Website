@@ -3,6 +3,19 @@ from decimal import Decimal
 from django.db import migrations, models
 
 
+def normalize_primary_media(apps, schema_editor):
+    ProductMedia = apps.get_model("product", "ProductMedia")
+    db = schema_editor.connection.alias
+    product_ids = ProductMedia.objects.using(db).filter(is_primary=True).values_list("product_id", flat=True).distinct()
+    for product_id in product_ids:
+        primary_ids = list(
+            ProductMedia.objects.using(db).filter(product_id=product_id, is_primary=True)
+            .order_by("position", "pk").values_list("pk", flat=True)
+        )
+        if len(primary_ids) > 1:
+            ProductMedia.objects.using(db).filter(pk__in=primary_ids[1:]).update(is_primary=False)
+
+
 def ensure_offer_prices(apps, schema_editor):
     """Move any legacy variant price into an Essential offer before removing the fields."""
     Product = apps.get_model("product", "Product")
@@ -46,6 +59,17 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(ensure_offer_prices, migrations.RunPython.noop),
+        migrations.RunPython(normalize_primary_media, migrations.RunPython.noop),
+        migrations.RemoveConstraint(model_name="productmedia", name="one_primary_common_media"),
+        migrations.RemoveConstraint(model_name="productmedia", name="one_primary_variant_media"),
+        migrations.AddConstraint(
+            model_name="productmedia",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(is_primary=True),
+                fields=("product",),
+                name="one_primary_media_per_product",
+            ),
+        ),
         migrations.RemoveConstraint(model_name="productvariant", name="variant_price_nonnegative"),
         migrations.RemoveConstraint(model_name="productvariant", name="variant_ref_price_gt_sale"),
         migrations.RemoveField(model_name="productvariant", name="compare_at_price"),
