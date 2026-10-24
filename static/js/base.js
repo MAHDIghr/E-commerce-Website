@@ -415,8 +415,7 @@ function renderOfferAccessories(offer) {
     if (!offerPickerAccessories || !offerPickerAccessoryList) return;
     offerPickerAccessoryList.replaceChildren();
     const accessories = Array.isArray(offer && offer.accessories) ? offer.accessories : [];
-    const hasAvailableAccessory = accessories.some((accessory) => accessory && accessory.available);
-    offerPickerAccessories.hidden = !hasAvailableAccessory;
+    offerPickerAccessories.hidden = !accessories.length;
     if (!accessories.length) return;
 
     accessories.forEach((accessory) => {
@@ -468,8 +467,8 @@ function chooseProductOffer(product, offers) {
     if (offerPickerTitle) offerPickerTitle.textContent = offers.length > 1 ? "Choisissez votre offre" : "Personnalisez votre offre";
     if (offerPickerSubmit) offerPickerSubmit.textContent = "Confirmer ma sélection";
     if (offerPickerProduct) offerPickerProduct.textContent = product.name
-        ? `Choisissez votre formule et, si vous le souhaitez, les accessoires offerts avec ${product.name}.`
-        : "Choisissez votre formule et vos accessoires offerts.";
+        ? `Choisissez votre formule et sélectionnez tous les accessoires inclus avec ${product.name}.`
+        : "Choisissez votre formule et sélectionnez tous les accessoires inclus.";
     if (offerPickerStatus) { offerPickerStatus.hidden = true; offerPickerStatus.textContent = ""; }
 
     offers.forEach((offer, index) => {
@@ -557,6 +556,19 @@ if (offerPickerForm) {
         const selectedItemIds = [...offerPickerForm.querySelectorAll('input[name="selected-accessory"]:checked')]
             .map((checkbox) => Number(checkbox.value))
             .filter((id) => Number.isSafeInteger(id) && id > 0);
+        const accessories = Array.isArray(selectedOffer && selectedOffer.accessories) ? selectedOffer.accessories : [];
+        const selectedIds = new Set(selectedItemIds);
+        const unavailable = accessories.some((item) => !item || !item.available);
+        const missing = accessories.some((item) => !item || !selectedIds.has(Number(item.item_id)));
+        if (unavailable || missing) {
+            if (offerPickerStatus) {
+                offerPickerStatus.textContent = unavailable
+                    ? "Un accessoire inclus est indisponible. Cette offre ne peut pas être ajoutée au panier pour le moment."
+                    : "Sélectionnez tous les accessoires inclus avant de continuer.";
+                offerPickerStatus.hidden = false;
+            }
+            return;
+        }
         finishOfferPicker({ offerId: Number(selected.value), selectedItemIds, offer: selectedOffer });
     });
 }
