@@ -318,7 +318,9 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
         return None
 
     fixed_items = {item.pk: item for item in offer_items if not item.use_selected_variant}
-    if any(item_id not in fixed_items for item_id in selected_item_ids):
+    # Tous les composants secondaires configurés dans l'offre sont obligatoires.
+    # La validation serveur empêche de contourner la sélection depuis le navigateur.
+    if set(selected_item_ids) != set(fixed_items):
         return None
 
     # Regrouper les composants par variante : plusieurs composants peuvent consommer
@@ -401,7 +403,7 @@ def _cart_stock_conflicts(state):
 @require_GET
 @ensure_csrf_cookie
 def offer_options(request, slug):
-    """Expose les offres valides et leurs accessoires optionnels pour une variante."""
+    """Expose les offres valides avec tous leurs composants obligatoires pour une variante."""
     product = published_products().filter(slug=slug).first()
     if product is None:
         return JsonResponse({"error": "Produit introuvable ou indisponible."}, status=404)
@@ -439,11 +441,13 @@ def offer_options(request, slug):
     ).order_by("position", "pk")
 
     for offer in queryset:
-        details = _line_details(variant.pk, offer.pk, 1)
-        if not details or not details["available"]:
-            continue
         offer_items = list(offer.items.all())
         main_item = next((item for item in offer_items if item.use_selected_variant), None)
+        required_item_ids = [item.pk for item in offer_items if not item.use_selected_variant]
+        # Vérifie le stock de l'offre avec tous ses composants obligatoires.
+        details = _line_details(variant.pk, offer.pk, 1, required_item_ids)
+        if not details or not details["available"]:
+            continue
         if main_item is None or main_item.product_id != product.pk:
             continue
         accessories = [
@@ -596,7 +600,9 @@ def cart_mutation(request):
 
         details = _line_details(variant_id, offer_id, combined_quantity, selected_item_ids)
         if details is None:
-            return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
+            return JsonResponse({
+                "error": "Cette offre n'est plus disponible ou tous ses accessoires inclus n'ont pas été sélectionnés."
+            }, status=400)
         proposed_state = dict(state)
         proposed_state[key] = combined_quantity
         conflicts = _cart_stock_conflicts(proposed_state)
@@ -621,7 +627,9 @@ def cart_mutation(request):
                 return JsonResponse({"error": "La quantité maximale est de 10 par ligne."}, status=400)
             details = _line_details(variant_id, offer_id, quantity, selected_item_ids)
             if details is None:
-                return JsonResponse({"error": "Ce produit ou cette offre n'est plus disponible."}, status=400)
+                return JsonResponse({
+                "error": "Cette offre n'est plus disponible ou tous ses accessoires inclus n'ont pas été sélectionnés."
+            }, status=400)
             if quantity >= state[key]:
                 proposed_state = dict(state)
                 proposed_state[key] = quantity
