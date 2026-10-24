@@ -102,6 +102,9 @@ def product_edit(request, pk=None):
                     item for item in media.forms
                     if item.cleaned_data and item.cleaned_data.get("is_primary") and not item.cleaned_data.get("DELETE")
                 ), None)
+                # Libérer la contrainte unique avant de promouvoir un autre média.
+                if primary_form:
+                    product.media_items.update(is_primary=False)
                 media.save()
                 if primary_form and primary_form.instance.pk:
                     product.media_items.exclude(pk=primary_form.instance.pk).update(is_primary=False)
