@@ -98,10 +98,13 @@ def search_suggestions(request):
             continue
         media = next(iter(product.media_items.all()), None)
         image = (media.image.url if media and media.image else media.source_url) if media else ""
+        offer = product.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        if offer is None:
+            continue
         results.append({
             "name": product.name,
             "category": product.category.name,
-            "price": f"{variant.price:.2f}",
+            "price": f"{offer.price:.2f}",
             "image": image,
             "url": f"/produit/{product.slug}/",
         })
@@ -148,7 +151,7 @@ def _cart_state(request):
 
 def _line_details(variant_id, offer_id, quantity):
     """Retourne une ligne recalculée depuis le catalogue, ou None si elle n'est plus valide."""
-    if quantity < 1 or quantity > MAX_CART_QUANTITY:
+    if quantity < 1 or quantity > MAX_CART_QUANTITY or not offer_id:
         return None
 
     variant = ProductVariant.objects.select_related("product", "product__category").filter(
@@ -209,11 +212,6 @@ def _line_details(variant_id, offer_id, quantity):
         title = f"{variant.product.name} — {offer.title}"
         if variant.color_name:
             title += f" ({variant.color_name})"
-    else:
-        unit_price = variant.price
-        title = f"{variant.product.name} — {variant.color_name}" if variant.color_name else variant.product.name
-        max_available = variant.stock_quantity
-
     media = ProductMedia.objects.filter(
         product_id=variant.product_id, variant__isnull=True, media_type=ProductMedia.IMAGE,
     ).order_by("-is_primary", "position", "pk").first()
@@ -274,7 +272,7 @@ def offer_options(request, slug):
 
         components = []
         offer_items = list(offer.items.all())
-        reference_total = Decimal("0.00")
+        reference_total = offer.price
         for item in offer_items:
             component = variant if item.use_selected_variant else item.variant
             if component is None:
@@ -285,7 +283,7 @@ def offer_options(request, slug):
                 "quantity": item.quantity,
                 "variant_name": component.color_name or "",
             })
-            reference_total += component.price * item.quantity
+
         if not components:
             continue
 
@@ -298,8 +296,8 @@ def offer_options(request, slug):
             "delivery_label": offer.get_display_delivery_label_display(),
             "featured": offer.is_featured,
             "price": f"{unit_price:.2f}",
-            "reference_total": f"{reference_total:.2f}",
-            "saving": f"{saving:.2f}",
+            "reference_total": f"{unit_price:.2f}",
+            "saving": "0.00",
             "components": components,
             "component_count": sum(component["quantity"] for component in components),
             "uses_variant_price": False,
