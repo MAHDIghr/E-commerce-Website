@@ -51,6 +51,7 @@ def detail(request, slug):
     offers = []
     for offer_obj in product.offers.all():
         lines = []
+        accessories = []
         offer_items = list(offer_obj.items.all())
         invalid_offer = not any(item.use_selected_variant for item in offer_items)
         for item in offer_items:
@@ -58,25 +59,53 @@ def detail(request, slug):
                 if (
                     item.product_id != product.pk
                     or item.variant_id is not None
+                    or item.quantity < 1
                     or default_variant.stock_quantity < item.quantity
                 ):
                     invalid_offer = True
                     break
-                component_variant = default_variant
+                lines.append(f"{item.product.name} × {item.quantity}" if item.quantity > 1 else item.product.name)
             else:
                 if (
                     item.product_id == product.pk
                     or not item.variant_id
                     or item.variant.product_id != item.product_id
                     or not item.variant.is_active
-                    or item.variant.stock_quantity < item.quantity
+                    or item.quantity < 1
                     or not item.product.is_published
                     or not item.product.category.is_active
                 ):
                     invalid_offer = True
                     break
-                component_variant = item.variant
-            lines.append(f"{item.product.name} × {item.quantity}" if item.quantity > 1 else item.product.name)
+                media_item = ProductMedia.objects.filter(
+                    product_id=item.product_id, media_type=ProductMedia.IMAGE,
+                ).order_by("-is_primary", "position", "pk").first()
+                accessory_image = (
+                    media_item.image.url if media_item and media_item.image else media_item.source_url
+                ) if media_item else ""
+                accessory_offers = ProductOffer.objects.filter(
+                    product_id=item.product_id, is_active=True,
+                    items__product_id=item.product_id, items__use_selected_variant=True,
+                    items__variant__isnull=True,
+                ).distinct()
+                essential = accessory_offers.filter(
+                    badge=ProductOffer.BADGE_ESSENTIAL,
+                ).order_by("position", "pk").first()
+                standalone_offer = essential or accessory_offers.order_by(
+                    "-is_featured", "position", "pk",
+                ).first()
+                accessories.append({
+                    "item_id": item.pk,
+                    "product_id": item.product_id,
+                    "slug": item.product.slug,
+                    "name": item.product.name,
+                    "variant_name": item.variant.color_name or "",
+                    "image": accessory_image,
+                    "quantity": item.quantity,
+                    "original_price": float(standalone_offer.price) if standalone_offer else None,
+                    "available": item.variant.stock_quantity >= item.quantity,
+                    "available_quantity": item.variant.stock_quantity // item.quantity,
+                })
         # Les offres incomplètes ou incohérentes ne sont jamais exposées au client.
         if not lines or invalid_offer:
             continue
@@ -92,7 +121,8 @@ def detail(request, slug):
         offers.append({
             "id": str(offer_obj.pk),
             "title": offer_obj.title,
-            "items": " + ".join(lines),
+            "items": " + ".join(lines) + (" · Accessoires offerts en option" if accessories else ""),
+            "accessories": accessories,
             "price": float(offer_obj.price),
             "old": float(old_price) if old_price else None,
             "reference_total": float(old_price) if old_price is not None else None,
@@ -106,6 +136,7 @@ def detail(request, slug):
             "includes_selected_variant": any(item.use_selected_variant for item in offer_items),
             "uses_variant_price": False,
             "main_quantity": sum(item.quantity for item in offer_items if item.use_selected_variant),
+            "has_accessories": bool(accessories),
         })
 
     if not offers:
