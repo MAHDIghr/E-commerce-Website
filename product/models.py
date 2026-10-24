@@ -346,6 +346,11 @@ class ProductOffer(models.Model):
                 condition=Q(is_active=True),
                 name="unique_active_offer_badge",
             ),
+            models.UniqueConstraint(
+                fields=("product",),
+                condition=Q(is_featured=True),
+                name="unique_featured_offer_per_product",
+            ),
         ]
         verbose_name = "offre"
         verbose_name_plural = "offres"
