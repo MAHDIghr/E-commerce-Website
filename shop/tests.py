@@ -94,7 +94,7 @@ class CartAndSearchTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_selected_variant_offer_uses_current_variant_price(self):
+    def test_configured_offer_price_remains_authoritative_when_variant_price_changes(self):
         self.variant.price = Decimal("99.90")
         self.variant.save(update_fields=["price"])
         response = self.client.post(
@@ -106,8 +106,8 @@ class CartAndSearchTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["subtotal"], "99.90")
-        self.assertEqual(response.json()["items"][0]["unit_price"], "99.90")
+        self.assertEqual(response.json()["subtotal"], "89.90")
+        self.assertEqual(response.json()["items"][0]["unit_price"], "89.90")
         self.assertEqual(response.json()["items"][0]["components"][0]["name"], self.product.name)
 
     def test_cart_mutations_require_csrf(self):
