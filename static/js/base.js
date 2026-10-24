@@ -241,7 +241,7 @@ function buildCartItemNode(item) {
     name.appendChild(productLink);
     const price = document.createElement("p");
     price.className = "cart-item__price";
-    price.textContent = `${formatPrice(Number(item.unit_price))} / offre`;
+    price.textContent = `${formatPrice(Number(item.unit_price))} / ${item.offer_id ? "offre" : "article"}`;
     const qtyWrap = document.createElement("div"); qtyWrap.className = "cart-item__qty";
     const minus = document.createElement("button"); minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", "Diminuer la quantité"); minus.addEventListener("click", async () => { minus.disabled = true; await updateQuantity(item.key, item.quantity - 1); if (minus.isConnected) minus.disabled = false; });
     const qty = document.createElement("span"); qty.textContent = String(item.quantity);
@@ -440,6 +440,7 @@ if (offerPicker) offerPicker.addEventListener("click", (event) => {
 });
 
 async function addProductFromCard(button) {
+    if (offerPicker && (offerPicker.open || resolveOfferPicker)) return false;
     const card = button && button.closest("[data-product-slug]");
     if (!card) {
         showCartStatus("Impossible d'identifier ce produit. Ouvrez sa fiche pour réessayer.", true);
