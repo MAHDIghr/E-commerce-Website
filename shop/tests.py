@@ -378,6 +378,22 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(gift["unit_price"], "0.00")
         self.assertTrue(gift["available"])
 
+    def test_cart_rejects_offer_when_required_accessory_is_not_selected(self):
+        accessory, accessory_variant, offer_item = self._create_offer_accessory()
+        response = self.client.post(
+            reverse("shop:cart_mutation"),
+            data=json.dumps({
+                "action": "add",
+                "variant_id": self.variant.pk,
+                "offer_id": self.offer.pk,
+                "quantity": 1,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("accessoires inclus", response.json()["error"].lower())
+        self.assertEqual(self.client.get(reverse("shop:cart_api")).json()["count"], 0)
+
     def test_selected_offer_accessory_is_free_and_does_not_change_offer_subtotal(self):
         accessory, accessory_variant, offer_item = self._create_offer_accessory()
         response = self.client.post(
@@ -402,16 +418,14 @@ class CartAndSearchTests(TestCase):
         self.assertTrue(gift["is_gift"])
         self.assertEqual(gift["image"], "https://cdn.example.test/porte-cartes.webp")
 
-    def test_accessory_out_of_stock_does_not_block_the_main_offer(self):
+    def test_offer_with_out_of_stock_required_accessory_is_not_available_for_quick_add(self):
         accessory, accessory_variant, offer_item = self._create_offer_accessory(stock=0)
         response = self.client.get(
             reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
             {"variant_id": self.variant.pk},
         )
         self.assertEqual(response.status_code, 200)
-        gift = response.json()["offers"][0]["accessories"][0]
-        self.assertFalse(gift["available"])
-        self.assertEqual(response.json()["offers"][0]["price"], "89.90")
+        self.assertEqual(response.json()["offers"], [])
 
     def test_cart_rejects_accessory_not_configured_for_selected_offer(self):
         other_offer = ProductOffer.objects.create(
