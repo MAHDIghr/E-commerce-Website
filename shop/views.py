@@ -205,12 +205,7 @@ def _line_details(variant_id, offer_id, quantity):
             })
 
         max_available = min(max_available_values, default=0)
-        simple_variant_offer = (
-            len(offer_items) == 1
-            and offer_items[0].use_selected_variant
-            and offer_items[0].quantity == 1
-        )
-        unit_price = variant.price if simple_variant_offer else offer.price
+        unit_price = offer.price
         title = f"{variant.product.name} — {offer.title}"
         if variant.color_name:
             title += f" ({variant.color_name})"
