@@ -203,17 +203,39 @@ def _cart_state(request):
 
 
 def _product_reference_price(product):
-    """Prix public de référence d'un accessoire : offre Essentiel, sinon première offre valide."""
-    offers = ProductOffer.objects.filter(
-        product_id=product.pk,
-        is_active=True,
-        items__product_id=product.pk,
-        items__use_selected_variant=True,
-        items__variant__isnull=True,
-    ).distinct()
-    essential = offers.filter(badge=ProductOffer.BADGE_ESSENTIAL).order_by("position", "pk").first()
-    offer = essential or offers.order_by("-is_featured", "position", "pk").first()
-    return (offer.reference_price if offer.reference_price is not None and offer.reference_price > offer.price else offer.price) if offer else None
+    """Prix public de référence d'un accessoire, en réutilisant les offres préchargées si possible."""
+    cached_offers = getattr(product, "_prefetched_objects_cache", {}).get("offers")
+    if cached_offers is not None:
+        offers = [
+            offer for offer in cached_offers
+            if offer.is_active and any(
+                component.product_id == product.pk
+                and component.use_selected_variant
+                and component.variant_id is None
+                and component.quantity > 0
+                for component in offer.items.all()
+            )
+        ]
+        essential = next((offer for offer in offers if offer.badge == ProductOffer.BADGE_ESSENTIAL), None)
+        offer = essential or next(
+            (candidate for candidate in offers if candidate.is_featured),
+            offers[0] if offers else None,
+        )
+    else:
+        offers = ProductOffer.objects.filter(
+            product_id=product.pk,
+            is_active=True,
+            items__product_id=product.pk,
+            items__use_selected_variant=True,
+            items__variant__isnull=True,
+        ).distinct()
+        essential = offers.filter(badge=ProductOffer.BADGE_ESSENTIAL).order_by("position", "pk").first()
+        offer = essential or offers.order_by("-is_featured", "position", "pk").first()
+    return (
+        offer.reference_price
+        if offer and offer.reference_price is not None and offer.reference_price > offer.price
+        else offer.price if offer else None
+    )
 
 
 def _accessory_option(item):
@@ -229,9 +251,14 @@ def _accessory_option(item):
         or not item.product.category.is_active
     ):
         return None
-    media = ProductMedia.objects.filter(
-        product_id=item.product_id, media_type=ProductMedia.IMAGE,
-    ).order_by("-is_primary", "position", "pk").first()
+    cached_media = getattr(item.product, "_prefetched_objects_cache", {}).get("media_items")
+    media = (
+        next((candidate for candidate in cached_media if candidate.media_type == ProductMedia.IMAGE), None)
+        if cached_media is not None
+        else ProductMedia.objects.filter(
+            product_id=item.product_id, media_type=ProductMedia.IMAGE,
+        ).order_by("-is_primary", "position", "pk").first()
+    )
     image = (media.image.url if media and media.image else media.source_url) if media else ""
     reference_price = _product_reference_price(item.product)
     available_quantity = component.stock_quantity // max(1, item.quantity)
@@ -271,6 +298,15 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
 
     offer_items = list(offer.items.select_related(
         "product", "product__category", "variant", "variant__product",
+    ).prefetch_related(
+        Prefetch(
+            "product__media_items",
+            queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk"),
+        ),
+        Prefetch(
+            "product__offers",
+            queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items"),
+        ),
     ).order_by("position", "pk"))
     main_items = [item for item in offer_items if item.use_selected_variant]
     if (
@@ -389,6 +425,15 @@ def offer_options(request, slug):
             "items",
             queryset=ProductOfferItem.objects.select_related(
                 "product", "product__category", "variant", "variant__product",
+            ).prefetch_related(
+                Prefetch(
+                    "product__media_items",
+                    queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk"),
+                ),
+                Prefetch(
+                    "product__offers",
+                    queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items"),
+                ),
             ).order_by("position", "pk"),
         ),
     ).order_by("position", "pk")
