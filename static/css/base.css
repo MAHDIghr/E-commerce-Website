@@ -1085,3 +1085,148 @@ body.cart-open { overflow: hidden; }
 .shipping-progress[hidden],
 .cart-title-count[hidden],
 .cart-status[hidden] { display: none !important; }
+
+
+/* Sélecteur d'offres — dialogue premium partagé par l'accueil et le catalogue. */
+.offer-picker {
+    width: min(94vw, 650px);
+    max-width: 650px;
+    max-height: min(88dvh, 820px);
+    padding: 0;
+    overflow: auto;
+    border: 1px solid #e7dfd5;
+    border-radius: 16px;
+    color: var(--color-ink);
+    background: var(--color-surface);
+    box-shadow: 0 24px 80px rgb(25 20 16 / 24%);
+}
+.offer-picker::backdrop { background: rgb(25 20 16 / 56%); backdrop-filter: blur(3px); }
+.offer-picker__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.35rem 1.4rem 1.15rem;
+    border-bottom: 1px solid var(--color-line);
+    background: linear-gradient(135deg, #fbf8f4, #fff);
+}
+.offer-picker__eyebrow {
+    margin: 0 0 .45rem;
+    color: var(--color-accent-dark);
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .16em;
+}
+.offer-picker__header h2 {
+    margin: 0;
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: clamp(1.4rem, 4vw, 1.9rem);
+    font-weight: 500;
+    line-height: 1.2;
+}
+.offer-picker__intro {
+    margin: .5rem 0 0;
+    color: var(--color-ink-muted);
+    font-size: .83rem;
+    line-height: 1.55;
+}
+.offer-picker__close {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--color-ink);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+.offer-picker__close:hover { background: var(--color-bg-alt); }
+.offer-picker__fieldset { margin: 0; padding: 1rem 1.15rem .4rem; border: 0; }
+.offer-picker__options { display: grid; gap: .65rem; }
+.offer-picker__option {
+    display: flex;
+    align-items: flex-start;
+    gap: .8rem;
+    padding: .95rem 1rem;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.offer-picker__option:has(input:checked) {
+    border-color: var(--color-accent-dark);
+    background: #fbf7f1;
+    box-shadow: 0 0 0 1px var(--color-accent-dark);
+}
+.offer-picker__option input {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin: .18rem 0 0;
+    accent-color: var(--color-accent-dark);
+}
+.offer-picker__option-content { display: grid; flex: 1; min-width: 0; gap: .45rem; }
+.offer-picker__option-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .8rem; }
+.offer-picker__option-title { font-size: .94rem; font-weight: 700; line-height: 1.4; }
+.offer-picker__option-price { flex: 0 0 auto; font-size: 1rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.offer-picker__badge {
+    justify-self: start;
+    padding: .2rem .5rem;
+    border-radius: 3px;
+    background: #eee5d9;
+    color: #6b4b2d;
+    font-size: .63rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.offer-picker__included { color: var(--color-ink-muted); font-size: .78rem; line-height: 1.55; }
+.offer-picker__saving { color: #41634d; font-size: .75rem; font-weight: 600; line-height: 1.45; }
+.offer-picker__status {
+    margin: .5rem 1.4rem 0;
+    color: #8d3028;
+    font-size: .82rem;
+}
+.offer-picker__footer {
+    position: sticky;
+    bottom: 0;
+    padding: .95rem 1.4rem calc(1.15rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-line);
+    background: rgb(255 255 255 / 97%);
+}
+.offer-picker__footer p {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: .4rem;
+    margin: 0 0 .8rem;
+    color: var(--color-ink-muted);
+    font-size: .7rem;
+    line-height: 1.5;
+    text-align: center;
+}
+.offer-picker__footer p span { color: var(--color-accent-dark); }
+.offer-picker__footer .button { min-height: 48px; }
+@media (max-width: 520px) {
+    .offer-picker {
+        width: 100%;
+        max-width: none;
+        max-height: 92dvh;
+        margin: auto 0 0;
+        border-radius: 16px 16px 0 0;
+    }
+    .offer-picker__header { padding: 1.1rem 1rem .95rem; }
+    .offer-picker__fieldset { padding: .85rem .8rem .4rem; }
+    .offer-picker__option { padding: .8rem .75rem; gap: .65rem; }
+    .offer-picker__option-top { gap: .45rem; }
+    .offer-picker__option-title { font-size: .87rem; }
+    .offer-picker__option-price { font-size: .91rem; }
+    .offer-picker__footer { padding: .85rem 1rem calc(.9rem + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .offer-picker__option { transition: none; }
+}
