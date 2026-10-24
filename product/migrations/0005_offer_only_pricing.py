@@ -3,6 +3,19 @@ from decimal import Decimal
 from django.db import migrations, models
 
 
+def normalize_featured_offers(apps, schema_editor):
+    ProductOffer = apps.get_model("product", "ProductOffer")
+    db = schema_editor.connection.alias
+    product_ids = ProductOffer.objects.using(db).filter(is_featured=True).values_list("product_id", flat=True).distinct()
+    for product_id in product_ids:
+        featured_ids = list(
+            ProductOffer.objects.using(db).filter(product_id=product_id, is_featured=True)
+            .order_by("-is_active", "position", "pk").values_list("pk", flat=True)
+        )
+        if len(featured_ids) > 1:
+            ProductOffer.objects.using(db).filter(pk__in=featured_ids[1:]).update(is_featured=False)
+
+
 def normalize_primary_media(apps, schema_editor):
     ProductMedia = apps.get_model("product", "ProductMedia")
     db = schema_editor.connection.alias
@@ -64,6 +77,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(ensure_offer_prices, migrations.RunPython.noop),
         migrations.RunPython(normalize_primary_media, migrations.RunPython.noop),
+        migrations.RunPython(normalize_featured_offers, migrations.RunPython.noop),
         migrations.RemoveConstraint(model_name="productmedia", name="one_primary_common_media"),
         migrations.RemoveConstraint(model_name="productmedia", name="one_primary_variant_media"),
         migrations.AddConstraint(
@@ -72,6 +86,14 @@ class Migration(migrations.Migration):
                 condition=models.Q(is_primary=True),
                 fields=("product",),
                 name="one_primary_media_per_product",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="productoffer",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(is_featured=True),
+                fields=("product",),
+                name="unique_featured_offer_per_product",
             ),
         ),
         migrations.RemoveConstraint(model_name="productvariant", name="variant_price_nonnegative"),
