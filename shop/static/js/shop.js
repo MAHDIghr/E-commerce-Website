@@ -195,14 +195,21 @@
         add.disabled = p.stock <= 0;
         add.setAttribute("aria-label", p.stock <= 0 ? t().unavailable : t().add(p.name));
         add.appendChild(svgIcon([PLUS]));
-        add.addEventListener("click", () => {
-            addToCart({ variantId: p.variantId });
-            add.classList.add("is-added");
-            add.replaceChildren(svgIcon([CHECK]));
-            window.setTimeout(() => {
-                add.classList.remove("is-added");
-                add.replaceChildren(svgIcon([PLUS]));
-            }, 1200);
+        add.addEventListener("click", async () => {
+            if (add.disabled) return;
+            add.disabled = true;
+            const added = await addToCart({ variantId: p.variantId });
+            if (added) {
+                add.classList.add("is-added");
+                add.replaceChildren(svgIcon([CHECK]));
+                window.setTimeout(() => {
+                    add.classList.remove("is-added");
+                    add.replaceChildren(svgIcon([PLUS]));
+                    add.disabled = p.stock <= 0;
+                }, 1200);
+            } else {
+                add.disabled = p.stock <= 0;
+            }
         });
 
         const mediaWrap = el("div");
