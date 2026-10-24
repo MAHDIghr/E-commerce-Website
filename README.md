@@ -986,3 +986,13 @@ python manage.py test home shop product --settings=config.settings.development
 ```
 
 Ces commandes doivent être exécutées dans l’environnement local du projet. Aucun test ni déploiement n’est réputé réussi sans résultat effectivement observé.
+
+
+### Sélection d'offre depuis l'accueil et le catalogue
+
+- Les boutons d'ajout rapide interrogent `shop:offer_options` avec le slug du produit et l'identifiant de la variante active.
+- Le serveur ne renvoie que les offres actives, cohérentes et disponibles, avec leurs prix recalculés côté serveur, leur composition, les économies indicatives et le badge configuré.
+- Une seule offre disponible : ajout direct. Plusieurs offres disponibles : dialogue natif accessible avec choix explicite, prix, contenu et économie éventuelle.
+- Le choix final est envoyé au point d'entrée du panier avec les seuls identifiants de variante et d'offre ; la mutation du panier revalide l'offre et le stock.
+- La fiche produit conserve l'offre et la variante sélectionnées à l'écran. Les erreurs d'initialisation ou de validation sont rendues visibles plutôt que de laisser le bouton sembler inactif.
+- La composition déjà configurée dans une offre est affichée dans le panier. La sélection dynamique d'un article parmi plusieurs choix possibles au sein d'une offre reste une évolution distincte : elle nécessite de définir les choix autorisés dans l'administration et de persister cette composition dans l'identité de ligne du panier.
