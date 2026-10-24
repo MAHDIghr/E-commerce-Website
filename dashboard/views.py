@@ -108,9 +108,7 @@ def product_edit(request, pk=None):
                 offers.save()
 
                 for offer in product.offers.all():
-                    ProductOfferItem.objects.filter(
-                        offer=offer, product=product, use_selected_variant=False,
-                    ).delete()
+                    # Préserver les composants complémentaires configurés dans Django Admin.
                     main_item = ProductOfferItem.objects.filter(
                         offer=offer, product=product, use_selected_variant=True,
                     ).first()
