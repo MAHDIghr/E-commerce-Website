@@ -196,7 +196,11 @@ function showCartStatus(message, isError = false) {
     if (!cartStatus) return; cartStatus.textContent = message || "";
     cartStatus.classList.toggle("is-error", Boolean(isError)); cartStatus.hidden = !message;
 }
-function cartKeyParts(key) { const p = String(key).split(":"); return { variant_id: Number(p[0]), offer_id: Number(p[1] || 0) }; }
+function cartKeyParts(key) {
+    const p = String(key).split(":");
+    const selected = p.length > 2 && p[2] ? p[2].split(",").map(Number).filter(Number.isSafeInteger) : [];
+    return { variant_id: Number(p[0]), offer_id: Number(p[1] || 0), selected_item_ids: selected };
+}
 async function cartRequest(url, method = "GET", payload = null) {
     const opts = { method, credentials: "same-origin", headers: { "Accept": "application/json" } };
     if (payload) { opts.headers["Content-Type"] = "application/json"; opts.headers["X-CSRFToken"] = csrfToken(); opts.body = JSON.stringify(payload); }
@@ -256,13 +260,41 @@ function buildCartItemNode(item) {
     actions.appendChild(total);
     details.append(name, price);
     if (Array.isArray(item.components) && item.components.length) {
-        const components = document.createElement("p");
+        const components = document.createElement("ul");
         components.className = "cart-item__components";
-        components.textContent = "Comprend : " + item.components.map((component) =>
-            (component.quantity > 1 ? `${component.quantity} × ` : "")
-            + component.name
-            + (component.variant_name ? ` — ${component.variant_name}` : "")
-        ).join(" · ");
+        item.components.forEach((component) => {
+            const gift = document.createElement("li");
+            gift.className = "cart-item__gift";
+            const giftImage = document.createElement("img");
+            giftImage.className = "cart-item__gift-image";
+            giftImage.alt = "";
+            giftImage.loading = "lazy";
+            giftImage.decoding = "async";
+            if (component.image) giftImage.src = component.image;
+            else giftImage.hidden = true;
+
+            const giftDetails = document.createElement("span");
+            giftDetails.className = "cart-item__gift-details";
+            const giftName = document.createElement("strong");
+            giftName.textContent = (component.quantity * item.quantity > 1 ? `${component.quantity * item.quantity} × ` : "")
+                + component.name
+                + (component.variant_name ? ` — ${component.variant_name}` : "");
+            const giftPrices = document.createElement("span");
+            giftPrices.className = "cart-item__gift-prices";
+            if (component.original_price !== null && component.original_price !== undefined && component.original_price !== "") {
+                const original = document.createElement("del");
+                original.textContent = formatPrice(Number(component.original_price));
+                giftPrices.appendChild(original);
+            }
+            const free = document.createElement("strong");
+            free.textContent = formatPrice(0);
+            const giftLabel = document.createElement("em");
+            giftLabel.textContent = "OFFERT";
+            giftPrices.append(free, giftLabel);
+            giftDetails.append(giftName, giftPrices);
+            gift.append(giftImage, giftDetails);
+            components.appendChild(gift);
+        });
         details.appendChild(components);
     }
     details.append(qtyWrap, remove);
@@ -327,6 +359,7 @@ async function addToCart(product) {
             action: "add",
             variant_id: Number(product.variantId),
             offer_id: Number(product.offerId || 0),
+            selected_item_ids: Array.isArray(product.selectedItemIds) ? product.selectedItemIds : [],
             quantity: 1,
         });
         if (result) {
@@ -358,9 +391,14 @@ const offerPickerForm = document.querySelector("#offer-picker-form");
 const offerPickerOptions = document.querySelector("#offer-picker-options");
 const offerPickerProduct = document.querySelector("#offer-picker-product");
 const offerPickerStatus = document.querySelector("#offer-picker-status");
+const offerPickerAccessories = document.querySelector("#offer-picker-accessories");
+const offerPickerAccessoryList = document.querySelector("#offer-picker-accessory-list");
+const offerPickerTitle = document.querySelector("#offer-picker-title");
+const offerPickerSubmit = document.querySelector("#offer-picker-submit");
 const offerPickerClose = document.querySelector('[data-action="close-offer-picker"]');
 let resolveOfferPicker = null;
 let offerPickerCancelHandler = null;
+let offerPickerCurrentOffers = [];
 
 function finishOfferPicker(value) {
     if (offerPicker && offerPickerCancelHandler) {
@@ -373,12 +411,64 @@ function finishOfferPicker(value) {
     if (resolve) resolve(value);
 }
 
+function renderOfferAccessories(offer) {
+    if (!offerPickerAccessories || !offerPickerAccessoryList) return;
+    offerPickerAccessoryList.replaceChildren();
+    const accessories = Array.isArray(offer && offer.accessories) ? offer.accessories : [];
+    offerPickerAccessories.hidden = accessories.length === 0;
+    if (!accessories.length) return;
+
+    accessories.forEach((accessory) => {
+        const label = document.createElement("label");
+        label.className = "offer-picker__accessory" + (accessory.available ? "" : " is-unavailable");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.name = "selected-accessory";
+        checkbox.value = String(accessory.item_id);
+        checkbox.disabled = !accessory.available;
+        checkbox.setAttribute("aria-label", `Ajouter ${accessory.name} gratuitement`);
+
+        const image = document.createElement("img");
+        image.alt = "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        if (accessory.image) image.src = accessory.image;
+        else image.hidden = true;
+
+        const copy = document.createElement("span");
+        copy.className = "offer-picker__accessory-copy";
+        const title = document.createElement("strong");
+        title.textContent = accessory.name + (accessory.variant_name ? ` — ${accessory.variant_name}` : "");
+        const quantity = document.createElement("small");
+        quantity.textContent = accessory.quantity > 1 ? `Quantité incluse : ${accessory.quantity}` : "Offert avec votre offre";
+        copy.append(title, quantity);
+
+        const prices = document.createElement("span");
+        prices.className = "offer-picker__accessory-prices";
+        if (accessory.original_price !== null && accessory.original_price !== undefined && accessory.original_price !== "") {
+            const original = document.createElement("del");
+            original.textContent = formatPrice(Number(accessory.original_price));
+            prices.appendChild(original);
+        }
+        const free = document.createElement("strong");
+        free.textContent = formatPrice(0);
+        const labelFree = document.createElement("em");
+        labelFree.textContent = accessory.available ? "OFFERT" : "INDISPONIBLE";
+        prices.append(free, labelFree);
+        label.append(checkbox, image, copy, prices);
+        offerPickerAccessoryList.appendChild(label);
+    });
+}
+
 function chooseProductOffer(product, offers) {
     if (!offerPicker || !offerPickerForm || !offerPickerOptions || !offers.length) return Promise.resolve(null);
+    offerPickerCurrentOffers = offers;
     offerPickerOptions.replaceChildren();
+    if (offerPickerTitle) offerPickerTitle.textContent = offers.length > 1 ? "Choisissez votre offre" : "Personnalisez votre offre";
+    if (offerPickerSubmit) offerPickerSubmit.textContent = "Confirmer ma sélection";
     if (offerPickerProduct) offerPickerProduct.textContent = product.name
-        ? `Choisissez la formule qui vous convient pour ${product.name}.`
-        : "Choisissez la formule qui vous convient.";
+        ? `Choisissez votre formule et, si vous le souhaitez, les accessoires offerts avec ${product.name}.`
+        : "Choisissez votre formule et vos accessoires offerts.";
     if (offerPickerStatus) { offerPickerStatus.hidden = true; offerPickerStatus.textContent = ""; }
 
     offers.forEach((offer, index) => {
@@ -424,7 +514,6 @@ function chooseProductOffer(product, offers) {
             delivery.textContent = offer.delivery_label;
             content.appendChild(delivery);
         }
-
         const saving = Number(offer.saving || 0);
         if (saving > 0) {
             const savingLabel = document.createElement("span");
@@ -434,8 +523,11 @@ function chooseProductOffer(product, offers) {
         }
         label.append(radio, content);
         offerPickerOptions.appendChild(label);
+        radio.addEventListener("change", () => renderOfferAccessories(offers.find((item) => Number(item.id) === Number(radio.value))));
     });
 
+    const initiallySelected = offers.find((item) => item.featured) || offers[0];
+    renderOfferAccessories(initiallySelected);
     return new Promise((resolve) => {
         resolveOfferPicker = resolve;
         offerPickerCancelHandler = (event) => {
@@ -460,7 +552,11 @@ if (offerPickerForm) {
             }
             return;
         }
-        finishOfferPicker(Number(selected.value));
+        const selectedOffer = offerPickerCurrentOffers.find((item) => Number(item.id) === Number(selected.value));
+        const selectedItemIds = [...offerPickerForm.querySelectorAll('input[name="selected-accessory"]:checked')]
+            .map((checkbox) => Number(checkbox.value))
+            .filter((id) => Number.isSafeInteger(id) && id > 0);
+        finishOfferPicker({ offerId: Number(selected.value), selectedItemIds, offer: selectedOffer });
     });
 }
 if (offerPickerClose) offerPickerClose.addEventListener("click", () => finishOfferPicker(null));
@@ -497,15 +593,16 @@ async function addProductFromCard(button) {
             throw new Error("Aucune offre n'est disponible pour cette variante.");
         }
 
-        let offerId;
-        if (payload.offers.length === 1) {
-            offerId = Number(payload.offers[0].id);
+        let selection;
+        const hasAccessories = payload.offers.some((offer) => Array.isArray(offer.accessories) && offer.accessories.length);
+        if (payload.offers.length === 1 && !hasAccessories) {
+            selection = { offerId: Number(payload.offers[0].id), selectedItemIds: [] };
         } else {
-            offerId = await chooseProductOffer(payload.product || {}, payload.offers);
-            if (!offerId) return false;
+            selection = await chooseProductOffer(payload.product || {}, payload.offers);
+            if (!selection || !selection.offerId) return false;
         }
         lastCartTrigger = button;
-        return await addToCart({ variantId, offerId });
+        return await addToCart({ variantId, offerId: selection.offerId, selectedItemIds: selection.selectedItemIds });
     } catch (error) {
         showCartStatus(error.message || "L'ajout au panier a échoué.", true);
         openCart();
