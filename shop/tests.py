@@ -20,7 +20,7 @@ class CartAndSearchTests(TestCase):
         self.variant = ProductVariant.objects.create(
             product=self.product, sku="CABAS-CAMEL-TEST", color_name="Camel",
             color_slug="camel", color_code="#B07A4A",
-            price=Decimal("89.90"), stock_quantity=4,
+            stock_quantity=4,
         )
         ProductMedia.objects.create(
             product=self.product, media_type=ProductMedia.IMAGE,
@@ -108,7 +108,7 @@ class CartAndSearchTests(TestCase):
             category=self.category, name="Autre sac", slug="autre-sac", is_active=True,
         )
         other_variant = ProductVariant.objects.create(
-            product=other, sku="AUTRE-SAC-TEST", price=Decimal("20.00"), stock_quantity=2,
+            product=other, sku="AUTRE-SAC-TEST", stock_quantity=2,
         )
         response = self.client.get(
             reverse("shop:offer_options", kwargs={"slug": self.product.slug}),
@@ -116,9 +116,9 @@ class CartAndSearchTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_configured_offer_price_remains_authoritative_when_variant_price_changes(self):
-        self.variant.price = Decimal("99.90")
-        self.variant.save(update_fields=["price"])
+    def test_configured_offer_price_is_independent_of_selected_color(self):
+        self.variant.color_name = "Noir"
+        self.variant.save(update_fields=["color_name"])
         response = self.client.post(
             reverse("shop:cart_mutation"),
             data=json.dumps({

@@ -2,8 +2,9 @@
 {% block title %}Modifier la catégorie{% endblock %}
 {% block section %}Catégories / Modification{% endblock %}
 {% block content %}
-<section class="page-heading"><div><p class="eyebrow">ORGANISATION DE LA BOUTIQUE</p><h1>Modifier la catégorie</h1><p class="muted">{{ category.name }}</p></div><a class="button button-secondary" href="{% url 'dashboard:categories' %}">← Retour</a></section>
+<section class="page-heading"><div><p class="eyebrow">ORGANISATION DE LA BOUTIQUE</p><h1>Modifier la catégorie</h1><p class="muted">{{ category.name }} · {{ category.products.count }} produit(s) associé(s)</p></div><a class="button button-secondary" href="{% url 'dashboard:categories' %}">← Retour</a></section>
 <section class="form-panel narrow-panel"><form method="post" enctype="multipart/form-data" class="stack-form">{% csrf_token %}
-{% for field in form %}<div class="form-field">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+<div class="media-preview category-image-preview" data-media-preview>{% if category.image %}<img src="{{ category.image.url }}" alt="{{ category.alt_text|default:category.name }}">{% elif category.image_url %}<img src="{{ category.image_url }}" alt="{{ category.alt_text|default:category.name }}">{% else %}<span>Aperçu de l'image de catégorie</span>{% endif %}</div>
+{% for field in form %}<div class="form-field">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
 <div class="form-actions"><a class="button button-secondary" href="{% url 'dashboard:categories' %}">Annuler</a><button class="button button-primary" type="submit">Enregistrer</button></div></form></section>
 {% endblock %}

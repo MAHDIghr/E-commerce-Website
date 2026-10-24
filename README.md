@@ -44,7 +44,7 @@ La branche `developpement-backend` introduit une source de données persistante 
 - **Mobile-first :** les pages et interactions doivent rester utilisables sur téléphone.
 - **Catalogue administrable :** les données éditoriales du catalogue sont gérées via les modèles Django et Django Admin.
 - **Médias organisés :** les fichiers envoyés par l'administration sont rangés automatiquement dans des sous-dossiers de `MEDIA_ROOT`.
-- **Prix explicites :** les prix et stocks sont portés par les variantes.
+- **Prix explicites :** le prix est porté exclusivement par une offre commerciale ; les variantes décrivent la couleur et le stock.
 - **Publication contrôlée :** seuls les produits actifs et associés à une catégorie active sont éligibles à l'affichage public, selon les sélecteurs utilisés.
 - **Pas de fausse promesse métier :** une interface de panier ou de checkout ne signifie pas qu'une commande ou un paiement réel est implémenté.
 
@@ -207,7 +207,7 @@ Les modèles sont définis dans `product/models.py`. Les champs exacts du code c
 |---|---|
 | `Category` | Nom, slug, description, image téléversée ou URL externe, texte alternatif, activation et ordre. |
 | `Product` | Identité, catégorie, descriptions, matière, dimensions, attributs de publication et métadonnées SEO. |
-| `ProductVariant` | SKU unique, couleur, prix de vente, prix de référence facultatif, stock, activation et ordre. |
+| `ProductVariant` | Référence interne unique, couleur, stock, activation et ordre d'affichage. Aucun prix n'est enregistré sur une variante. |
 | `ProductMedia` | Image ou vidéo associée au produit, éventuellement à une variante, texte alternatif, ordre et média principal. |
 | `ProductReason` | Arguments éditoriaux en faveur du produit. |
 | `ProductContentItem` | Éléments de capacité et indication qu'ils rentrent dans le produit. |
@@ -223,7 +223,7 @@ Les modèles sont définis dans `product/models.py`. Les champs exacts du code c
 - Le prix et le stock sont portés par `ProductVariant`, pas par `Product`.
 - Le SKU doit être unique.
 - Le prix de vente doit être positif ou nul.
-- Si un prix de référence est renseigné, une contrainte exige qu'il soit supérieur au prix de vente.
+- Le prix de vente est défini par `ProductOffer.price` ; les couleurs n'ont pas de prix individuel.
 - Le stock est un entier positif ou nul.
 - Les variantes ont un ordre d'affichage et peuvent être désactivées.
 - La couleur peut être décrite par un nom, un slug et un code hexadécimal.
@@ -411,7 +411,7 @@ Ne publie pas la sortie complète si elle contient des valeurs confidentielles.
 
 1. **Créer une catégorie** et choisir son nom, son slug, son ordre, son état actif et son image si nécessaire.
 2. **Créer un produit** et renseigner sa catégorie, son nom, son slug, ses descriptions, sa matière et ses dimensions facultatives.
-3. **Ajouter au moins une variante active** avec un SKU unique, un prix, un stock et éventuellement une couleur.
+3. **Ajouter au moins une variante active** avec une référence interne unique, une couleur et un stock. Le prix se définit dans une offre commerciale.
 4. **Ajouter un média image** dans la section des médias du produit. Pour un média partagé entre toutes les variantes, laisser la variante vide ; pour une photo propre à une variante, sélectionner celle-ci.
 5. **Choisir le média principal** et renseigner un texte alternatif descriptif.
 6. **Configurer les contenus facultatifs** : arguments, éléments de capacité, détails de fabrication, situations d'usage, FAQ et offres.
@@ -644,7 +644,7 @@ Les photos de produits sont destinées à être publiques, mais le dossier médi
 
 Le fichier `product/tests.py` contient des tests sur les modèles, les vues du catalogue et le stockage local d'images, notamment :
 
-- validation du prix de référence d'une variante ;
+- validation des prix d'offres commerciales ;
 - cohérence d'une variante dans un élément d'offre ;
 - cohérence du produit et de la variante d'un média ;
 - affichage des données de catalogue ;
@@ -660,7 +660,7 @@ L'existence de ces tests n'est pas une preuve de réussite. Lance les commandes 
 - [ ] Les migrations sont appliquées sans erreur.
 - [ ] L'administration est accessible uniquement aux utilisateurs autorisés.
 - [ ] Une catégorie peut être créée et son image téléversée.
-- [ ] Un produit peut être créé avec une variante active, un prix et un stock.
+- [ ] Un produit peut être créé avec une variante active (couleur et stock) et au moins une offre tarifée.
 - [ ] Les médias se retrouvent dans le sous-dossier attendu de `MEDIA_ROOT`.
 - [ ] L'image de catégorie s'affiche sur la page qui l'utilise.
 - [ ] La fiche produit affiche ses médias et ses variantes.
@@ -860,7 +860,7 @@ Dans **Django Admin → Produits → ouvrir le produit** :
 - si le produit doit apparaître dans les nouveautés de l'accueil, cocher aussi « Nouveauté » (is_new) ; la page d'accueil n'affiche que les quatre nouveautés les plus récentes ;
 - vérifier que le produit et sa catégorie sont actifs ;
 - vérifier la date de publication ;
-- ouvrir la section des variantes et confirmer qu'au moins une variante est active, avec un prix et un stock renseignés ;
+- ouvrir la section des variantes et confirmer qu'au moins une variante est active, avec sa couleur et son stock renseignés ;
 - dans les médias du produit, ajouter une ligne de type **Image**, téléverser le fichier ou renseigner une URL HTTPS, renseigner le texte alternatif, puis laisser **Variante** vide pour une image commune ;
 - enregistrer, puis recharger le catalogue sans cache.
 
@@ -874,7 +874,7 @@ En production, il faut aussi confirmer que l'administration et le site utilisent
 - Une offre est toujours rattachée à un produit principal.
 - Chaque produit doit disposer d'au moins une offre active contenant une ligne qui référence le produit principal avec **« Utiliser la variante choisie sur la fiche »** activé et sans variante fixe.
 - Trois badges au maximum sont proposés : **Essentiel**, **Medium**, **Premium**.
-- Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement.
+- Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement. Le prix appartient uniquement à l'offre, jamais à la variante de couleur.
 - Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. Cette mention décrit l'offre ; elle ne calcule pas encore les frais réels de livraison au checkout.
 - Une offre peut inclure d'autres produits. Chaque ligne doit sélectionner le produit et, pour un produit complémentaire, une variante appartenant à ce produit.
 - Un produit sans offre active valide est exclu du catalogue public. La fiche produit ne doit pas remplacer une offre invalide par un prix de variante présenté comme une offre commerciale.
@@ -941,7 +941,7 @@ La migration 0004_review_featured ajoute le champ de mise en avant des avis. La 
 
 ## Panier invité
 
-Le panier utilise la session Django côté serveur. Le navigateur ne peut envoyer que l’identifiant de variante, l’identifiant facultatif d’offre et la quantité ; les prix, les produits publiés, les variantes actives et les stocks sont recalculés et contrôlés par le serveur. Les prix fournis par le client sont ignorés.
+Le panier utilise la session Django côté serveur. Le navigateur ne peut envoyer que l’identifiant de variante, l’identifiant obligatoire d’offre et la quantité ; les prix, les produits publiés, les variantes actives et les stocks sont recalculés et contrôlés par le serveur. Les prix fournis par le client sont ignorés.
 
 - GET /boutique/panier/ renvoie le contenu et les totaux calculés côté serveur.
 - POST /boutique/panier/modifier/ accepte les actions add, update, remove et clear, avec protection CSRF Django.
@@ -952,7 +952,7 @@ Le panier utilise la session Django côté serveur. Le navigateur ne peut envoye
 - Les mutations reçues depuis l'interface sont sérialisées côté JavaScript pour éviter que des clics rapprochés se remplacent. Le serveur reste la source de vérité ; aucune mutation ne réserve le stock.
 - Les lignes devenues invalides (produit non publié, variante inactive ou offre supprimée) sont retirées lors de la relecture.
 - Le tiroir du panier et les badges sont alimentés par la réponse serveur. Le prix affiché n’est pas une preuve de prix définitif pour une commande.
-- Les ajouts rapides accueil/catalogue récupèrent les offres actives via `GET /boutique/offres/<slug>/` ; une offre est ajoutée automatiquement si elle est unique, sinon un dialogue accessible présente les prix, le contenu, la livraison indiquée et l’économie calculée côté serveur. La route émet aussi le cookie CSRF avant la mutation POST.
+- Les ajouts rapides accueil/catalogue récupèrent les offres actives via `GET /boutique/offres/<slug>/` ; une offre est ajoutée automatiquement si elle est unique, sinon un dialogue accessible présente les prix, le contenu et la livraison indiquée côté serveur. La route émet aussi le cookie CSRF avant la mutation POST.
 - Les boutons de la fiche produit sont gérés par délégation dans `static/js/base.js` pour éviter qu’une erreur d’initialisation secondaire de `product.js` les laisse sans action. L’offre et la variante cochées sont envoyées au serveur ; le serveur recalcule disponibilité et prix.
 - Le panier affiche les composants configurés de chaque offre. La composition interactive d’une offre (choix libre du deuxième article) nécessite toutefois une modélisation dédiée des options autorisées et de leur sélection dans la session ; elle n’est pas activée par cette première étape.
 - La route publique `GET /boutique/offres/<slug>/?variant_id=<id>` renvoie uniquement les offres actives validées pour le produit et la variante demandés. Les prix, composants et disponibilités sont recalculés côté serveur.
@@ -961,7 +961,7 @@ Le panier utilise la session Django côté serveur. Le navigateur ne peut envoye
 - Les lignes de panier exposent les composants de l'offre pour rendre la composition lisible. La sélection interactive d'articles alternatifs dans une offre multi-articles nécessite encore de définir les choix autorisés pour chaque offre avant d'ajouter le modèle métier correspondant.
 - Les trois boutons d’ajout de la fiche produit (CTA principal, CTA de fin de page et barre d’achat collante) sont initialisés via `querySelectorAll`. Un sélecteur simple `querySelector` suivi de `forEach` interrompait le script avant l’attachement des événements.
 - L’ajout depuis la fiche produit transmet explicitement la variante et l’offre sélectionnées. Les erreurs serveur sont remontées à l’interface au lieu d’être silencieusement transformées en échec sans diagnostic.
-- Les boutons rapides de l’accueil et du catalogue interrogent `/boutique/offres/<slug>/`. Une seule offre disponible est ajoutée directement ; plusieurs offres ouvrent une boîte de dialogue accessible avec prix serveur, composition connue, badge et économie calculée à partir des prix courants des composants.
+- Les boutons rapides de l’accueil et du catalogue interrogent `/boutique/offres/<slug>/`. Une seule offre disponible est ajoutée directement ; plusieurs offres ouvrent une boîte de dialogue accessible avec prix serveur, composition connue et badge. Les économies ne sont affichées que lorsqu'une référence tarifaire explicite existe.
 - Les tests Django couvrent la récupération des offres, plusieurs offres actives, le rejet d’une variante qui ne correspond pas au produit, ainsi que la présence des trois CTA de la fiche produit. Ils doivent encore être exécutés localement.
 - Le tiroir distingue explicitement l’état vide de l’état avec articles : la liste, la progression de livraison et le récapitulatif sont masqués ou affichés selon la réponse serveur. Le nombre d’articles, les images, les quantités et les totaux sont synchronisés depuis cette réponse.
 - Le tiroir a une mise en page mobile-first, des liens vers les fiches produits, une progression accessible vers le seuil de livraison offerte, une navigation clavier et un retour du focus à l’élément déclencheur.
@@ -1017,16 +1017,16 @@ La connexion réutilise le mécanisme d'authentification Django et ses validateu
 ### Fonctionnalités de cette première version
 
 - Vue d'ensemble : compteurs calculés à partir de la base (produits, produits activés, catégories, offres actives, avis à modérer) et derniers produits modifiés.
-- Produits : recherche, création et modification depuis un formulaire regroupant l'identité, la catégorie, les descriptions, les paramètres de publication, les variantes et les images communes.
-- Catégories : création, liste et modification, avec téléversement d'image et paramètres de visibilité.
-- Offres : liste de toutes les offres et raccourcis vers leur édition existante dans Django Admin.
+- Produits : recherche, création, modification et suppression protégée depuis un formulaire regroupant l'identité, les variantes (couleur/stock), une à trois offres tarifées et plusieurs images/vidéos.
+- Catégories : création, liste, modification et suppression uniquement lorsqu'aucun produit n'est rattaché ; aperçu des images téléversées ou distantes.
+- Offres : liste filtrable par produit, niveau Essentiel/Medium/Premium et état ; accès à l'administration avancée des compositions.
 - Gestion avancée : accès direct à Django Admin pour les compositions d'offres et les contenus détaillés des fiches produits. Cette première version ne remplace pas encore tous les formulaires spécialisés de Django Admin ; elle rassemble les opérations courantes et conserve les outils avancés existants.
 
 ### Automatisation de l'offre initiale
 
-Lorsqu'un nouveau Product est créé, le service dashboard/services.py prépare une offre Essentiel inactive, à prix nul provisoire, et ajoute automatiquement le produit principal comme composant utilisant la variante choisie sur la fiche. Quand une variante active est ensuite enregistrée, si cette offre automatique est encore inactive et à zéro, son prix est initialisé à partir du prix de cette variante et elle est activée.
+Dans le dashboard, chaque création ou modification de produit comprend directement la création ou la modification de une à trois offres commerciales et de plusieurs médias. Chaque offre possède son prix propre et est automatiquement reliée au produit principal. Les variantes ne contiennent plus de prix : elles décrivent les couleurs et les stocks.
 
-Cette automatisation ne remplace pas les règles existantes : les niveaux Medium et Premium, les produits complémentaires, les variantes fixes et la composition détaillée restent à configurer pour les offres qui en ont besoin. Un produit ne devient pas automatiquement publiable : les règles existantes concernant la catégorie active, la variante, l'image commune et la cohérence de l'offre continuent de s'appliquer. Vérifiez le diagnostic de publication avant d'activer un produit.
+Les offres Essentiel, Medium et Premium sont limitées à trois niveaux par produit. Les compositions multi-articles avancées restent configurables dans Django Admin. Une offre doit être créée avant qu'un produit puisse être publié. Un produit ne devient pas automatiquement publiable : les règles existantes concernant la catégorie active, la variante, l'image commune et la cohérence de l'offre continuent de s'appliquer. Vérifiez le diagnostic de publication avant d'activer un produit.
 
 ### Sécurité et déploiement
 
@@ -1034,7 +1034,7 @@ Cette automatisation ne remplace pas les règles existantes : les niveaux Medium
 - Conserver DEBUG=False, les cookies sécurisés, les hôtes autorisés et les origines CSRF strictement configurés.
 - Utiliser un mot de passe unique et robuste pour le superutilisateur, ne pas partager ce compte et activer une protection supplémentaire au niveau de l'hébergement / reverse proxy contre les tentatives de connexion répétées.
 - Ne pas exposer les fichiers média ou les sauvegardes de base de données autrement que prévu ; sauvegarder la base et les médias avant toute mise en production.
-- Le dashboard réutilise les modèles existants : aucune migration de base n'est ajoutée par cette fonctionnalité.
+- La migration `product.0005_offer_only_pricing` transfère les prix historiques des variantes vers l'offre Essentiel lorsque nécessaire, puis retire les champs de prix des variantes. Appliquer les migrations et vérifier les offres après la mise à jour.
 - Les fichiers CSS et JavaScript sont des ressources statiques versionnées. Exécuter collectstatic lors du déploiement de production.
 
 ### Recette locale

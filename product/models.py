@@ -1,7 +1,7 @@
 """Modèles métier du catalogue My Line Collection.
 
-Les prix et les stocks sont portés par les variantes, jamais par Product.
-Les contenus éditoriaux restent rattachés au produit afin d'être administrables.
+Les prix sont portés exclusivement par les offres commerciales. Les variantes décrivent
+les déclinaisons de couleur et leur stock. Les contenus éditoriaux restent rattachés au produit.
 """
 from decimal import Decimal
 import re
@@ -28,7 +28,7 @@ class Category(models.Model):
     image_url = models.URLField("URL externe de l'image", blank=True, help_text="Facultatif si une image est téléversée.")
     alt_text = models.CharField("Texte alternatif", max_length=180, blank=True)
     is_active = models.BooleanField("Active", default=True, db_index=True)
-    position = models.PositiveIntegerField("Position", default=0, db_index=True)
+    position = models.PositiveIntegerField("Ordre d'affichage des catégories", default=0, db_index=True)
 
     class Meta:
         ordering = ("position", "name")
@@ -100,8 +100,8 @@ class Product(models.Model):
 
     @property
     def display_price(self):
-        variant = self.default_variant
-        return variant.price if variant else None
+        offer = self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        return offer.price if offer else None
 
     @property
     def approved_reviews(self):
@@ -110,19 +110,13 @@ class Product(models.Model):
 
 class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants", verbose_name="Produit")
-    sku = models.CharField("SKU", max_length=80, unique=True)
+    sku = models.CharField("Référence interne de la variante", max_length=80, unique=True)
     color_name = models.CharField("Couleur", max_length=80, blank=True)
     color_slug = models.SlugField("Identifiant de couleur", max_length=80, blank=True)
     color_code = models.CharField("Code couleur", max_length=7, blank=True)
-    price = models.DecimalField("Prix de vente (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
-    compare_at_price = models.DecimalField(
-        "Prix de référence (€)", max_digits=10, decimal_places=2, null=True, blank=True,
-        validators=[MinValueValidator(Decimal("0.00"))],
-        help_text="Facultatif. Ne doit être renseigné que si le prix de référence est justifié.",
-    )
     stock_quantity = models.PositiveIntegerField("Stock", default=0)
     is_active = models.BooleanField("Active", default=True, db_index=True)
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des couleurs", default=0)
 
     class Meta:
         ordering = ("position", "color_name", "pk")
@@ -133,11 +127,6 @@ class ProductVariant(models.Model):
                 name="unique_product_color_slug",
             ),
             models.CheckConstraint(condition=Q(stock_quantity__gte=0), name="variant_stock_nonnegative"),
-            models.CheckConstraint(condition=Q(price__gte=0), name="variant_price_nonnegative"),
-            models.CheckConstraint(
-                condition=Q(compare_at_price__isnull=True) | Q(compare_at_price__gt=models.F("price")),
-                name="variant_ref_price_gt_sale",
-            ),
         ]
         indexes = [models.Index(fields=("product", "is_active", "position"), name="variant_product_active_pos_idx")]
         verbose_name = "variante"
@@ -145,8 +134,6 @@ class ProductVariant(models.Model):
 
     def clean(self):
         super().clean()
-        if self.compare_at_price is not None and self.price is not None and self.compare_at_price <= self.price:
-            raise ValidationError({"compare_at_price": "Le prix de référence doit être supérieur au prix de vente."})
         if self.color_code and not re.fullmatch(r"#[0-9a-fA-F]{6}", self.color_code):
             raise ValidationError({"color_code": "Utilisez un code hexadécimal au format #RRGGBB."})
 
@@ -175,7 +162,7 @@ class ProductMedia(models.Model):
     poster_url = models.URLField("URL de la vignette vidéo", max_length=1000, blank=True)
     alt_text = models.CharField("Texte alternatif", max_length=240, blank=True)
     is_primary = models.BooleanField("Média principal", default=False)
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des médias", default=0)
 
     class Meta:
         ordering = ("-is_primary", "position", "pk")
@@ -183,13 +170,8 @@ class ProductMedia(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("product",),
-                condition=Q(is_primary=True, variant__isnull=True),
-                name="one_primary_common_media",
-            ),
-            models.UniqueConstraint(
-                fields=("variant",),
-                condition=Q(is_primary=True, variant__isnull=False),
-                name="one_primary_variant_media",
+                condition=Q(is_primary=True),
+                name="one_primary_media_per_product",
             ),
         ]
         verbose_name = "média produit"
@@ -218,7 +200,7 @@ class ProductReason(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="reasons", verbose_name="Produit")
     title = models.CharField("Titre", max_length=160)
     description = models.TextField("Description")
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des arguments", default=0)
 
     class Meta:
         ordering = ("position", "pk")
@@ -233,7 +215,7 @@ class ProductContentItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="content_items", verbose_name="Produit")
     name = models.CharField("Élément", max_length=120)
     fits = models.BooleanField("Rentre dans le produit", default=True)
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des éléments", default=0)
 
     class Meta:
         ordering = ("position", "pk")
@@ -251,7 +233,7 @@ class ProductCraftDetail(models.Model):
     image = models.ImageField("Image téléversée", upload_to="products/craft/%Y/%m/", blank=True)
     image_url = models.URLField("URL externe de l'image", max_length=1000, blank=True)
     alt_text = models.CharField("Texte alternatif", max_length=240, blank=True)
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des détails de fabrication", default=0)
 
     class Meta:
         ordering = ("position", "pk")
@@ -272,7 +254,7 @@ class ProductUsage(models.Model):
     image = models.ImageField("Image téléversée", upload_to="products/usage/%Y/%m/", blank=True)
     image_url = models.URLField("URL externe de l'image", max_length=1000, blank=True)
     alt_text = models.CharField("Texte alternatif", max_length=240, blank=True)
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des situations d'usage", default=0)
 
     class Meta:
         ordering = ("position", "pk")
@@ -291,7 +273,7 @@ class ProductFAQ(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="faqs", verbose_name="Produit")
     question = models.CharField("Question", max_length=240)
     answer = models.TextField("Réponse")
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des questions fréquentes", default=0)
 
     class Meta:
         ordering = ("position", "pk")
@@ -353,7 +335,7 @@ class ProductOffer(models.Model):
     price = models.DecimalField("Prix de l'offre (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
     is_featured = models.BooleanField("Offre mise en avant", default=False)
     is_active = models.BooleanField("Active", default=True, db_index=True)
-    position = models.PositiveIntegerField("Ordre automatique", default=0, editable=False)
+    position = models.PositiveIntegerField("Ordre d'affichage des offres (automatique)", default=0, editable=False)
 
     class Meta:
         ordering = ("position", "pk")
@@ -363,6 +345,11 @@ class ProductOffer(models.Model):
                 fields=("product", "badge"),
                 condition=Q(is_active=True),
                 name="unique_active_offer_badge",
+            ),
+            models.UniqueConstraint(
+                fields=("product",),
+                condition=Q(is_featured=True),
+                name="unique_featured_offer_per_product",
             ),
         ]
         verbose_name = "offre"
@@ -377,8 +364,6 @@ class ProductOffer(models.Model):
             siblings = siblings.exclude(pk=self.pk)
         if self.is_active and siblings.filter(badge=self.badge).exists():
             raise ValidationError({"badge": "Ce produit possède déjà une offre active avec ce badge."})
-        if self.is_active and siblings.count() >= 3:
-            raise ValidationError({"badge": "Un produit ne peut pas avoir plus de trois offres actives."})
 
     def save(self, *args, **kwargs):
         self.position = self.BADGE_ORDER.get(self.badge, 99)
@@ -406,7 +391,7 @@ class ProductOfferItem(models.Model):
         help_text="À activer uniquement pour le produit principal de l'offre.",
     )
     quantity = models.PositiveSmallIntegerField("Quantité", default=1, validators=[MinValueValidator(1)])
-    position = models.PositiveIntegerField("Position", default=0)
+    position = models.PositiveIntegerField("Ordre d'affichage des composants de l'offre", default=0)
 
     class Meta:
         ordering = ("position", "pk")

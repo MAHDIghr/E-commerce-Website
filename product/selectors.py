@@ -59,15 +59,22 @@ def product_card_data(queryset):
             for item in product.variants.all()
             if item.is_active and item.color_slug and item.color_code
         ]
-        old_price = variant.compare_at_price
+        offer = product.offers.filter(
+            is_active=True, items__product_id=product.pk,
+            items__use_selected_variant=True, items__variant__isnull=True,
+        ).distinct().order_by("-is_featured", "position", "pk").first()
+        if offer is None:
+            continue
         products.append({
             "id": product.slug,
             "variantId": variant.pk,
             "variantName": variant.color_name,
             "name": product.name,
             "cat": product.category.slug,
-            "price": float(variant.price),
-            "old": float(old_price) if old_price and old_price > variant.price else None,
+            "price": float(offer.price),
+            "old": None,
+            "offerId": offer.pk,
+            "offerTitle": offer.title,
             "colors": [color["slug"] for color in colors],
             "color_details": colors,
             "rating": round(float(rating), 1),
