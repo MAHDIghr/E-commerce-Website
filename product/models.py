@@ -368,7 +368,11 @@ class ProductOffer(models.Model):
         blank=True, null=True, validators=[MinValueValidator(Decimal("0.00"))],
         help_text="Facultatif. À renseigner uniquement si une réduction réelle est applicable ; doit être supérieur au prix de l'offre.",
     )
-    is_featured = models.BooleanField("Offre mise en avant", default=False)
+    is_featured = models.BooleanField(
+        "Sélectionnée par défaut sur la fiche produit",
+        default=False,
+        help_text="Sélectionne cette offre au chargement de la fiche ; les autres offres actives restent visibles.",
+    )
     is_active = models.BooleanField("Active", default=True, db_index=True)
     position = models.PositiveIntegerField("Ordre d'affichage des offres (automatique)", default=0, editable=False)
 
