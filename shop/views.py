@@ -237,6 +237,7 @@ def _line_details(variant_id, offer_id, quantity):
     }
 
 @require_GET
+@ensure_csrf_cookie
 def offer_options(request, slug):
     """Expose uniquement les offres réellement ajoutables pour une variante précise."""
     product = published_products().filter(slug=slug).first()
