@@ -102,7 +102,12 @@ class Product(models.Model):
         cached = getattr(self, "_prefetched_objects_cache", {}).get("offers")
         if cached is not None:
             return [offer for offer in cached if offer.is_active]
-        return list(self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk"))
+        return list(self.offers.filter(
+            is_active=True,
+            items__product_id=F("product_id"),
+            items__use_selected_variant=True,
+            items__variant__isnull=True,
+        ).distinct().order_by("-is_featured", "position", "pk"))
 
     @property
     def display_offer(self):
