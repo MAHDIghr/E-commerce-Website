@@ -98,10 +98,42 @@ class Product(models.Model):
             return active[0] if active else None
         return self.variants.filter(is_active=True).order_by("position", "pk").first()
 
+    def _active_offers(self):
+        cached = getattr(self, "_prefetched_objects_cache", {}).get("offers")
+        if cached is not None:
+            return [offer for offer in cached if offer.is_active]
+        return list(self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk"))
+
+    @property
+    def display_offer(self):
+        """Offre Essentiel pour le prix catalogue ; sinon offre mise en avant ou première offre active."""
+        offers = self._active_offers()
+        return (
+            next((offer for offer in offers if offer.badge == "essential"), None)
+            or next((offer for offer in offers if offer.is_featured), None)
+            or (offers[0] if offers else None)
+        )
+
     @property
     def display_price(self):
-        offer = self.offers.filter(is_active=True).order_by("-is_featured", "position", "pk").first()
+        offer = self.display_offer
         return offer.price if offer else None
+
+    @property
+    def display_reference_price(self):
+        """Le prix de référence du catalogue est toujours celui de l'offre Essentiel."""
+        essential = next((offer for offer in self._active_offers() if offer.badge == "essential"), None)
+        if essential and essential.reference_price and essential.reference_price > essential.price:
+            return essential.reference_price
+        return None
+
+    @property
+    def display_discount_percent(self):
+        """Réduction de la carte calculée exclusivement à partir de l'offre Essentiel."""
+        essential = next((offer for offer in self._active_offers() if offer.badge == "essential"), None)
+        if not essential or not essential.reference_price or essential.reference_price <= essential.price:
+            return 0
+        return round((essential.reference_price - essential.price) * 100 / essential.reference_price)
 
     @property
     def approved_reviews(self):
