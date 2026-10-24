@@ -51,6 +51,7 @@ def catalog(request):
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
         Prefetch("media_items", queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk")),
         Prefetch("reviews", queryset=Review.objects.filter(is_approved=True)),
+        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
     ).order_by("-published_at", "-created_at", "name")
 
     color_map = {}
@@ -89,6 +90,7 @@ def search_suggestions(request):
                 media_type=ProductMedia.IMAGE,
             ).order_by("-is_primary", "position", "pk"),
         ),
+        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
     ).order_by("-is_best_seller", "-is_new", "name")[:8]
 
     results = []
@@ -98,10 +100,17 @@ def search_suggestions(request):
             continue
         media = next((item for item in product.media_items.all() if item.media_type == ProductMedia.IMAGE), None)
         image = (media.image.url if media and media.image else media.source_url) if media else ""
-        offer = product.offers.filter(
-            is_active=True, items__product_id=product.pk,
-            items__use_selected_variant=True, items__variant__isnull=True,
-        ).distinct().order_by("-is_featured", "position", "pk").first()
+        offers = [
+            candidate for candidate in product._active_offers()
+            if sum(
+                1 for item in candidate.items.all()
+                if item.use_selected_variant
+                and item.product_id == product.pk
+                and item.variant_id is None
+                and item.quantity > 0
+            ) == 1
+        ]
+        offer = next((candidate for candidate in offers if candidate.is_featured), offers[0] if offers else None)
         if offer is None:
             continue
         results.append({
