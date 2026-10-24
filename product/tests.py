@@ -468,6 +468,24 @@ class UploadedMediaTests(TestCase):
         with self.assertRaises(ValidationError) as error:
             category.full_clean()
         self.assertIn("image", error.exception.message_dict)
+        self.assertTrue(any(
+            "10 Mo" in message for message in error.exception.message_dict["image"]
+        ))
+
+    def test_product_detail_starts_with_an_in_stock_variant(self):
+        self.variant.stock_quantity = 0
+        self.variant.position = 0
+        self.variant.save(update_fields=["stock_quantity", "position"])
+        ProductVariant.objects.create(
+            product=self.product, sku="CABAS-CAMEL-AVAILABLE-DETAIL",
+            color_name="Noisette", color_slug="noisette", color_code="#8B5E3C",
+            stock_quantity=3, position=1,
+        )
+
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["product"]["colors"][0]["label"], "Noisette")
 
     def test_category_image_is_stored_in_media_categories_folder(self):
         category = Category.objects.create(
