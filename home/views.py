@@ -11,6 +11,7 @@ def home(request):
     categories = Category.objects.filter(is_active=True).order_by("position", "name")
     signature_selections = SignatureSelection.objects.filter(
         is_active=True,
+        image__gt="",
         product__in=published_products(),
     ).select_related("product", "product__category").order_by("position", "pk")
     new_products = published_products().filter(is_new=True).select_related("category").prefetch_related(
