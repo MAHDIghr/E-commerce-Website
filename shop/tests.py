@@ -50,7 +50,6 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["subtotal"], "89.90")
         self.assertEqual(payload["items"][0]["unit_price"], "89.90")
-        self.assertEqual(payload["items"][0]["components"][0]["name"], self.product.name)
 
     def test_offer_options_returns_the_single_available_offer_for_quick_add(self):
         response = self.client.get(
@@ -109,6 +108,7 @@ class CartAndSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["subtotal"], "99.90")
         self.assertEqual(response.json()["items"][0]["unit_price"], "99.90")
+        self.assertEqual(response.json()["items"][0]["components"][0]["name"], self.product.name)
 
     def test_cart_mutations_require_csrf(self):
         client = Client(enforce_csrf_checks=True)
