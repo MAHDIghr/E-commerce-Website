@@ -30,6 +30,10 @@ def ensure_offer_prices(apps, schema_editor):
         first_variant = ProductVariant.objects.using(db).filter(
             product_id=product.pk, is_active=True
         ).order_by("position", "pk").first()
+        if essential is not None and not essential.is_active and essential.price == Decimal("0.00") and first_variant is not None:
+            essential.price = first_variant.price
+            essential.is_active = True
+            essential.save(update_fields=["price", "is_active"])
         if essential is None:
             essential = ProductOffer.objects.using(db).create(
                 product_id=product.pk,
