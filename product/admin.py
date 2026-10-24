@@ -95,6 +95,12 @@ class ProductAdmin(admin.ModelAdmin):
     )
     ordering = ("name",)
 
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        # Crée l'offre par défaut après les variantes et les offres saisies dans les inlines.
+        from dashboard.services import ensure_default_offer
+        ensure_default_offer(form.instance)
+
     def get_queryset(self, request):
         """Précharge les relations utilisées par le diagnostic de publication."""
         return super().get_queryset(request).select_related("category").prefetch_related(

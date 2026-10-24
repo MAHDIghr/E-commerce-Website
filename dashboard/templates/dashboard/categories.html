@@ -1,0 +1,14 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Catégories{% endblock %}
+{% block section %}Catégories{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">ORGANISATION DE LA BOUTIQUE</p><h1>Catégories</h1><p class="muted">Structurez les rayons et gérez leurs images depuis une vue unique.</p></div></section>
+<div class="two-column-layout">
+<section class="form-panel"><div class="form-panel-heading"><span class="step-number">＋</span><div><h2>Nouvelle catégorie</h2><p class="muted">Les catégories inactives ne sont pas proposées dans le catalogue public.</p></div></div>
+<form method="post" enctype="multipart/form-data" class="stack-form">{% csrf_token %}
+{% for field in form %}<div class="form-field">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+<button class="button button-primary button-wide" type="submit">Créer la catégorie</button></form>
+</section>
+<section class="table-card"><div class="table-card-heading"><div><h2>Catégories existantes</h2><p class="muted">{{ categories|length }} catégorie(s)</p></div></div><div class="table-scroll"><table><thead><tr><th>Nom</th><th>État</th><th>Ordre</th><th></th></tr></thead><tbody>{% for category in categories %}<tr><td><strong>{{ category.name }}</strong><small class="cell-sub">{{ category.slug }}</small></td><td>{% if category.is_active %}<span class="status status-green">Active</span>{% else %}<span class="status status-neutral">Inactive</span>{% endif %}</td><td>{{ category.position }}</td><td><a class="text-link" href="{% url 'dashboard:category_edit' category.pk %}">Modifier</a></td></tr>{% empty %}<tr><td colspan="4" class="empty-state">Aucune catégorie enregistrée.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+{% endblock %}

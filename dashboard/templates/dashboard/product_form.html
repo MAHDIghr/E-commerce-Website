@@ -1,0 +1,28 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{% if is_new %}Ajouter un produit{% else %}Modifier {{ product.name }}{% endif %}{% endblock %}
+{% block section %}Produits / {% if is_new %}Nouveau{% else %}Modification{% endif %}{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">CATALOGUE · FICHE PRODUIT</p><h1>{% if is_new %}Créer un produit{% else %}Modifier le produit{% endif %}</h1><p class="muted">Renseignez les informations utiles, puis ajoutez au moins une variante et une image commune pour préparer la publication.</p></div><a class="button button-secondary" href="{% url 'dashboard:products' %}">← Retour au catalogue</a></section>
+<form method="post" enctype="multipart/form-data" class="editor-form" novalidate>
+{% csrf_token %}
+{% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
+<section class="form-panel"><div class="form-panel-heading"><span class="step-number">01</span><div><h2>Informations du produit</h2><p class="muted">Identité, catégorie et description affichées sur le site.</p></div></div>
+<div class="form-grid">
+{% for field in form %}<div class="form-field {% if field.name == 'description' or field.name == 'short_description' %}field-wide{% endif %} {% if field.field.widget.input_type == 'checkbox' %}checkbox-field{% endif %}">
+{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+{% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+</div>{% endfor %}
+</div></section>
+<section class="form-panel"><div class="form-panel-heading"><span class="step-number">02</span><div><h2>Variantes et prix</h2><p class="muted">Le prix et le stock sont enregistrés sur chaque variante.</p></div></div>
+{{ variants.management_form }}{% if variants.non_form_errors %}<div class="form-alert">{{ variants.non_form_errors }}</div>{% endif %}
+<div class="repeat-list">{% for vf in variants %}<article class="repeat-card"><div class="repeat-title">Variante {{ forloop.counter }}</div>{% for hidden in vf.hidden_fields %}{{ hidden }}{% endfor %}<div class="form-grid">
+{% for field in vf.visible_fields %}<div class="form-field {% if field.name == 'DELETE' %}delete-field{% endif %}">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+</div></article>{% endfor %}</div></section>
+<section class="form-panel"><div class="form-panel-heading"><span class="step-number">03</span><div><h2>Images du produit</h2><p class="muted">Ajoutez une image commune, avec un texte alternatif descriptif. Les URL externes doivent être en HTTPS.</p></div></div>
+{{ media.management_form }}{% if media.non_form_errors %}<div class="form-alert">{{ media.non_form_errors }}</div>{% endif %}
+<div class="repeat-list">{% for mf in media %}<article class="repeat-card"><div class="repeat-title">Média {{ forloop.counter }}</div>{% for hidden in mf.hidden_fields %}{{ hidden }}{% endfor %}<div class="form-grid">
+{% for field in mf.visible_fields %}<div class="form-field">{% if field.field.widget.input_type == 'checkbox' %}<label class="check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+</div></article>{% endfor %}</div></section>
+<div class="form-actions"><a class="button button-secondary" href="{% url 'dashboard:products' %}">Annuler</a><button class="button button-primary" type="submit">Enregistrer le produit <span aria-hidden="true">→</span></button></div>
+</form>
+{% endblock %}
