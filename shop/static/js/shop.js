@@ -458,8 +458,8 @@
 
     function updateCartBar() {
         const cart = getCart();
-        const count = cart.reduce((s, i) => s + i.qty, 0);
-        const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+        const count = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const total = cart.reduce((sum, item) => sum + Number(item.line_total || 0), 0);
         bar.hidden = count === 0;
         document.body.classList.toggle("has-cart-bar", count > 0);
         if (count === 0) return;
