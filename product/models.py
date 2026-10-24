@@ -9,7 +9,7 @@ import re
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 from urllib.parse import urlparse
 
 from django.utils import timezone
@@ -151,11 +151,6 @@ class ProductMedia(models.Model):
     MEDIA_TYPES = [(IMAGE, "Image"), (VIDEO, "Vidéo")]
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="media_items", verbose_name="Produit")
-    variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, related_name="media_items",
-        null=True, blank=True, verbose_name="Variante",
-        help_text="Laisser vide pour un média commun à toutes les variantes.",
-    )
     media_type = models.CharField("Type", max_length=10, choices=MEDIA_TYPES, default=IMAGE)
     image = models.ImageField("Image téléversée", upload_to="products/%Y/%m/", blank=True)
     source_url = models.URLField("URL externe du média", max_length=1000, blank=True, help_text="Facultatif pour une image téléversée ; utile pour les vidéos ou les médias externes.")
@@ -166,7 +161,7 @@ class ProductMedia(models.Model):
 
     class Meta:
         ordering = ("-is_primary", "position", "pk")
-        indexes = [models.Index(fields=("product", "variant", "position"), name="media_product_variant_pos_idx")]
+        indexes = [models.Index(fields=("product", "position"), name="media_product_pos_idx")]
         constraints = [
             models.UniqueConstraint(
                 fields=("product",),
@@ -181,8 +176,6 @@ class ProductMedia(models.Model):
         super().clean()
         _require_https(self.source_url, "source_url")
         _require_https(self.poster_url, "poster_url")
-        if self.variant_id and self.product_id and self.variant.product_id != self.product_id:
-            raise ValidationError({"variant": "La variante doit appartenir au produit sélectionné."})
         if self.media_type == self.IMAGE and not (self.image or self.source_url):
             raise ValidationError({"image": "Téléversez une image ou renseignez une URL externe."})
         if self.media_type == self.VIDEO and not self.source_url:
@@ -333,6 +326,11 @@ class ProductOffer(models.Model):
     badge = models.CharField("Badge", max_length=20, choices=BADGE_CHOICES, default=BADGE_ESSENTIAL)
     display_delivery_label = models.CharField("Type de livraison", max_length=10, choices=DELIVERY_CHOICES, default=DELIVERY_PAID, help_text="Ce choix décrit l'offre et ne calcule pas les frais de livraison.")
     price = models.DecimalField("Prix de l'offre (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
+    reference_price = models.DecimalField(
+        "Prix de référence (€)", max_digits=10, decimal_places=2,
+        blank=True, null=True, validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Facultatif. À renseigner uniquement si une réduction réelle est applicable ; doit être supérieur au prix de l'offre.",
+    )
     is_featured = models.BooleanField("Offre mise en avant", default=False)
     is_active = models.BooleanField("Active", default=True, db_index=True)
     position = models.PositiveIntegerField("Ordre d'affichage des offres (automatique)", default=0, editable=False)
@@ -341,6 +339,10 @@ class ProductOffer(models.Model):
         ordering = ("position", "pk")
         constraints = [
             models.CheckConstraint(condition=Q(price__gte=0), name="offer_price_nonnegative"),
+            models.CheckConstraint(
+                condition=Q(reference_price__isnull=True) | Q(reference_price__gt=F("price")),
+                name="offer_reference_gt_price",
+            ),
             models.UniqueConstraint(
                 fields=("product", "badge"),
                 condition=Q(is_active=True),
@@ -357,6 +359,8 @@ class ProductOffer(models.Model):
 
     def clean(self):
         super().clean()
+        if self.reference_price is not None and self.reference_price <= self.price:
+            raise ValidationError({"reference_price": "Le prix de référence doit être supérieur au prix de l'offre."})
         if not self.product_id or not self.badge:
             return
         siblings = ProductOffer.objects.filter(product_id=self.product_id, is_active=True)
