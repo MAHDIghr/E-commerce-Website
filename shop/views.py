@@ -86,7 +86,7 @@ def search_suggestions(request):
         Prefetch(
             "media_items",
             queryset=ProductMedia.objects.filter(
-                variant__isnull=True, media_type=ProductMedia.IMAGE,
+                media_type=ProductMedia.IMAGE,
             ).order_by("-is_primary", "position", "pk"),
         ),
     ).order_by("-is_best_seller", "-is_new", "name")[:8]
@@ -96,7 +96,8 @@ def search_suggestions(request):
         variant = product.default_variant
         if not variant:
             continue
-        media = next(iter(product.media_items.all()), None)
+        media_items = list(product.media_items.all())
+        media = next((item for item in media_items if item.is_primary), None) or next(iter(media_items), None)
         image = (media.image.url if media and media.image else media.source_url) if media else ""
         offer = product.offers.filter(
             is_active=True, items__product_id=product.pk,
