@@ -190,11 +190,8 @@ class CatalogViewTests(TestCase):
         detail = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
         self.assertEqual(detail.status_code, 404)
 
-    def test_product_without_common_image_is_not_published(self):
-        variant = self.product.variants.first()
-        media = self.product.media_items.get()
-        media.variant = variant
-        media.save(update_fields=["variant"])
+    def test_product_without_image_is_not_published(self):
+        self.product.media_items.all().delete()
         response = self.client.get(reverse("shop:catalog"))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, '"id": "cabas-camel"')
@@ -218,16 +215,14 @@ class CatalogViewTests(TestCase):
         variant = self.product.variants.first()
         variant.is_active = False
         variant.save(update_fields=["is_active"])
-        media = self.product.media_items.get()
-        media.variant = variant
-        media.save(update_fields=["variant"])
+        self.product.media_items.all().delete()
 
         model_admin = ProductAdmin(Product, admin.site)
         diagnostic = str(model_admin.catalog_publication_diagnostics(self.product))
         self.assertIn("Produit désactivé", diagnostic)
         self.assertIn("Catégorie inactive", diagnostic)
         self.assertIn("Aucune variante active", diagnostic)
-        self.assertIn("Aucune image commune valide", diagnostic)
+        self.assertIn("Aucune image valide", diagnostic)
         self.assertIn("Aucune offre active valide", diagnostic)
         self.assertIn("cochez « Nouveauté »", diagnostic)
 
