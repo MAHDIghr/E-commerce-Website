@@ -209,11 +209,11 @@ function buildCartItemNode(item) {
     name.className = "cart-item__name"; name.textContent = item.name;
     price.className = "cart-item__price"; price.textContent = formatPrice(Number(item.unit_price));
     const qtyWrap = document.createElement("div"); qtyWrap.className = "cart-item__qty";
-    const minus = document.createElement("button"); minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", "Diminuer la quantité"); minus.addEventListener("click", () => updateQuantity(item.key, item.quantity - 1));
+    const minus = document.createElement("button"); minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", "Diminuer la quantité"); minus.addEventListener("click", async () => { minus.disabled = true; await updateQuantity(item.key, item.quantity - 1); if (minus.isConnected) minus.disabled = false; });
     const qty = document.createElement("span"); qty.textContent = String(item.quantity);
-    const plus = document.createElement("button"); plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", "Augmenter la quantité"); plus.disabled = !item.available || item.quantity >= item.available_quantity; plus.addEventListener("click", () => updateQuantity(item.key, item.quantity + 1));
+    const plus = document.createElement("button"); plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", "Augmenter la quantité"); plus.disabled = !item.available || item.quantity >= item.available_quantity; plus.addEventListener("click", async () => { plus.disabled = true; await updateQuantity(item.key, item.quantity + 1); if (plus.isConnected) plus.disabled = false; });
     qtyWrap.append(minus, qty, plus);
-    const remove = document.createElement("button"); remove.type = "button"; remove.className = "cart-item__remove"; remove.textContent = "Retirer"; remove.addEventListener("click", () => removeFromCart(item.key));
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "cart-item__remove"; remove.textContent = "Retirer"; remove.addEventListener("click", async () => { remove.disabled = true; await removeFromCart(item.key); if (remove.isConnected) remove.disabled = false; });
     details.append(name, price, qtyWrap, remove);
     const actions = document.createElement("div"); actions.style.textAlign = "right"; const total = document.createElement("p"); total.className = "cart-item__price"; total.textContent = formatPrice(Number(item.line_total)); actions.appendChild(total);
     row.append(img, details, actions);
