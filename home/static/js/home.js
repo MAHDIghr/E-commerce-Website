@@ -707,34 +707,7 @@ if (newsletterForm) {
 
 })();
 
-/* ==========================================================================
-   Mise à jour v2 — bouton panier des nouveautés + liens front-end uniquement
-   ========================================================================== */
-
-document.querySelectorAll('[data-action="quick-add"]').forEach((button) => {
-    const cartIcon = button.innerHTML;
-    button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const card = button.closest("[data-product-id]");
-        if (!card) return;
-
-        addToCart({
-            id: card.dataset.productId,
-            name: card.dataset.productName,
-            price: parseFloat(card.dataset.productPrice),
-            image: card.dataset.productImage,
-        });
-
-        button.classList.add("is-added");
-        button.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
-        window.setTimeout(() => {
-            button.classList.remove("is-added");
-            button.innerHTML = cartIcon;
-        }, 1200);
-    });
-});
+/* Les ajouts rapides sont gérés par base.js afin d'utiliser les offres et le panier serveur. */
 
 /* Liens de démonstration (avis, stories, reels) : pas de redirection pour l'instant.
    Remplacer href="#" par les vrais liens puis retirer data-frontend-only. */
