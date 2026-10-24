@@ -323,9 +323,21 @@ function mutateCart(payload) {
 }
 async function addToCart(product) {
     try {
-        const result = await mutateCart({ action: "add", variant_id: Number(product.variantId), offer_id: Number(product.offerId || 0), quantity: 1 });
-        if (result) { bumpCartIcon(); openCart(); } return Boolean(result);
-    } catch (e) { openCart(); return false; }
+        const result = await mutateCart({
+            action: "add",
+            variant_id: Number(product.variantId),
+            offer_id: Number(product.offerId || 0),
+            quantity: 1,
+        });
+        if (result) {
+            bumpCartIcon();
+            openCart();
+        }
+        return Boolean(result);
+    } catch (error) {
+        openCart();
+        throw error;
+    }
 }
 function playAddedFeedback(button) {
     if (!button) return;
