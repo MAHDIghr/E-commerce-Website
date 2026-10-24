@@ -612,6 +612,7 @@ if (newsletterForm) {
     let dragStartX = 0;
     let dragCurrentX = 0;
     let dragDifference = 0;
+    let suppressNextClick = false;
 
     function startDrag(clientX) {
         isDragging = true;
@@ -639,6 +640,8 @@ if (newsletterForm) {
         const minimumSwipeDistance = 60;
 
         if (Math.abs(dragDifference) >= minimumSwipeDistance) {
+            suppressNextClick = true;
+            window.setTimeout(() => { suppressNextClick = false; }, 0);
             if (dragDifference < 0) {
                 nextSlide();
             } else {
@@ -648,6 +651,13 @@ if (newsletterForm) {
             startAutoPlay();
         }
     }
+
+    carousel.addEventListener("click", (event) => {
+        if (!suppressNextClick) return;
+        event.preventDefault();
+        event.stopPropagation();
+        suppressNextClick = false;
+    }, true);
 
     carousel.addEventListener("mousedown", (event) => {
         event.preventDefault();
