@@ -1,4 +1,5 @@
 import base64
+import json
 import tempfile
 from decimal import Decimal
 
@@ -113,7 +114,7 @@ class CatalogViewTests(TestCase):
         token = client.cookies["csrftoken"].value
         cart_response = client.post(
             reverse("shop:cart_mutation"),
-            data=__import__("json").dumps({
+            data=json.dumps({
                 "action": "add", "variant_id": self.variant.pk,
                 "offer_id": self.offer.pk, "quantity": 1,
             }),
