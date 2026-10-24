@@ -86,7 +86,11 @@ def product_edit(request, pk=None):
         variants = VariantFormSet(request.POST, instance=instance, prefix="variants")
         media = MediaFormSet(request.POST, request.FILES, instance=instance, prefix="media")
         offers = OfferFormSet(request.POST, instance=instance, prefix="offers")
-        if form.is_valid() and variants.is_valid() and media.is_valid() and offers.is_valid():
+        form_valid = form.is_valid()
+        variants_valid = variants.is_valid()
+        media_valid = media.is_valid()
+        offers_valid = offers.is_valid()
+        if form_valid and variants_valid and media_valid and offers_valid:
             with transaction.atomic():
                 product = form.save()
                 variants.instance = product
@@ -109,10 +113,20 @@ def product_edit(request, pk=None):
                         product.media_items.exclude(pk=primary.pk).update(is_primary=False)
                 offers.save()
                 for offer in product.offers.all():
-                    ProductOfferItem.objects.get_or_create(
+                    ProductOfferItem.objects.filter(
+                        offer=offer, product=product, use_selected_variant=False,
+                    ).delete()
+                    main_item = ProductOfferItem.objects.filter(
                         offer=offer, product=product, use_selected_variant=True,
-                        defaults={"quantity": 1, "position": 0},
-                    )
+                    ).first()
+                    if main_item is None:
+                        ProductOfferItem.objects.create(
+                            offer=offer, product=product, use_selected_variant=True,
+                            quantity=1, position=0,
+                        )
+                    elif main_item.variant_id is not None:
+                        main_item.variant = None
+                        main_item.save(update_fields=("variant",))
             messages.success(request, "Produit créé avec ses offres et médias." if is_new else "Produit et offres mis à jour.")
             return redirect("dashboard:products")
     else:
@@ -177,7 +191,12 @@ def category_delete(request, pk):
     if category.products.exists():
         messages.error(request, f"Impossible de supprimer « {category.name} » : {category.products.count()} produit(s) y sont encore rattachés. Réaffectez-les ou supprimez-les d’abord.")
         return redirect("dashboard:categories")
-    category.delete()
+    try:
+        with transaction.atomic():
+            category.delete()
+    except ProtectedError:
+        messages.error(request, f"Impossible de supprimer « {category.name} » : des produits y sont encore rattachés.")
+        return redirect("dashboard:categories")
     messages.success(request, f"La catégorie « {category.name} » a été supprimée.")
     return redirect("dashboard:categories")
 
