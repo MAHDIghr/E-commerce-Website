@@ -946,7 +946,7 @@ Le panier utilise la session Django côté serveur. Le navigateur ne peut envoye
 - GET /boutique/panier/ renvoie le contenu et les totaux calculés côté serveur.
 - POST /boutique/panier/modifier/ accepte les actions add, update, remove et clear, avec protection CSRF Django.
 - Les quantités sont limitées à 10 par ligne, les lignes à 30 par panier, et les quantités doivent être des entiers stricts. Une addition qui ferait dépasser la limite d'une ligne est rejetée sans effacer la quantité déjà enregistrée.
-- Les offres sont contrôlées avec leurs composants et le stock de chaque variante ; les montants des offres utilisant directement la variante suivent le prix actuel de cette variante.
+- Les offres sont contrôlées avec leurs composants et le stock de chaque variante ; le champ `ProductOffer.price` est le prix appliqué côté serveur à l'offre sélectionnée. Les nouvelles lignes de panier exigent un identifiant d'offre valide.
 - Les mutations reçues depuis l'interface sont sérialisées côté JavaScript pour éviter que des clics rapprochés se remplacent. Le serveur reste la source de vérité ; aucune mutation ne réserve le stock.
 - Les lignes devenues invalides (produit non publié, variante inactive ou offre supprimée) sont retirées lors de la relecture.
 - Le tiroir du panier et les badges sont alimentés par la réponse serveur. Le prix affiché n’est pas une preuve de prix définitif pour une commande.
