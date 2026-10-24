@@ -141,9 +141,10 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'id="product-data"')
         self.assertContains(response, 'name="color"')
         self.assertContains(response, 'name="offer"')
-        self.assertContains(response, 'class="button button-primary button-block cta js-add"')
-        self.assertContains(response, 'class="button button-secondary js-add"')
-        self.assertContains(response, 'class="button button-primary js-add"')
+        self.assertContains(response, 'class="button button-primary button-block cta js-buy"')
+        self.assertContains(response, 'class="button button-secondary cta-icon js-add"')
+        self.assertContains(response, 'id="cta-final">Acheter</button>')
+        self.assertContains(response, 'class="button button-primary js-buy"')
 
     def test_featured_offer_is_selected_without_hiding_other_active_offers(self):
         self.offer.is_featured = False
