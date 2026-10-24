@@ -1,6 +1,8 @@
 """Formulaires métier du dashboard privé."""
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
+from django.forms.models import BaseInlineFormSet
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductVariant
 
@@ -48,6 +50,28 @@ class ProductForm(DashboardFormMixin, forms.ModelForm):
         self.fields["published_at"].input_formats = ("%Y-%m-%dT%H:%M",)
 
 
+class MediaFormSetBase(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        primary_forms = [
+            form for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get("DELETE") and form.cleaned_data.get("is_primary")
+        ]
+        if len(primary_forms) > 1:
+            raise ValidationError("Sélectionnez un seul média principal pour ce produit.")
+
+
+class OfferFormSetBase(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        featured_forms = [
+            form for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get("DELETE") and form.cleaned_data.get("is_featured")
+        ]
+        if len(featured_forms) > 1:
+            raise ValidationError("Une seule offre peut être mise en avant par produit.")
+
+
 VariantFormSet = inlineformset_factory(
     Product, ProductVariant,
     fields=("sku", "color_name", "color_slug", "color_code", "stock_quantity", "is_active", "position"),
@@ -60,7 +84,7 @@ VariantFormSet.form.base_fields["position"].label = "Ordre d'affichage des coule
 MediaFormSet = inlineformset_factory(
     Product, ProductMedia,
     fields=("variant", "media_type", "image", "source_url", "poster_url", "alt_text", "is_primary", "position"),
-    extra=0, can_delete=True,
+    extra=0, can_delete=True, formset=MediaFormSetBase,
 )
 MediaFormSet.form.base_fields["position"].label = "Ordre d'affichage des médias"
 MediaFormSet.form.base_fields["source_url"].label = "URL HTTPS de l'image ou de la vidéo"
@@ -70,4 +94,5 @@ OfferFormSet = inlineformset_factory(
     Product, ProductOffer,
     fields=("badge", "display_delivery_label", "price", "is_featured", "is_active"),
     extra=0, min_num=1, validate_min=True, max_num=3, validate_max=True, can_delete=True,
+    formset=OfferFormSetBase,
 )
