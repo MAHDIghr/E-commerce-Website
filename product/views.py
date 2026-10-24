@@ -102,7 +102,7 @@ def detail(request, slug):
                     "variant_name": item.variant.color_name or "",
                     "image": accessory_image,
                     "quantity": item.quantity,
-                    "original_price": float(standalone_offer.price) if standalone_offer else None,
+                    "original_price": float(standalone_offer.reference_price if standalone_offer.reference_price is not None and standalone_offer.reference_price > standalone_offer.price else standalone_offer.price) if standalone_offer else None,
                     "available": item.variant.stock_quantity >= item.quantity,
                     "available_quantity": item.variant.stock_quantity // item.quantity,
                 })
