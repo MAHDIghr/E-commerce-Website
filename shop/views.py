@@ -85,9 +85,7 @@ def search_suggestions(request):
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
         Prefetch(
             "media_items",
-            queryset=ProductMedia.objects.filter(
-                media_type=ProductMedia.IMAGE,
-            ).order_by("-is_primary", "position", "pk"),
+            queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk"),
         ),
     ).order_by("-is_best_seller", "-is_new", "name")[:8]
 
