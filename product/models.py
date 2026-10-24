@@ -170,13 +170,8 @@ class ProductMedia(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("product",),
-                condition=Q(is_primary=True, variant__isnull=True),
-                name="one_primary_common_media",
-            ),
-            models.UniqueConstraint(
-                fields=("variant",),
-                condition=Q(is_primary=True, variant__isnull=False),
-                name="one_primary_variant_media",
+                condition=Q(is_primary=True),
+                name="one_primary_media_per_product",
             ),
         ]
         verbose_name = "média produit"
