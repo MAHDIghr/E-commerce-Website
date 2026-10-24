@@ -172,6 +172,7 @@ const cartDrawer = document.querySelector("#cart-drawer");
 const cartBackdrop = document.querySelector("#cart-backdrop");
 const cartClose = document.querySelector('[data-action="close-cart"]');
 const cartItemsContainer = document.querySelector("#cart-items");
+const cartDrawerBody = document.querySelector("#cart-body");
 const cartEmptyState = document.querySelector("#cart-empty");
 const cartFooter = document.querySelector("#cart-footer");
 const cartSubtotalEl = document.querySelector("#cart-subtotal");
@@ -277,6 +278,7 @@ function renderCartDrawer() {
 
     if (cartEmptyState) cartEmptyState.hidden = !isEmpty;
     if (cartFooter) cartFooter.hidden = isEmpty;
+    if (cartDrawerBody) cartDrawerBody.hidden = isEmpty;
     if (shippingProgress) shippingProgress.hidden = isEmpty;
 
     if (isEmpty) {
