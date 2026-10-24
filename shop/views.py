@@ -234,6 +234,82 @@ def _line_details(variant_id, offer_id, quantity):
         "available": available,
     }
 
+@require_GET
+def offer_options(request, slug):
+    """Expose uniquement les offres réellement ajoutables pour une variante précise."""
+    product = published_products().filter(slug=slug).first()
+    if product is None:
+        return JsonResponse({"error": "Produit introuvable ou indisponible."}, status=404)
+
+    try:
+        variant_id = _strict_int(request.GET.get("variant_id"))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Variante invalide."}, status=400)
+
+    variant = ProductVariant.objects.filter(
+        pk=variant_id, product_id=product.pk, is_active=True,
+    ).select_related("product").first()
+    if variant is None:
+        return JsonResponse({"error": "Cette variante n'est pas disponible pour ce produit."}, status=404)
+
+    offers = []
+    queryset = ProductOffer.objects.filter(
+        product_id=product.pk, is_active=True,
+    ).prefetch_related(
+        Prefetch(
+            "items",
+            queryset=ProductOfferItem.objects.select_related(
+                "product", "product__category", "variant", "variant__product",
+            ).order_by("position", "pk"),
+        ),
+    ).order_by("position", "pk")
+
+    for offer in queryset:
+        details = _line_details(variant.pk, offer.pk, 1)
+        if not details or not details["available"]:
+            continue
+
+        components = []
+        reference_total = Decimal("0.00")
+        for item in offer.items.all():
+            component = variant if item.use_selected_variant else item.variant
+            if component is None:
+                components = []
+                break
+            components.append({
+                "name": item.product.name,
+                "quantity": item.quantity,
+            })
+            reference_total += component.price * item.quantity
+        if not components:
+            continue
+
+        unit_price = Decimal(details["unit_price"])
+        saving = reference_total - unit_price if reference_total > unit_price else Decimal("0.00")
+        offers.append({
+            "id": offer.pk,
+            "title": offer.title,
+            "badge": offer.get_badge_display(),
+            "featured": offer.is_featured,
+            "price": f"{unit_price:.2f}",
+            "reference_total": f"{reference_total:.2f}",
+            "saving": f"{saving:.2f}",
+            "components": components,
+            "component_count": sum(component["quantity"] for component in components),
+            "uses_variant_price": (
+                len(components) == 1
+                and components[0]["quantity"] == 1
+                and offer.items.all()[0].use_selected_variant
+            ),
+        })
+
+    return JsonResponse({
+        "product": {"slug": product.slug, "name": product.name},
+        "variant": {"id": variant.pk, "name": variant.color_name},
+        "offers": offers,
+    })
+
+
 def _cart_payload(request):
     raw_state = request.session.get(CART_SESSION_KEY, {})
     state = _cart_state(request)
