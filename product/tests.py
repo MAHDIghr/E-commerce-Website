@@ -61,18 +61,26 @@ class CatalogModelTests(TestCase):
             offer.full_clean()
 
     def test_catalog_card_price_and_discount_are_anchored_to_essential_offer(self):
-        ProductOffer.objects.create(
-            product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
-            price=Decimal("89.90"), reference_price=Decimal("119.90"),
-        )
-        ProductOffer.objects.create(
-            product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
-            price=Decimal("99.90"),
-        )
-        ProductOffer.objects.create(
-            product=self.product, title="Premium", badge=ProductOffer.BADGE_PREMIUM,
-            price=Decimal("109.90"), is_featured=True,
-        )
+        offers = [
+            ProductOffer.objects.create(
+                product=self.product, title="Essentiel", badge=ProductOffer.BADGE_ESSENTIAL,
+                price=Decimal("89.90"), reference_price=Decimal("119.90"),
+            ),
+            ProductOffer.objects.create(
+                product=self.product, title="Medium", badge=ProductOffer.BADGE_MEDIUM,
+                price=Decimal("99.90"),
+            ),
+            ProductOffer.objects.create(
+                product=self.product, title="Premium", badge=ProductOffer.BADGE_PREMIUM,
+                price=Decimal("109.90"), is_featured=True,
+            ),
+        ]
+        # Une offre n'est valide pour le catalogue que si elle contient son produit principal.
+        for offer in offers:
+            ProductOfferItem.objects.create(
+                offer=offer, product=self.product, use_selected_variant=True, quantity=1,
+            )
+
         self.assertEqual(self.product.display_price, Decimal("89.90"))
         self.assertEqual(self.product.display_reference_price, Decimal("119.90"))
         self.assertEqual(self.product.display_discount_percent, 25)
