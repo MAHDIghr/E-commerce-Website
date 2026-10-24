@@ -96,7 +96,7 @@ def search_suggestions(request):
         variant = product.default_variant
         if not variant:
             continue
-        media = next(iter(product.media_items.all()), None)
+        media = next((item for item in product.media_items.all() if item.media_type == ProductMedia.IMAGE), None)
         image = (media.image.url if media and media.image else media.source_url) if media else ""
         offer = product.offers.filter(
             is_active=True, items__product_id=product.pk,
