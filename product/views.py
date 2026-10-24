@@ -60,7 +60,6 @@ def detail(request, slug):
                     item.product_id != product.pk
                     or item.variant_id is not None
                     or item.quantity < 1
-                    or default_variant.stock_quantity < item.quantity
                 ):
                     invalid_offer = True
                     break

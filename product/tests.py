@@ -159,6 +159,20 @@ class CatalogViewTests(TestCase):
         self.assertIn("background: var(--color-ink);", css_source)
         self.assertIn("color: #fff;", css_source)
 
+    def test_offer_is_not_hidden_when_default_color_is_out_of_stock_but_another_color_is_available(self):
+        self.variant.stock_quantity = 0
+        self.variant.save(update_fields=["stock_quantity"])
+        ProductVariant.objects.create(
+            product=self.product, sku="CABAS-CAMEL-OTHER-COLOR",
+            color_name="Noir", color_slug="noir", color_code="#222222",
+            stock_quantity=3, position=1,
+        )
+
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["product"]["offers"]), 1)
+        self.assertContains(response, "Essentiel")
+
     def test_product_detail_exposes_configured_accessories_for_the_optional_gift_popup(self):
         accessory = Product.objects.create(
             category=self.category, name="Porte-cartes beige",
