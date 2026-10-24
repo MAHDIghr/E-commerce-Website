@@ -282,6 +282,7 @@ def offer_options(request, slug):
             components.append({
                 "name": item.product.name,
                 "quantity": item.quantity,
+                "variant_name": component.color_name or "",
             })
             reference_total += component.price * item.quantity
         if not components:
@@ -293,6 +294,7 @@ def offer_options(request, slug):
             "id": offer.pk,
             "title": offer.title,
             "badge": offer.get_badge_display(),
+            "delivery_label": offer.get_display_delivery_label_display(),
             "featured": offer.is_featured,
             "price": f"{unit_price:.2f}",
             "reference_total": f"{reference_total:.2f}",
