@@ -37,7 +37,9 @@ def detail(request, slug):
     variants = list(product.variants.all())
     if not variants:
         raise Http404("Produit indisponible.")
-    default_variant = next((variant for variant in variants if variant.stock_quantity > 0), variants[0])
+    # Le sélecteur démarre sur une variante vendable si l'une existe.
+    variants.sort(key=lambda variant: (variant.stock_quantity <= 0, variant.position, variant.pk))
+    default_variant = variants[0]
 
     media_items = list(product.media_items.all())
     media = [{
