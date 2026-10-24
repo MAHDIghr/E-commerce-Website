@@ -1,10 +1,9 @@
 """Vues privées de gestion du catalogue."""
 from django.contrib import messages
-from django.contrib.auth import logout
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, LogoutView
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -147,8 +146,3 @@ def offers(request):
         "offers": ProductOffer.objects.select_related("product").order_by("product__name", "position"),
     })
 
-
-@dashboard_admin_required
-def logout_redirect(request):
-    # Ancien lien GET interdit : la déconnexion reste exclusivement en POST.
-    raise PermissionDenied("Utilisez le formulaire de déconnexion sécurisé.")
