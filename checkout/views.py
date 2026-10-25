@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from shop.views import CART_SESSION_KEY
 from .forms import CheckoutForm
 from .models import Order, PaymentAttempt
-from .services import CheckoutProblem, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
+from .services import CheckoutProblem, RetryableWebhookError, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,9 @@ def stripe_webhook(request):
         return HttpResponseBadRequest("Signature webhook invalide.")
     try:
         process_stripe_event(event)
+    except RetryableWebhookError:
+        # Une réponse 5xx laisse Stripe réessayer après la sauvegarde de la commande.
+        return HttpResponse(status=500)
     except Exception:
         logger.exception("Stripe webhook processing failed; Stripe may retry the event")
         return HttpResponse(status=500)
