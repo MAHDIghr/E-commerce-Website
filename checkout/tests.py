@@ -9,7 +9,8 @@ from django.urls import reverse
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
 from .models import Order, OrderLine, PaymentAttempt, StripeWebhookEvent
-from .services import create_stripe_session, process_stripe_event, release_reserved_stock
+from .forms import CheckoutForm
+from .services import CheckoutProblem, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
 
 class CheckoutIntegrationTests(TestCase):
@@ -25,6 +26,18 @@ class CheckoutIntegrationTests(TestCase):
         return self.client.post(reverse("shop:cart_mutation"), data=json.dumps({
             "action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1,
         }), content_type="application/json")
+
+    def test_free_shipping_is_automatic_at_threshold_and_paid_delivery_has_two_choices(self):
+        free_form = CheckoutForm(subtotal=Decimal("80.00"))
+        self.assertEqual(list(free_form.fields["shipping_method"].choices), [("free", "Livraison offerte — 0,00 €")])
+        self.assertEqual(shipping_price("free", Decimal("80.00")), Decimal("0.00"))
+        with self.assertRaises(CheckoutProblem):
+            shipping_price("standard", Decimal("80.00"))
+
+        paid_form = CheckoutForm(subtotal=Decimal("79.99"))
+        self.assertEqual([value for value, _label in paid_form.fields["shipping_method"].choices], ["standard", "express"])
+        self.assertEqual(shipping_price("standard", Decimal("79.99")), Decimal("4.90"))
+        self.assertEqual(shipping_price("express", Decimal("79.99")), Decimal("9.90"))
 
     @patch.dict("os.environ", {"STRIPE_SECRET_KEY": "", "STRIPE_WEBHOOK_SECRET": "", "SITE_BASE_URL": ""})
     def test_missing_stripe_configuration_does_not_create_order_or_change_stock(self):
