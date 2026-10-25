@@ -1,0 +1,41 @@
+.cart-page-shell{width:min(1180px,calc(100% - 2rem));margin:clamp(2rem,5vw,4.5rem) auto 5rem;color:var(--color-text,#29231f)}
+.cart-page-heading{max-width:700px;margin:0 auto 2.5rem;text-align:center}
+.cart-page-eyebrow{font-size:.72rem;letter-spacing:.16em;font-weight:600;color:#8b7056}
+.cart-page-heading h1{font-family:"Playfair Display",Georgia,serif;font-size:clamp(2.2rem,5vw,3.6rem);font-weight:500;line-height:1.08;margin:.65rem 0 1rem}
+.cart-page-heading>p:last-child{color:#746a62;line-height:1.7}
+.cart-page-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.8fr);gap:clamp(1.25rem,3vw,2.5rem);align-items:start}
+.cart-page-list-panel,.cart-page-summary,.cart-page-empty{background:#fff;border:1px solid #e9e1d8;border-radius:18px;box-shadow:0 12px 38px rgba(49,37,26,.045)}
+.cart-page-list-panel{padding:clamp(1rem,2.5vw,2rem)}
+.cart-page-list-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;border-bottom:1px solid #eee7e0;padding-bottom:1rem}
+.cart-page-list-heading h2,.cart-page-summary h2{font-family:"Playfair Display",Georgia,serif;font-size:1.55rem;font-weight:500;margin:0}
+.cart-page-list-heading a,.cart-page-summary__continue{font-size:.88rem;color:#765a40;text-underline-offset:3px}
+.cart-page-items{list-style:none;padding:0;margin:0}
+.cart-page-item{display:grid;grid-template-columns:104px minmax(0,1fr) auto;gap:1rem;padding:1.3rem 0;border-bottom:1px solid #eee7e0}
+.cart-page-item:last-child{border-bottom:0}
+.cart-page-item__image{display:block;aspect-ratio:4/5;background:#f6f2ed;border-radius:10px;overflow:hidden}
+.cart-page-item__image img{width:100%;height:100%;object-fit:cover}
+.cart-page-item__details{min-width:0}
+.cart-page-item__name{font-weight:600;line-height:1.45;color:inherit;text-decoration:none}
+.cart-page-item__name:hover{text-decoration:underline;text-underline-offset:3px}
+.cart-page-item__variant,.cart-page-item__component{font-size:.82rem;color:#776d64;margin:.35rem 0}
+.cart-page-item__controls{display:flex;align-items:center;gap:.45rem;margin-top:.9rem;flex-wrap:wrap}
+.cart-page-item__controls button{min-width:34px;height:34px;border:1px solid #ded4ca;border-radius:8px;background:#fff;color:#302820;cursor:pointer}
+.cart-page-item__controls button:disabled{opacity:.4;cursor:not-allowed}
+.cart-page-item__quantity{min-width:1.5rem;text-align:center;font-size:.9rem}
+.cart-page-item__controls .cart-page-item__remove{border:0;margin-left:.35rem;color:#7c6250;text-decoration:underline;text-underline-offset:3px}
+.cart-page-item__total{white-space:nowrap;font-size:.96rem}
+.cart-page-item__warning{font-size:.82rem;color:#9b3d2f;line-height:1.5}
+.cart-page-summary{padding:clamp(1.25rem,2.5vw,2rem);position:sticky;top:1.5rem}
+.cart-page-summary h2{margin-bottom:1.4rem}
+.cart-page-summary__row{display:flex;justify-content:space-between;gap:1rem;padding:1rem 0;border-top:1px solid #eee7e0;font-size:1rem}
+.cart-page-summary__row strong{font-size:1.15rem}
+.cart-page-summary__note,.cart-page-trust{font-size:.82rem;color:#776d64;line-height:1.65}
+.cart-page-summary .button{margin-top:1rem;min-height:50px}
+.cart-page-summary__continue{display:block;text-align:center;margin-top:1rem}
+.cart-page-trust{border-top:1px solid #eee7e0;padding-top:1rem;margin-top:1.25rem}
+.cart-page-empty{text-align:center;padding:clamp(2rem,6vw,4rem) 1.25rem}
+.cart-page-empty h2{font-family:"Playfair Display",Georgia,serif;font-weight:500;font-size:2rem;margin:0 0 .8rem}
+.cart-page-empty p{color:#776d64;line-height:1.7;margin:0 auto 1.5rem;max-width:480px}
+.cart-page-status{padding:1rem;border:1px solid #e4c8bf;background:#fff8f5;border-radius:10px;color:#8c3024;margin:0 0 1.5rem}
+.cart-page-status[hidden],[hidden]{display:none!important}
+@media(max-width:760px){.cart-page-layout{grid-template-columns:1fr}.cart-page-summary{position:static;order:-1}.cart-page-item{grid-template-columns:76px minmax(0,1fr);gap:.8rem}.cart-page-item__total{grid-column:2;grid-row:1;justify-self:start;margin-top:.45rem}.cart-page-item__details{grid-column:2}.cart-page-list-heading{align-items:flex-start;flex-direction:column}.cart-page-heading{margin-bottom:1.5rem}}
