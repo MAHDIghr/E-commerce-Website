@@ -45,7 +45,7 @@ class CheckoutIntegrationTests(TestCase):
         response = self.client.post(reverse("checkout:checkout"), data={
             "full_name": "Camille Martin", "email": "camille@example.test", "phone": "",
             "address_line1": "1 rue du Test", "address_line2": "", "postal_code": "75001",
-            "city": "Paris", "country": "FR", "shipping_method": "standard",
+            "city": "Paris", "country": "FR", "shipping_method": "free",
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Order.objects.count(), 0)
