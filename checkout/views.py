@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from shop.views import CART_SESSION_KEY
+from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
 from .models import Order, PaymentAttempt
 from .services import CheckoutProblem, RetryableWebhookError, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
@@ -104,7 +104,10 @@ def order_result(request, public_id):
     cancelled_return = request.GET.get("cancelled") == "1"
     # Le navigateur ne confirme jamais le paiement; seul le webhook signé le fait.
     if order.status == Order.PAID:
-        if not request.session.get(CART_SESSION_KEY):
+        # Effacer uniquement le panier qui a servi à cette commande. Si le client
+        # a commencé une nouvelle sélection entre-temps, ne pas la supprimer.
+        current_cart = _cart_state(request)
+        if not current_cart or current_cart == (order.cart_snapshot or {}):
             request.session.pop(CART_SESSION_KEY, None)
         request.session.pop("checkout_attempt_key", None)
     elif order.status in (Order.CANCELLED, Order.EXPIRED):
