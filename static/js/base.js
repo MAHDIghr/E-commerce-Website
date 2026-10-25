@@ -187,6 +187,8 @@ const shippingFill = document.querySelector("#shipping-fill");
 const shippingText = document.querySelector("#shipping-text");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
+const cartCheckoutUrl = cartDrawer?.dataset.checkoutUrl || "/checkout/";
+const cartCheckoutButton = document.querySelector("#cart-checkout");
 const FREE_SHIPPING_THRESHOLD = 80;
 let cartSnapshot = { items: [], count: 0, subtotal: "0.00" };
 let cartMutationQueue = Promise.resolve();
@@ -324,6 +326,10 @@ function renderCartDrawer() {
     if (cartFooter) cartFooter.hidden = isEmpty;
     if (cartDrawerBody) cartDrawerBody.hidden = isEmpty;
     if (shippingProgress) shippingProgress.hidden = isEmpty;
+    if (cartCheckoutButton) {
+        cartCheckoutButton.disabled = isEmpty || items.some((item) => !item.available);
+        cartCheckoutButton.setAttribute("aria-disabled", String(cartCheckoutButton.disabled));
+    }
 
     if (isEmpty) {
         if (cartSubtotalEl) cartSubtotalEl.textContent = formatPrice(0);
@@ -669,6 +675,13 @@ function bumpCartIcon() { cartActionButtons.forEach((b) => { b.classList.remove(
 cartActionButtons.forEach((button) => button.addEventListener("click", openCart));
 if (cartClose) cartClose.addEventListener("click", closeCart);
 if (cartBackdrop) cartBackdrop.addEventListener("click", closeCart);
+if (cartCheckoutButton) cartCheckoutButton.addEventListener("click", () => {
+    if (cartCheckoutButton.disabled) {
+        showCartStatus("Vérifiez la disponibilité des articles avant de commander.", true);
+        return;
+    }
+    window.location.assign(cartCheckoutUrl);
+});
 if (cartClearButton) cartClearButton.addEventListener("click", async () => { try { await mutateCart({ action: "clear" }); showCartStatus("Le panier a été vidé."); } catch (e) {} });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCart(); closeSearch(); } });
 /* CTA fiche produit : délégation globale pour rester fonctionnel même si une
