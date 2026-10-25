@@ -43,9 +43,13 @@ def stripe_currency():
 
 
 def shipping_price(method, subtotal):
+    if subtotal >= FREE_SHIPPING_THRESHOLD:
+        if method != "free":
+            raise CheckoutProblem("La livraison est offerte pour ce montant. Rechargez le checkout puis réessayez.")
+        return Decimal("0.00")
     if method not in SHIPPING:
         raise CheckoutProblem("Le mode de livraison sélectionné n’est pas valide.")
-    return Decimal("0.00") if subtotal >= FREE_SHIPPING_THRESHOLD else SHIPPING[method]
+    return SHIPPING[method]
 
 
 def validated_cart(request):
@@ -103,6 +107,7 @@ def create_order_and_reserve(request, form, checkout_key):
 
         order = Order.objects.create(
             checkout_key=checkout_key,
+            cart_snapshot=dict(_cart_state(request)),
             customer=request.user if request.user.is_authenticated else None,
             email=form.cleaned_data["email"], full_name=form.cleaned_data["full_name"],
             phone=form.cleaned_data["phone"], address_line1=form.cleaned_data["address_line1"],
