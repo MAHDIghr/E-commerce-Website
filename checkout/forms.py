@@ -6,7 +6,7 @@ from django import forms
 COUNTRIES = [
     ("FR", "France"), ("BE", "Belgique"), ("LU", "Luxembourg"),
     ("DE", "Allemagne"), ("ES", "Espagne"), ("IT", "Italie"),
-    ("NL", "Pays-Bas"), ("PT", "Portugal"), ("CH", "Suisse"), ("GB", "Royaume-Uni"), ("CH", "Suisse"), ("GB", "Royaume-Uni"),
+    ("NL", "Pays-Bas"), ("PT", "Portugal"), ("CH", "Suisse"), ("GB", "Royaume-Uni"),
 ]
 
 
@@ -21,14 +21,20 @@ class CheckoutForm(forms.Form):
     country = forms.ChoiceField(label="Pays", choices=COUNTRIES, initial="FR", widget=forms.Select(attrs={"autocomplete": "country"}))
     shipping_method = forms.ChoiceField(label="Mode de livraison", choices=(), initial="standard")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subtotal=None, **kwargs):
         super().__init__(*args, **kwargs)
         standard = Decimal(os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90"))
         express = Decimal(os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90"))
-        self.fields["shipping_method"].choices = (
-            ("standard", f"Standard — {standard:.2f} €"),
-            ("express", f"Express — {express:.2f} €"),
-        )
+        threshold = Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00"))
+        if subtotal is not None and Decimal(str(subtotal)) >= threshold:
+            self.fields["shipping_method"].choices = (("free", "Livraison offerte — 0,00 €"),)
+            self.fields["shipping_method"].initial = "free"
+        else:
+            self.fields["shipping_method"].choices = (
+                ("standard", f"Standard — {standard:.2f} €"),
+                ("express", f"Express — {express:.2f} €"),
+            )
+            self.fields["shipping_method"].initial = "standard"
 
     def clean_full_name(self):
         value = " ".join(self.cleaned_data["full_name"].split())
