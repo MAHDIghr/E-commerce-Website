@@ -4,7 +4,8 @@
 <aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier"
        role="dialog" aria-modal="true" data-cart-url="{% url 'shop:cart_api' %}"
        data-cart-mutation-url="{% url 'shop:cart_mutation' %}"
-       data-checkout-url="{% url 'checkout:checkout' %}">
+       data-checkout-url="{% url 'checkout:checkout' %}"
+       data-cart-page-url="{% url 'shop:cart_page' %}">
     <div class="cart-drawer__header">
         <div class="cart-drawer__heading">
             <span class="cart-drawer__eyebrow">MY LINE COLLECTION</span>
