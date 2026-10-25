@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Mon panier | My Line Collection{% endblock %}
+{% block meta_description %}Vérifiez votre sélection, les quantités et la disponibilité avant de finaliser votre commande.{% endblock %}
+{% block body_class %}page-cart{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cart-page.css' %}">{% endblock %}
+{% block content %}
+<section class="cart-page-shell" id="cart-page"
+         data-cart-url="{% url 'shop:cart_api' %}"
+         data-cart-mutation-url="{% url 'shop:cart_mutation' %}"
+         data-checkout-url="{% url 'checkout:checkout' %}"
+         data-catalog-url="{% url 'shop:catalog' %}">
+  <header class="cart-page-heading">
+    <p class="cart-page-eyebrow">MY LINE COLLECTION · VOTRE SÉLECTION</p>
+    <h1>Votre panier</h1>
+    <p>Vérifiez votre sélection avant de passer à la livraison et au paiement sécurisé.</p>
+  </header>
+  <p id="cart-page-status" class="cart-page-status" role="status" aria-live="polite" hidden></p>
+  <div id="cart-page-empty" class="cart-page-empty" {% if cart.items %}hidden{% endif %}>
+    <h2>Votre panier est vide</h2>
+    <p>Découvrez nos sacs et accessoires pour trouver votre prochaine pièce coup de cœur.</p>
+    <a class="button button-primary" href="{% url 'shop:catalog' %}">Découvrir la collection</a>
+  </div>
+  <div id="cart-page-content" class="cart-page-layout" {% if not cart.items %}hidden{% endif %}>
+    <div class="cart-page-list-panel">
+      <div class="cart-page-list-heading"><h2>Votre sélection</h2><a href="{% url 'shop:catalog' %}">Continuer mes achats</a></div>
+      <ul id="cart-page-items" class="cart-page-items">
+        {% for item in cart.items %}
+        <li class="cart-page-item" data-key="{{ item.key }}">
+          <a class="cart-page-item__image" href="{% url 'product:detail' slug=item.product_slug %}">{% if item.image %}<img src="{{ item.image }}" alt="" loading="lazy">{% endif %}</a>
+          <div class="cart-page-item__details">
+            <a class="cart-page-item__name" href="{% url 'product:detail' slug=item.product_slug %}">{{ item.name }}</a>
+            {% if item.variant_name %}<p class="cart-page-item__variant">{{ item.variant_name }}</p>{% endif %}
+            {% for component in item.components %}<p class="cart-page-item__component">Inclus et offert : {{ component.name }}{% if component.variant_name %} — {{ component.variant_name }}{% endif %}</p>{% endfor %}
+            <div class="cart-page-item__controls">
+              <button type="button" data-cart-action="decrease" aria-label="Diminuer la quantité de {{ item.name }}">−</button>
+              <span class="cart-page-item__quantity">{{ item.quantity }}</span>
+              <button type="button" data-cart-action="increase" aria-label="Augmenter la quantité de {{ item.name }}" {% if not item.available or item.quantity >= item.available_quantity %}disabled{% endif %}>+</button>
+              <button type="button" class="cart-page-item__remove" data-cart-action="remove">Retirer</button>
+            </div>
+            {% if not item.available %}<p class="cart-page-item__warning">Stock insuffisant ou article indisponible. Ajustez la quantité ou retirez cet article.</p>{% endif %}
+          </div>
+          <strong class="cart-page-item__total">{{ item.line_total }} €</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <aside class="cart-page-summary">
+      <h2>Récapitulatif</h2>
+      <div class="cart-page-summary__row"><span>Sous-total</span><strong id="cart-page-subtotal">{{ cart.subtotal }} €</strong></div>
+      <p class="cart-page-summary__note">Les frais de livraison éventuels seront calculés à l’étape suivante. Le total est vérifié côté serveur.</p>
+      <button type="button" class="button button-primary button-block" id="cart-page-checkout">Passer à la commande</button>
+      <a class="cart-page-summary__continue" href="{% url 'shop:catalog' %}">Continuer mes achats</a>
+      <p class="cart-page-trust">Paiement effectué sur la page sécurisée hébergée par Stripe. Les données de carte ne transitent pas par la boutique.</p>
+    </aside>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/cart-page.js' %}" defer></script>{% endblock %}
