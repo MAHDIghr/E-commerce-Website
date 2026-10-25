@@ -622,7 +622,7 @@ async function addProductFromCard(button) {
             if (!selection || !selection.offerId) return false;
         }
         lastCartTrigger = button;
-        return await addToCart({ variantId, offerId: selection.offerId, selectedItemIds: selection.selectedItemIds });
+        return await addToCart({ variantId, offerId: selection.offerId, selectedItemIds: selection.selectedItemIds }, { openDrawer: false });
     } catch (error) {
         showCartStatus(error.message || "L'ajout au panier a échoué.", true);
         openCart();
@@ -746,8 +746,11 @@ document.querySelectorAll('[data-action="add-to-cart"], [data-action="quick-add"
         if (button.disabled) return;
         button.disabled = true;
         const added = await addProductFromCard(button);
-        if (added) playAddedFeedback(button);
-        else if (button.isConnected) button.disabled = false;
+        if (added) {
+            window.location.assign(cartPageUrl);
+            return;
+        }
+        if (button.isConnected) button.disabled = false;
     });
 });
 cartReady = refreshCartUI();
