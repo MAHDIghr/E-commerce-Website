@@ -14,6 +14,10 @@
     const mutationUrl = root.dataset.cartMutationUrl;
     const checkoutUrl = root.dataset.checkoutUrl;
     const catalogUrl = root.dataset.catalogUrl;
+    let cartReady = Promise.resolve();
+    let mutationQueue = Promise.resolve();
+    let mutationInProgress = false;
+    let currentCart = null;
 
     const money = (value) => `${Number(value || 0).toFixed(2).replace(".", ",")} €`;
     const csrfToken = () => {
@@ -121,6 +125,7 @@
         return row;
     }
     function render(data) {
+        currentCart = data;
         list.replaceChildren();
         const items = Array.isArray(data.items) ? data.items : [];
         items.forEach((item) => list.appendChild(renderItem(item)));
@@ -128,7 +133,7 @@
         empty.hidden = !isEmpty;
         content.hidden = isEmpty;
         subtotalNode.textContent = money(data.subtotal);
-        checkoutButton.disabled = isEmpty || items.some((item) => !item.available);
+        checkoutButton.disabled = mutationInProgress || isEmpty || items.some((item) => !item.available);
         checkoutButton.setAttribute("aria-disabled", String(checkoutButton.disabled));
     }
     async function refresh() {
@@ -138,17 +143,26 @@
             showStatus(error.message || "Le panier est momentanément indisponible.");
         }
     }
-    async function mutate(payload, button) {
-        if (button) button.disabled = true;
-        showStatus("");
-        try {
-            render(await request(mutationUrl, "POST", payload));
-        } catch (error) {
-            showStatus(error.message || "Le panier n'a pas pu être mis à jour.");
-            await refresh();
-        } finally {
-            if (button && button.isConnected) button.disabled = false;
-        }
+    function mutate(payload, button) {
+        const operation = mutationQueue.then(async () => {
+            await cartReady;
+            mutationInProgress = true;
+            if (checkoutButton) checkoutButton.disabled = true;
+            if (button) button.disabled = true;
+            showStatus("");
+            try {
+                render(await request(mutationUrl, "POST", payload));
+            } catch (error) {
+                showStatus(error.message || "Le panier n'a pas pu être mis à jour.");
+                await refresh();
+            } finally {
+                mutationInProgress = false;
+                if (currentCart) render(currentCart);
+                if (button && button.isConnected) button.disabled = false;
+            }
+        });
+        mutationQueue = operation.catch(() => null);
+        return operation;
     }
 
     list.addEventListener("click", (event) => {
@@ -184,5 +198,5 @@
         }
         window.location.assign(checkoutUrl);
     });
-    refresh();
+    cartReady = refresh();
 })();
