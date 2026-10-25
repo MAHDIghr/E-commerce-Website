@@ -12,6 +12,10 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Charge les paramètres locaux depuis .env sans versionner les secrets.
+from dotenv import load_dotenv
+load_dotenv(BASE_DIR / ".env")
+
 
 # -----------------------------------------------------------------------------
 # Application definition
