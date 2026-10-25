@@ -77,6 +77,30 @@ class CheckoutIntegrationTests(TestCase):
         self.assertEqual(self.variant.stock_quantity, 4)
         self.assertContains(response, "Aucun paiement ne sera simulé")
 
+    def test_paid_return_clears_matching_cart_but_preserves_a_new_cart(self):
+        from shop.views import CART_SESSION_KEY
+        order = Order.objects.create(
+            checkout_key=uuid.uuid4(), email="client@example.test", full_name="Client Test",
+            address_line1="1 rue Test", postal_code="75001", city="Paris", country="FR",
+            shipping_method="standard", subtotal=Decimal("89.90"), shipping_amount=Decimal("4.90"),
+            total=Decimal("94.80"), status=Order.PAID,
+            cart_snapshot={f"{self.variant.pk}:{self.offer.pk}": 1},
+        )
+        session = self.client.session
+        session[CART_SESSION_KEY] = dict(order.cart_snapshot)
+        session.save()
+        response = self.client.get(reverse("checkout:result", kwargs={"public_id": order.public_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(CART_SESSION_KEY, self.client.session)
+
+        new_cart = {f"{self.variant.pk}:{self.offer.pk}": 2}
+        session = self.client.session
+        session[CART_SESSION_KEY] = new_cart
+        session.save()
+        response = self.client.get(reverse("checkout:result", kwargs={"public_id": order.public_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session.get(CART_SESSION_KEY), new_cart)
+
     def test_return_page_never_marks_order_paid_and_rejects_mismatched_session(self):
         order = Order.objects.create(
             checkout_key=uuid.uuid4(), email="client@example.test", full_name="Client Test",
