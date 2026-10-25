@@ -8,9 +8,9 @@ from django.test import TestCase
 from django.urls import reverse
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
-from .models import Order, OrderLine, PaymentAttempt, StripeWebhookEvent
+from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent
 from .forms import CheckoutForm
-from .services import CheckoutProblem, RetryableWebhookError, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
 
 class CheckoutIntegrationTests(TestCase):
@@ -244,3 +244,56 @@ class CheckoutIntegrationTests(TestCase):
         self.assertEqual(payload["metadata"]["order_public_id"], str(order.public_id))
         order.refresh_from_db()
         self.assertEqual(order.stripe_session_id, "cs_test_unit")
+
+
+class PromoCodeTests(TestCase):
+    def setUp(self):
+        self.promo = PromoCode.objects.create(code="TESTPROMO", discount_type=PromoCode.PERCENT, value=Decimal("15.00"), minimum_subtotal=Decimal("20.00"), maximum_discount=Decimal("25.00"), is_active=True)
+
+    def test_code_is_normalized_and_discount_is_server_calculated(self):
+        promo, discount = apply_promo_code(" testpromo ", Decimal("100.00"))
+        self.assertEqual(promo.code, "TESTPROMO")
+        self.assertEqual(discount, Decimal("15.00"))
+
+    def test_discount_cap_and_minimum_are_enforced(self):
+        _promo, discount = apply_promo_code("TESTPROMO", Decimal("300.00"))
+        self.assertEqual(discount, Decimal("25.00"))
+        with self.assertRaises(CheckoutProblem):
+            apply_promo_code("TESTPROMO", Decimal("19.99"))
+
+    def test_inactive_and_expired_codes_are_rejected(self):
+        from django.utils import timezone
+        self.promo.ends_at = timezone.now()
+        self.promo.save()
+        with self.assertRaises(CheckoutProblem):
+            apply_promo_code("TESTPROMO", Decimal("100.00"))
+        self.promo.ends_at = None
+        self.promo.is_active = False
+        self.promo.save()
+        with self.assertRaises(CheckoutProblem):
+            apply_promo_code("TESTPROMO", Decimal("100.00"))
+
+    def test_welcome_code_cannot_be_reused_after_paid_order_for_same_email(self):
+        Order.objects.create(checkout_key=uuid.uuid4(), email="client@example.test", full_name="Client Test", address_line1="1 rue Test", postal_code="75001", city="Paris", country="FR", shipping_method="standard", subtotal=Decimal("100.00"), promo_code_snapshot="TESTPROMO", discount_amount=Decimal("15.00"), shipping_amount=Decimal("4.90"), total=Decimal("89.90"), status=Order.PAID)
+        with self.assertRaises(CheckoutProblem):
+            apply_promo_code("TESTPROMO", Decimal("100.00"), "CLIENT@example.test")
+
+
+    def test_code_is_reserved_while_an_order_for_the_same_email_is_pending(self):
+        Order.objects.create(checkout_key=uuid.uuid4(), email="client@example.test", full_name="Client Test", address_line1="1 rue Test", postal_code="75001", city="Paris", country="FR", shipping_method="standard", subtotal=Decimal("100.00"), promo_code_snapshot="TESTPROMO", discount_amount=Decimal("15.00"), shipping_amount=Decimal("4.90"), total=Decimal("89.90"), status=Order.PENDING)
+        with self.assertRaises(CheckoutProblem):
+            apply_promo_code("TESTPROMO", Decimal("100.00"), "client@example.test")
+
+    def test_checkout_apply_stores_only_code_not_a_client_discount(self):
+        category = Category.objects.create(name="Promo", slug="promo")
+        product = Product.objects.create(category=category, name="Sac promo", slug="sac-promo", is_active=True)
+        ProductMedia.objects.create(product=product, media_type=ProductMedia.IMAGE, source_url="https://cdn.example.test/promo.webp", alt_text="Sac promo", is_primary=True)
+        variant = ProductVariant.objects.create(product=product, sku="PROMO-TEST", stock_quantity=3)
+        offer = ProductOffer.objects.create(product=product, title="Essentiel", price=Decimal("100.00"), is_active=True)
+        ProductOfferItem.objects.create(offer=offer, product=product, use_selected_variant=True, quantity=1)
+        self.client.post(reverse("shop:cart_mutation"), data=json.dumps({"action":"add","variant_id":variant.pk,"offer_id":offer.pk,"quantity":1}), content_type="application/json")
+        response = self.client.post(reverse("checkout:checkout"), {"promo_action":"apply","promo_code":"testpromo"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session.get("checkout_promo_code"), "TESTPROMO")
+        self.assertNotIn("checkout_discount_amount", self.client.session)
+

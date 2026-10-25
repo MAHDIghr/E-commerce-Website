@@ -6,6 +6,45 @@ from django.db import models
 from django.db.models import Q
 
 
+class PromoCode(models.Model):
+    PERCENT = "percent"
+    FIXED = "fixed"
+    DISCOUNT_TYPES = ((PERCENT, "Pourcentage"), (FIXED, "Montant fixe"))
+    code = models.CharField(max_length=32, unique=True)
+    discount_type = models.CharField(max_length=8, choices=DISCOUNT_TYPES, default=PERCENT)
+    value = models.DecimalField(max_digits=8, decimal_places=2)
+    minimum_subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    maximum_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    once_per_email = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("code",)
+        constraints = [
+            models.CheckConstraint(condition=Q(value__gt=0), name="promo_value_positive"),
+            models.CheckConstraint(condition=Q(minimum_subtotal__gte=0), name="promo_min_subtotal_nonnegative"),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or "").strip().upper()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.discount_type == self.PERCENT and self.value > 100:
+            raise ValidationError({"value": "Le pourcentage ne peut pas dépasser 100 %."})
+        if self.maximum_discount is not None and self.maximum_discount < 0:
+            raise ValidationError({"maximum_discount": "Le plafond ne peut pas être négatif."})
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            raise ValidationError({"ends_at": "La fin doit être postérieure au début."})
+
+    def __str__(self):
+        return self.code
+
+
 class Order(models.Model):
     PENDING = "pending_payment"
     AWAITING = "awaiting_payment"
@@ -32,6 +71,8 @@ class Order(models.Model):
     shipping_method = models.CharField(max_length=20)
     currency = models.CharField(max_length=3, default="eur")
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    promo_code_snapshot = models.CharField(max_length=32, blank=True)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=PENDING, db_index=True)
@@ -49,6 +90,7 @@ class Order(models.Model):
         indexes = [models.Index(fields=("status", "created_at"), name="order_status_created_idx")]
         constraints = [
             models.CheckConstraint(condition=Q(subtotal__gte=0), name="order_subtotal_nonnegative"),
+            models.CheckConstraint(condition=Q(discount_amount__gte=0), name="order_discount_nonnegative"),
             models.CheckConstraint(condition=Q(shipping_amount__gte=0), name="order_shipping_nonnegative"),
             models.CheckConstraint(condition=Q(total__gte=0), name="order_total_nonnegative"),
         ]

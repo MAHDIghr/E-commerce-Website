@@ -9,10 +9,11 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.urls import reverse
+from django.utils import timezone
 
 from product.models import ProductVariant
 from shop.views import _cart_key_parts, _cart_state
-from .models import Order, OrderLine, PaymentAttempt, StripeWebhookEvent
+from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent
 
 logger = logging.getLogger(__name__)
 CENT = Decimal("0.01")
@@ -44,6 +45,36 @@ def stripe_configured():
 def stripe_currency():
     value = os.environ.get("STRIPE_CURRENCY", "eur").strip().lower()
     return value if len(value) == 3 and value.isalpha() else "eur"
+
+
+def apply_promo_code(code, subtotal, email="", *, lock=False):
+    """Valide le code en base et calcule une remise monétaire côté serveur."""
+    normalized = (code or "").strip().upper()
+    if not normalized:
+        return None, Decimal("0.00")
+    if len(normalized) > 32 or not normalized.isascii():
+        raise CheckoutProblem("Ce code promo n’est pas valide.")
+    promo_query = PromoCode.objects.filter(code=normalized, is_active=True)
+    if lock:
+        promo_query = promo_query.select_for_update()
+    promo = promo_query.first()
+    now = timezone.now()
+    if not promo or (promo.starts_at and promo.starts_at > now) or (promo.ends_at and promo.ends_at <= now):
+        raise CheckoutProblem("Ce code promo est invalide ou n’est plus disponible.")
+    if subtotal < promo.minimum_subtotal:
+        raise CheckoutProblem(f"Ce code nécessite un sous-total d’au moins {promo.minimum_subtotal:.2f} €.")
+    if promo.once_per_email and email and Order.objects.filter(
+        email__iexact=email.strip(), promo_code_snapshot=promo.code,
+        status__in=(Order.PENDING, Order.AWAITING, Order.PAID, Order.REVIEW),
+    ).exists():
+        raise CheckoutProblem("Ce code de bienvenue a déjà été utilisé avec cette adresse e-mail.")
+    discount = money(subtotal * promo.value / Decimal("100")) if promo.discount_type == PromoCode.PERCENT else money(promo.value)
+    if promo.maximum_discount is not None:
+        discount = min(discount, money(promo.maximum_discount))
+    discount = min(discount, money(subtotal))
+    if discount <= 0:
+        raise CheckoutProblem("Ce code ne peut pas être appliqué à cette commande.")
+    return promo, discount
 
 
 def shipping_price(method, subtotal):
@@ -99,8 +130,17 @@ def create_order_and_reserve(request, form, checkout_key):
             return existing, bool(existing.stripe_session_id)
 
         lines, usage, subtotal = validated_cart(request)
-        shipping = shipping_price(form.cleaned_data["shipping_method"], subtotal)
-        total = money(subtotal + shipping)
+        try:
+            promo, discount = apply_promo_code(
+                request.session.get("checkout_promo_code", ""), subtotal,
+                form.cleaned_data["email"], lock=True,
+            )
+        except CheckoutProblem:
+            request.session.pop("checkout_promo_code", None)
+            raise
+        discounted_subtotal = money(subtotal - discount)
+        shipping = shipping_price(form.cleaned_data["shipping_method"], discounted_subtotal)
+        total = money(discounted_subtotal + shipping)
         variant_ids = sorted(usage)
         locked = {v.pk: v for v in ProductVariant.objects.select_for_update().filter(pk__in=variant_ids).order_by("pk")}
         if len(locked) != len(variant_ids):
@@ -118,7 +158,8 @@ def create_order_and_reserve(request, form, checkout_key):
             address_line2=form.cleaned_data["address_line2"], postal_code=form.cleaned_data["postal_code"],
             city=form.cleaned_data["city"], country=form.cleaned_data["country"],
             shipping_method=form.cleaned_data["shipping_method"], currency=stripe_currency(),
-            subtotal=subtotal, shipping_amount=shipping, total=total, stock_reserved=True,
+            subtotal=subtotal, promo_code_snapshot=promo.code if promo else "",
+            discount_amount=discount, shipping_amount=shipping, total=total, stock_reserved=True,
             stock_requirements_snapshot={str(pk): qty for pk, qty in usage.items()},
         )
         for details, quantity in lines:
@@ -180,8 +221,18 @@ def create_stripe_session(order, request=None):
             "unit_amount": int(order.shipping_amount * 100),
             "product_data": {"name": f"Livraison {order.shipping_method}"}}, "quantity": 1})
     try:
+        discounts = []
+        if order.discount_amount > 0:
+            coupon = stripe.Coupon.create(
+                name=f"Code promo {order.promo_code_snapshot}"[:40],
+                amount_off=int((order.discount_amount * 100).quantize(Decimal("1"))),
+                currency=order.currency, duration="once",
+                idempotency_key=f"mlc-promo-{order.checkout_key}",
+            )
+            discounts = [{"coupon": coupon.id}]
         session = stripe.checkout.Session.create(
-            mode="payment", line_items=line_items, customer_email=order.email,
+            mode="payment", line_items=line_items, discounts=discounts,
+            customer_email=order.email,
             client_reference_id=str(order.public_id),
             metadata={"order_id": str(order.pk), "order_public_id": str(order.public_id)},
             payment_intent_data={"metadata": {"order_id": str(order.pk), "order_public_id": str(order.public_id)}},

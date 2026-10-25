@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
 from .models import Order, PaymentAttempt
-from .services import CheckoutProblem, RetryableWebhookError, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,35 @@ def checkout(request):
         cart_items = [{**details, "quantity": quantity} for details, quantity in lines]
     except CheckoutProblem as exc:
         cart_error = str(exc)
-    form = CheckoutForm(request.POST or None, subtotal=subtotal)
+
+    if request.method == "POST" and request.POST.get("promo_action") in {"apply", "remove"}:
+        action = request.POST.get("promo_action")
+        if action == "remove":
+            request.session.pop("checkout_promo_code", None)
+            request.session.pop("checkout_attempt_key", None)
+            request.session["checkout_promo_notice"] = "Code promo retiré."
+        elif cart_error:
+            request.session["checkout_promo_notice"] = cart_error
+        else:
+            try:
+                promo, _discount = apply_promo_code(request.POST.get("promo_code", ""), subtotal)
+                request.session["checkout_promo_code"] = promo.code
+                request.session.pop("checkout_attempt_key", None)
+                request.session["checkout_promo_notice"] = f"Code {promo.code} appliqué. La remise sera recalculée avant le paiement."
+            except CheckoutProblem as exc:
+                request.session["checkout_promo_notice"] = str(exc)
+        return redirect("checkout:checkout")
+
+    promo_notice = request.session.pop("checkout_promo_notice", "")
+    promo, promo_discount, promo_error = None, Decimal("0.00"), ""
+    if subtotal is not None and request.session.get("checkout_promo_code"):
+        try:
+            promo, promo_discount = apply_promo_code(request.session["checkout_promo_code"], subtotal)
+        except CheckoutProblem as exc:
+            promo_error = str(exc)
+            request.session.pop("checkout_promo_code", None)
+    discounted_subtotal = max(Decimal("0.00"), subtotal - promo_discount) if subtotal is not None else None
+    form = CheckoutForm(request.POST or None, subtotal=discounted_subtotal)
     if request.method == "POST":
         if not form.is_valid():
             pass
@@ -86,11 +114,13 @@ def checkout(request):
                 form.add_error(None, "Impossible de reprendre cette session de paiement. Réessayez dans quelques instants.")
     return render(request, "checkout.html", {
         "form": form, "cart_items": cart_items, "subtotal": subtotal,
+        "promo_code": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
+        "promo_notice": promo_notice, "promo_error": promo_error,
         "free_shipping_threshold": os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00"),
         "standard_shipping": os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90"),
         "express_shipping": os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90"),
         "stripe_configured": stripe_configured(), "cart_error": cart_error,
-        "free_shipping": subtotal is not None and subtotal >= Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")),
+        "free_shipping": discounted_subtotal is not None and discounted_subtotal >= Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")),
     })
 
 
@@ -110,6 +140,7 @@ def order_result(request, public_id):
         if not current_cart or current_cart == (order.cart_snapshot or {}):
             request.session.pop(CART_SESSION_KEY, None)
         request.session.pop("checkout_attempt_key", None)
+        request.session.pop("checkout_promo_code", None)
     elif order.status in (Order.CANCELLED, Order.EXPIRED):
         if not request.session.get(CART_SESSION_KEY):
             request.session[CART_SESSION_KEY] = order.cart_snapshot or {}

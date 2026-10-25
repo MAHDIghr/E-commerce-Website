@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderLine, PaymentAttempt, StripeWebhookEvent
+from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent
 
 
 class OrderLineInline(admin.TabularInline):
@@ -33,3 +33,12 @@ class StripeWebhookEventAdmin(admin.ModelAdmin):
     list_display = ("event_id", "event_type", "processed_at")
     search_fields = ("event_id", "event_type")
     readonly_fields = ("event_id", "event_type", "processed_at")
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "discount_type", "value", "minimum_subtotal", "maximum_discount", "is_active", "starts_at", "ends_at")
+    list_filter = ("is_active", "discount_type", "once_per_email")
+    search_fields = ("code",)
+    list_editable = ("is_active",)
+    ordering = ("code",)

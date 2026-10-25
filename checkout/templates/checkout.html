@@ -65,7 +65,24 @@
         </article>
         {% endfor %}
       </div>
-      <dl class="checkout-totals"><div><dt>Sous-total</dt><dd>{{ subtotal|floatformat:2 }} €</dd></div><div><dt>Livraison</dt><dd id="shipping-preview">{% if free_shipping %}Offerte{% else %}Calculée selon le mode choisi{% endif %}</dd></div><div class="checkout-totals__total"><dt>Total à payer</dt><dd id="checkout-total-preview">{{ subtotal|floatformat:2 }} €</dd></div></dl>
+      <section class="checkout-promo" aria-labelledby="checkout-promo-title">
+        <div class="checkout-promo__heading"><span aria-hidden="true">✦</span><div><h3 id="checkout-promo-title">Un code privilège ?</h3><p>Appliquez votre avantage avant de passer au paiement.</p></div></div>
+        {% if promo_notice %}<p class="checkout-promo__notice" role="status">{{ promo_notice }}</p>{% endif %}
+        {% if promo_error %}<p class="checkout-promo__notice checkout-promo__notice--error" role="status">{{ promo_error }}</p>{% endif %}
+        <form method="post" class="checkout-promo__form">
+          {% csrf_token %}<input type="hidden" name="promo_action" value="apply">
+          <label class="visually-hidden" for="checkout-promo-code">Code promo</label>
+          <input id="checkout-promo-code" name="promo_code" type="text" maxlength="32" autocomplete="off" autocapitalize="characters" placeholder="Ex. BIENVENUE" value="{{ promo.code|default:'' }}" required>
+          <button type="submit" class="button button-outline">Appliquer</button>
+        </form>
+        {% if promo %}<div class="checkout-promo__applied"><span><strong>{{ promo.code }}</strong> · Code appliqué</span><form method="post"><input type="hidden" name="promo_action" value="remove">{% csrf_token %}<button type="submit" class="checkout-promo__remove">Retirer</button></form></div>{% endif %}
+      </section>
+      <dl class="checkout-totals">
+        <div><dt>Sous-total</dt><dd>{{ subtotal|floatformat:2 }} €</dd></div>
+        {% if promo_discount %}<div class="checkout-totals__discount"><dt>Remise ({{ promo.code }})</dt><dd>−{{ promo_discount|floatformat:2 }} €</dd></div>{% endif %}
+        <div><dt>Livraison</dt><dd id="shipping-preview">{% if free_shipping %}Offerte{% else %}Calculée selon le mode choisi{% endif %}</dd></div>
+        <div class="checkout-totals__total"><dt>Total avant livraison</dt><dd id="checkout-total-preview">{{ discounted_subtotal|floatformat:2 }} €</dd></div>
+      </dl>
       <p class="checkout-summary__footnote">Le montant définitif est recalculé par le serveur. La commande reste en attente jusqu’à confirmation sécurisée de Stripe.</p>
     </aside>
   </div>
