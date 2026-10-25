@@ -10,7 +10,7 @@ from django.urls import reverse
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
 from .models import Order, OrderLine, PaymentAttempt, StripeWebhookEvent
 from .forms import CheckoutForm
-from .services import CheckoutProblem, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
+from .services import CheckoutProblem, RetryableWebhookError, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
 
 class CheckoutIntegrationTests(TestCase):
@@ -26,6 +26,30 @@ class CheckoutIntegrationTests(TestCase):
         return self.client.post(reverse("shop:cart_mutation"), data=json.dumps({
             "action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1,
         }), content_type="application/json")
+
+    def test_cart_page_renders_current_server_validated_cart(self):
+        self.add_to_cart()
+        response = self.client.get(reverse("shop:cart_page"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cabas camel")
+        self.assertContains(response, "Passer à la commande")
+        self.assertContains(response, reverse("checkout:checkout"))
+
+    def test_cart_mutation_invalidates_previous_checkout_attempt_key(self):
+        session = self.client.session
+        session["checkout_attempt_key"] = str(uuid.uuid4())
+        session.save()
+        self.add_to_cart()
+        self.assertNotIn("checkout_attempt_key", self.client.session)
+
+    def test_unknown_checkout_session_webhook_is_retryable_and_not_deduplicated(self):
+        event = {"id": "evt_unknown_session", "type": "checkout.session.completed", "data": {"object": {
+            "object": "checkout.session", "id": "cs_session_not_yet_associated",
+            "currency": "eur", "amount_total": 100, "payment_status": "paid",
+        }}}
+        with self.assertRaises(RetryableWebhookError):
+            process_stripe_event(event)
+        self.assertFalse(StripeWebhookEvent.objects.filter(event_id="evt_unknown_session").exists())
 
     def test_free_shipping_is_automatic_at_threshold_and_paid_delivery_has_two_choices(self):
         free_form = CheckoutForm(subtotal=Decimal("80.00"))
