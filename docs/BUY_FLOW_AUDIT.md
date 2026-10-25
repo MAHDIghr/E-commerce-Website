@@ -46,7 +46,11 @@ Le seuil de livraison gratuite du panier était codé en dur à 80 €, alors qu
 
 La clé de tentative `checkout_attempt_key` est désormais invalidée quand le client modifie ou vide son panier. Cela empêche de réutiliser silencieusement une session Checkout créée pour une ancienne sélection après une modification du panier.
 
-### 5. Webhook reçu avant l'association de la session à la commande
+### 5. Panier résiduel après confirmation du paiement
+
+La page de retour vide désormais le panier uniquement lorsqu'il correspond à l'instantané de la commande payée. Si le client a commencé une nouvelle sélection pendant le paiement, cette nouvelle sélection est préservée.
+
+### 6. Webhook reçu avant l'association de la session à la commande
 
 Le traitement enregistrait auparavant un événement de session inconnue comme traité et répondait ensuite avec succès. Si Stripe livrait le webhook avant que l'identifiant de session soit enregistré sur la commande, cet événement pouvait ne jamais être retraité. Le traitement lève désormais une erreur réessayable, ce qui annule l'enregistrement de déduplication dans la transaction et renvoie une réponse 5xx à Stripe pour déclencher une nouvelle livraison.
 
