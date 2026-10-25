@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 def checkout(request):
-    form = CheckoutForm(request.POST or None)
     cart_items, subtotal, cart_error = [], None, ""
     try:
         lines, _, subtotal = validated_cart(request)
         cart_items = [{**details, "quantity": quantity} for details, quantity in lines]
     except CheckoutProblem as exc:
         cart_error = str(exc)
+    form = CheckoutForm(request.POST or None, subtotal=subtotal)
     if request.method == "POST":
         if not form.is_valid():
             pass
@@ -47,6 +47,7 @@ def checkout(request):
                     stripe.api_key = os.environ["STRIPE_SECRET_KEY"].strip()
                     session = stripe.checkout.Session.retrieve(order.stripe_session_id)
                     if session.status == "open" and session.url:
+                        request.session.pop(CART_SESSION_KEY, None)
                         return redirect(session.url)
                     if session.status == "complete":
                         return redirect(f"{reverse('checkout:result', kwargs={'public_id': order.public_id})}?session_id={session.id}")
@@ -56,14 +57,16 @@ def checkout(request):
                             release_reserved_stock(locked)
                             locked.status = Order.EXPIRED
                             locked.save(update_fields=["stock_reserved", "status", "updated_at"])
+                        if not request.session.get(CART_SESSION_KEY):
+                            request.session[CART_SESSION_KEY] = order.cart_snapshot or {}
                         request.session.pop("checkout_attempt_key", None)
                         form.add_error(None, "Cette session de paiement a expiré. Vérifiez le panier puis recommencez.")
                     else:
                         form.add_error(None, "La session de paiement n’est pas disponible. Réessayez ou contactez le support.")
                 else:
                     session = create_stripe_session(order)
+                    # Le panier est masqué pendant le paiement; son instantané permet de le restaurer en cas d’annulation.
                     request.session.pop(CART_SESSION_KEY, None)
-                    request.session.pop("checkout_attempt_key", None)
                     return redirect(session.url)
             except CheckoutProblem as exc:
                 if order and order.pk and not order.stripe_session_id:
@@ -73,6 +76,8 @@ def checkout(request):
                         locked.status = Order.CANCELLED
                         locked.save(update_fields=["stock_reserved", "status", "updated_at"])
                         locked.payment_attempts.filter(status__in=[PaymentAttempt.CREATED, PaymentAttempt.OPEN]).update(status=PaymentAttempt.FAILED)
+                    if not request.session.get(CART_SESSION_KEY):
+                        request.session[CART_SESSION_KEY] = order.cart_snapshot or {}
                 request.session.pop("checkout_attempt_key", None)
                 form.add_error(None, str(exc))
             except stripe.error.StripeError:
@@ -84,6 +89,7 @@ def checkout(request):
         "standard_shipping": os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90"),
         "express_shipping": os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90"),
         "stripe_configured": stripe_configured(), "cart_error": cart_error,
+        "free_shipping": subtotal is not None and subtotal >= __import__("decimal").Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")),
     })
 
 
@@ -93,8 +99,24 @@ def order_result(request, public_id):
     session_id = request.GET.get("session_id", "")
     if session_id and session_id != order.stripe_session_id:
         return HttpResponseNotFound("Commande introuvable.")
-    # Cette page ne modifie jamais le statut : seul le webhook signé confirme le paiement.
-    return render(request, "checkout_result.html", {"order": order, "cancelled_return": request.GET.get("cancelled") == "1"})
+
+    cancelled_return = request.GET.get("cancelled") == "1"
+    # Le navigateur ne confirme jamais le paiement; seul le webhook signé le fait.
+    if order.status == Order.PAID:
+        if not request.session.get(CART_SESSION_KEY):
+            request.session.pop(CART_SESSION_KEY, None)
+        request.session.pop("checkout_attempt_key", None)
+    elif order.status in (Order.CANCELLED, Order.EXPIRED):
+        if not request.session.get(CART_SESSION_KEY):
+            request.session[CART_SESSION_KEY] = order.cart_snapshot or {}
+        request.session.pop("checkout_attempt_key", None)
+    elif cancelled_return:
+        if not request.session.get(CART_SESSION_KEY):
+            request.session[CART_SESSION_KEY] = order.cart_snapshot or {}
+        else:
+            request.session.pop("checkout_attempt_key", None)
+
+    return render(request, "checkout_result.html", {"order": order, "cancelled_return": cancelled_return})
 
 
 @csrf_exempt
