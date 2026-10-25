@@ -2,6 +2,7 @@
 import logging
 import os
 import uuid
+from decimal import Decimal
 import stripe
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
@@ -89,7 +90,7 @@ def checkout(request):
         "standard_shipping": os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90"),
         "express_shipping": os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90"),
         "stripe_configured": stripe_configured(), "cart_error": cart_error,
-        "free_shipping": subtotal is not None and subtotal >= __import__("decimal").Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")),
+        "free_shipping": subtotal is not None and subtotal >= Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")),
     })
 
 
