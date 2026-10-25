@@ -188,6 +188,7 @@ const shippingText = document.querySelector("#shipping-text");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
 const cartCheckoutUrl = cartDrawer?.dataset.checkoutUrl || "/checkout/";
+const cartPageUrl = cartDrawer?.dataset.cartPageUrl || "/boutique/mon-panier/";
 const cartCheckoutButton = document.querySelector("#cart-checkout");
 const FREE_SHIPPING_THRESHOLD = 80;
 let cartSnapshot = { items: [], count: 0, subtotal: "0.00" };
@@ -359,7 +360,7 @@ function mutateCart(payload) {
         throw error;
     });
 }
-async function addToCart(product) {
+async function addToCart(product, options = {}) {
     try {
         const result = await mutateCart({
             action: "add",
@@ -370,7 +371,7 @@ async function addToCart(product) {
         });
         if (result) {
             bumpCartIcon();
-            openCart();
+            if (options.openDrawer !== false) openCart();
         }
         return Boolean(result);
     } catch (error) {
