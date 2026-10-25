@@ -27,6 +27,10 @@ class CheckoutProblem(Exception):
     """Erreur métier contrôlée, affichable au client."""
 
 
+class RetryableWebhookError(Exception):
+    """Événement valide reçu avant que sa session soit associée à une commande."""
+
+
 def money(value):
     return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
 
@@ -209,8 +213,10 @@ def process_stripe_event(event):
         session_id = obj.get("id", "")
         order = Order.objects.select_for_update().filter(stripe_session_id=session_id).first()
         if not order:
-            logger.warning("Stripe event %s references an unknown Checkout Session", event_type)
-            return "unknown"
+            # Ne pas enregistrer définitivement cet événement : Stripe peut livrer le
+            # webhook avant la sauvegarde du session_id. Le 500 déclenche une nouvelle tentative.
+            logger.warning("Stripe event %s references an unknown Checkout Session; requesting retry", event_type)
+            raise RetryableWebhookError(f"Unknown Checkout Session: {session_id}")
         payment = order.payment_attempts.select_for_update().filter(stripe_session_id=session_id).first()
         if event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
             expected_cents = int((order.total * 100).quantize(Decimal("1")))
