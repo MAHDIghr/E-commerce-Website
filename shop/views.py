@@ -4,6 +4,7 @@ Le navigateur ne fournit que des identifiants et des quantités. Prix, variantes
 offres, publication et disponibilité sont toujours vérifiés côté serveur.
 """
 import json
+import os
 from decimal import Decimal
 
 from django.db.models import Q, Prefetch
@@ -22,7 +23,7 @@ CART_SESSION_KEY = "shop_cart_v1"
 MAX_CART_QUANTITY = 10
 MAX_CART_LINES = 30
 MAX_CART_REQUEST_BYTES = 8192
-FREE_SHIPPING_THRESHOLD = Decimal("80.00")
+FREE_SHIPPING_THRESHOLD = Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00"))
 
 
 def _search_queryset(queryset, query):
@@ -580,6 +581,7 @@ def cart_mutation(request):
     state = _cart_state(request)
     if action == "clear":
         request.session[CART_SESSION_KEY] = {}
+        request.session.pop("checkout_attempt_key", None)
         request.session.modified = True
         return JsonResponse(_cart_payload(request))
 
@@ -656,5 +658,8 @@ def cart_mutation(request):
         return JsonResponse({"error": "Action de panier inconnue."}, status=400)
 
     request.session[CART_SESSION_KEY] = state
+    # Toute modification du panier invalide la clé d'idempotence de la tentative
+    # précédente : elle ne doit pas faire réutiliser une session Stripe liée à un ancien panier.
+    request.session.pop("checkout_attempt_key", None)
     request.session.modified = True
     return JsonResponse(_cart_payload(request))
