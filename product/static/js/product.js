@@ -56,6 +56,11 @@
                     selectedItemIds = selection.selectedItemIds || [];
                 }
                 const added = await addToCart({ variantId, offerId, selectedItemIds });
+                if (added && button.matches(".js-buy")) {
+                    const checkoutUrl = document.querySelector("#cart-drawer")?.dataset.checkoutUrl || "/checkout/";
+                    window.location.assign(checkoutUrl);
+                    return;
+                }
                 if (added) {
                     button.classList.add("is-done");
                     button.textContent = "Ajouté ✓";
