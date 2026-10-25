@@ -264,6 +264,7 @@ def _accessory_option(item):
     available_quantity = component.stock_quantity // max(1, item.quantity)
     return {
         "item_id": item.pk,
+        "variant_id": component.pk,
         "product_id": item.product_id,
         "slug": item.product.slug,
         "name": item.product.name,

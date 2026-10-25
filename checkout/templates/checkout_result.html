@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}État de la commande | My Line Collection{% endblock %}
+{% block body_class %}page-checkout page-checkout-result{% endblock %}
+{% block extra_css %}<style>.checkout-result{max-width:760px;margin:5rem auto;padding:2.5rem 1.25rem;text-align:center}.checkout-result__mark{display:grid;place-items:center;width:4rem;height:4rem;margin:0 auto 1.5rem;border-radius:50%;background:#f3eee7;color:#7b6249;font-size:2rem}.checkout-result h1{font-size:clamp(2rem,5vw,3.4rem);margin:.5rem 0 1rem}.checkout-result p{line-height:1.7;color:#665e57}.checkout-result__status{margin:1.5rem 0;padding:1rem;border:1px solid #e7ded4;border-radius:12px}.checkout-result__items{margin:1.5rem 0;text-align:left}.checkout-result__items li{padding:.5rem 0}.checkout-result .button{display:inline-flex;margin-top:1rem}</style>{% endblock %}
+{% block content %}
+<section class="checkout-result" aria-labelledby="result-title">
+  <div class="checkout-result__mark" aria-hidden="true">{% if order.status == "paid" %}✓{% elif order.status == "payment_review" %}!{% else %}…{% endif %}</div>
+  {% if order.status == "paid" %}<p class="checkout-eyebrow">COMMANDE CONFIRMÉE</p><h1 id="result-title">Merci pour votre commande.</h1><p>Le paiement a été confirmé par Stripe. Votre commande est enregistrée.</p>
+  {% elif order.status == "payment_review" %}<p class="checkout-eyebrow">VÉRIFICATION NÉCESSAIRE</p><h1 id="result-title">Nous vérifions votre paiement.</h1><p>Le paiement a été reçu, mais une vérification est nécessaire. Ne repassez pas commande pour le moment.</p>
+  {% elif order.status == "cancelled" or order.status == "expired" or cancelled_return %}<p class="checkout-eyebrow">PAIEMENT NON CONFIRMÉ</p><h1 id="result-title">Votre paiement n’est pas confirmé.</h1><p>Le retour du navigateur ne suffit pas à annuler ou confirmer le paiement. Vous pouvez revenir à la boutique et vérifier votre sélection.</p>
+  {% else %}<p class="checkout-eyebrow">CONFIRMATION EN COURS</p><h1 id="result-title">Nous attendons la confirmation du paiement.</h1><p>Votre commande n’est pas encore marquée comme payée. Actualisez cette page dans quelques instants. Seule la notification sécurisée de Stripe confirme le paiement.</p>{% endif %}
+  <div class="checkout-result__status"><strong>Référence :</strong> {{ order.public_id }}<br><strong>État :</strong> {{ order.get_status_display }}<br><strong>Total :</strong> {{ order.total|floatformat:2 }} {{ order.currency|upper }}</div>
+  <ul class="checkout-result__items">{% for line in order.lines.all %}<li>{{ line.quantity }} × {{ line.product_name }} — {{ line.line_total|floatformat:2 }} €</li>{% endfor %}</ul>
+  <a class="button button-primary" href="{% url 'shop:catalog' %}">Retour à la boutique</a>
+</section>
+{% endblock %}

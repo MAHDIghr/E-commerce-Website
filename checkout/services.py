@@ -1,0 +1,254 @@
+"""Services métier Stripe Checkout. Le serveur est la source de vérité des montants."""
+import logging
+import os
+from decimal import Decimal, ROUND_HALF_UP
+from urllib.parse import urljoin, urlparse
+
+import stripe
+from django.conf import settings
+from django.db import transaction
+from django.db.models import F
+from django.urls import reverse
+
+from product.models import ProductVariant
+from shop.views import _cart_key_parts, _cart_state
+from .models import Order, OrderLine, PaymentAttempt, StripeWebhookEvent
+
+logger = logging.getLogger(__name__)
+CENT = Decimal("0.01")
+SHIPPING = {
+    "standard": Decimal(os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90")).quantize(CENT),
+    "express": Decimal(os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90")).quantize(CENT),
+}
+FREE_SHIPPING_THRESHOLD = Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")).quantize(CENT)
+
+
+class CheckoutProblem(Exception):
+    """Erreur métier contrôlée, affichable au client."""
+
+
+def money(value):
+    return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def stripe_configured():
+    return bool(os.environ.get("STRIPE_SECRET_KEY", "").strip()
+                and os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip()
+                and os.environ.get("SITE_BASE_URL", "").strip())
+
+
+def stripe_currency():
+    value = os.environ.get("STRIPE_CURRENCY", "eur").strip().lower()
+    return value if len(value) == 3 and value.isalpha() else "eur"
+
+
+def shipping_price(method, subtotal):
+    if method not in SHIPPING:
+        raise CheckoutProblem("Le mode de livraison sélectionné n’est pas valide.")
+    return Decimal("0.00") if subtotal >= FREE_SHIPPING_THRESHOLD else SHIPPING[method]
+
+
+def validated_cart(request):
+    """Revalide chaque ligne du panier session via le catalogue et les offres en base."""
+    from shop.views import _line_details
+    state = _cart_state(request)
+    if not state:
+        raise CheckoutProblem("Votre panier est vide. Ajoutez un article avant de continuer.")
+    lines, usage = [], {}
+    for key, quantity in state.items():
+        try:
+            variant_id, offer_id, selected_ids = _cart_key_parts(key)
+        except (TypeError, ValueError):
+            raise CheckoutProblem("Votre panier contient une ligne invalide. Vérifiez-le avant de continuer.")
+        details = _line_details(variant_id, offer_id, quantity, selected_ids)
+        if details is None or not details["available"]:
+            raise CheckoutProblem("Un article, une offre ou un accessoire inclus n’est plus disponible. Vérifiez votre panier.")
+        for variant_id_key, required in details["stock_requirements"].items():
+            pk = int(variant_id_key)
+            usage[pk] = usage.get(pk, 0) + int(required)
+        lines.append((details, quantity))
+    if len(lines) > 30:
+        raise CheckoutProblem("Votre panier contient trop de lignes.")
+    subtotal = money(sum((Decimal(details["line_total"]) for details, _ in lines), Decimal("0.00")))
+    return lines, usage, subtotal
+
+
+def _snapshot_components(details):
+    return [
+        {"name": c["name"], "variant": c["variant_name"], "variant_id": c["variant_id"],
+         "quantity_per_offer": c["quantity"], "unit_price": "0.00", "is_gift": True}
+        for c in details["components"]
+    ]
+
+
+def create_order_and_reserve(request, form, checkout_key):
+    """Crée l'instantané et réserve les stocks avec mises à jour conditionnelles atomiques."""
+    with transaction.atomic():
+        existing = Order.objects.select_for_update().filter(checkout_key=checkout_key).first()
+        if existing:
+            if existing.status in (Order.CANCELLED, Order.EXPIRED, Order.REVIEW):
+                raise CheckoutProblem("Cette tentative de commande n’est plus réutilisable. Rechargez la page et réessayez.")
+            return existing, bool(existing.stripe_session_id)
+
+        lines, usage, subtotal = validated_cart(request)
+        shipping = shipping_price(form.cleaned_data["shipping_method"], subtotal)
+        total = money(subtotal + shipping)
+        variant_ids = sorted(usage)
+        locked = {v.pk: v for v in ProductVariant.objects.select_for_update().filter(pk__in=variant_ids).order_by("pk")}
+        if len(locked) != len(variant_ids):
+            raise CheckoutProblem("Le stock a changé. Vérifiez votre panier.")
+        for pk, required in usage.items():
+            if locked[pk].stock_quantity < required:
+                raise CheckoutProblem("Le stock vient de changer. Réduisez les quantités puis réessayez.")
+
+        order = Order.objects.create(
+            checkout_key=checkout_key,
+            customer=request.user if request.user.is_authenticated else None,
+            email=form.cleaned_data["email"], full_name=form.cleaned_data["full_name"],
+            phone=form.cleaned_data["phone"], address_line1=form.cleaned_data["address_line1"],
+            address_line2=form.cleaned_data["address_line2"], postal_code=form.cleaned_data["postal_code"],
+            city=form.cleaned_data["city"], country=form.cleaned_data["country"],
+            shipping_method=form.cleaned_data["shipping_method"], currency=stripe_currency(),
+            subtotal=subtotal, shipping_amount=shipping, total=total, stock_reserved=True,
+            stock_requirements_snapshot={str(pk): qty for pk, qty in usage.items()},
+        )
+        for details, quantity in lines:
+            OrderLine.objects.create(
+                order=order, product_id=details["product_id"], variant_id=details["variant_id"],
+                offer_id_snapshot=details["offer_id"], product_name=details["name"],
+                variant_name=details["variant_name"], quantity=quantity,
+                unit_price=money(details["unit_price"]), line_total=money(details["line_total"]),
+                components_snapshot=_snapshot_components(details),
+            )
+        for pk in variant_ids:
+            updated = ProductVariant.objects.filter(pk=pk, stock_quantity__gte=usage[pk]).update(
+                stock_quantity=F("stock_quantity") - usage[pk])
+            if updated != 1:
+                raise CheckoutProblem("Le stock vient de changer. Vérifiez votre panier puis réessayez.")
+        PaymentAttempt.objects.create(order=order, amount=total, currency=order.currency)
+        return order, False
+
+
+def release_reserved_stock(order):
+    """Libère une réservation au plus une fois, y compris les composants offerts."""
+    if not order.stock_reserved:
+        return
+    for variant_id, quantity in (order.stock_requirements_snapshot or {}).items():
+        ProductVariant.objects.filter(pk=int(variant_id)).update(stock_quantity=F("stock_quantity") + int(quantity))
+    order.stock_reserved = False
+
+
+def create_stripe_session(order, request=None):
+    """Crée une session hébergée depuis l'instantané immuable de la commande."""
+    if not stripe_configured():
+        raise CheckoutProblem("Le paiement en ligne n’est pas configuré. Aucun paiement ne sera simulé.")
+    secret_key = os.environ["STRIPE_SECRET_KEY"].strip()
+    live_mode = os.environ.get("STRIPE_LIVE_MODE", "False").strip().lower() in {"1", "true", "yes", "on"}
+    if (live_mode and not secret_key.startswith("sk_live_")) or (not live_mode and not secret_key.startswith("sk_test_")):
+        raise CheckoutProblem("La clé Stripe ne correspond pas au mode configuré. Vérifiez la configuration hors du dépôt.")
+    stripe.api_key = secret_key
+    base_url = os.environ["SITE_BASE_URL"].rstrip("/") + "/"
+    parsed = urlparse(base_url)
+    if not parsed.netloc or parsed.scheme not in ("http", "https") or (not settings.DEBUG and parsed.scheme != "https"):
+        raise CheckoutProblem("SITE_BASE_URL doit être un domaine canonique valide et utiliser HTTPS en production.")
+    result_path = reverse("checkout:result", kwargs={"public_id": order.public_id})
+    success_url = urljoin(base_url, result_path.lstrip("/")) + "?session_id={CHECKOUT_SESSION_ID}"
+    cancel_url = urljoin(base_url, result_path.lstrip("/")) + "?cancelled=1"
+    line_items = []
+    for line in order.lines.all():
+        gifts = [c for c in line.components_snapshot if c.get("is_gift")]
+        description = "Inclus sans supplément : " + ", ".join(
+            f'{gift["name"]} ({gift["variant"]})' for gift in gifts
+        ) if gifts else ""
+        unit_amount = int((line.unit_price * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        product_data = {"name": line.product_name[:250]}
+        if description:
+            product_data["description"] = description[:350]
+        line_items.append({"price_data": {"currency": order.currency, "unit_amount": unit_amount,
+                                          "product_data": product_data}, "quantity": line.quantity})
+    if order.shipping_amount > 0:
+        line_items.append({"price_data": {"currency": order.currency,
+            "unit_amount": int(order.shipping_amount * 100),
+            "product_data": {"name": f"Livraison {order.shipping_method}"}}, "quantity": 1})
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment", line_items=line_items, customer_email=order.email,
+            client_reference_id=str(order.public_id),
+            metadata={"order_id": str(order.pk), "order_public_id": str(order.public_id)},
+            payment_intent_data={"metadata": {"order_id": str(order.pk), "order_public_id": str(order.public_id)}},
+            success_url=success_url, cancel_url=cancel_url, billing_address_collection="auto",
+            idempotency_key=f"mlc-checkout-{order.checkout_key}",
+        )
+    except stripe.error.StripeError as exc:
+        logger.warning("Stripe Checkout creation failed for order %s (%s)", order.public_id, type(exc).__name__)
+        raise CheckoutProblem("Le service de paiement est momentanément indisponible. Réessayez dans quelques instants.") from exc
+    with transaction.atomic():
+        locked_order = Order.objects.select_for_update().get(pk=order.pk)
+        locked_order.stripe_session_id = session.id
+        locked_order.save(update_fields=["stripe_session_id", "updated_at"])
+        locked_order.payment_attempts.filter(status=PaymentAttempt.CREATED).update(
+            status=PaymentAttempt.OPEN, stripe_session_id=session.id)
+    return session
+
+
+def process_stripe_event(event):
+    """Traite un événement signé une seule fois et protège les transitions de commande."""
+    event_id, event_type = event["id"], event["type"]
+    obj = event["data"]["object"]
+    with transaction.atomic():
+        if StripeWebhookEvent.objects.filter(event_id=event_id).exists():
+            return "duplicate"
+        StripeWebhookEvent.objects.create(event_id=event_id, event_type=event_type)
+        if obj.get("object") != "checkout.session":
+            return "ignored"
+        session_id = obj.get("id", "")
+        order = Order.objects.select_for_update().filter(stripe_session_id=session_id).first()
+        if not order:
+            logger.warning("Stripe event %s references an unknown Checkout Session", event_type)
+            return "unknown"
+        payment = order.payment_attempts.select_for_update().filter(stripe_session_id=session_id).first()
+        if event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+            expected_cents = int((order.total * 100).quantize(Decimal("1")))
+            if obj.get("currency", "").lower() != order.currency or obj.get("amount_total") != expected_cents:
+                order.status = Order.REVIEW
+                order.save(update_fields=["status", "updated_at"])
+                if payment:
+                    payment.status = PaymentAttempt.REVIEW
+                    payment.save(update_fields=["status", "updated_at"])
+                logger.error("Stripe amount/currency mismatch for order %s", order.public_id)
+                return "mismatch"
+            paid = obj.get("payment_status") == "paid" or event_type.endswith("async_payment_succeeded")
+            if paid:
+                if order.stock_reserved and order.status not in (Order.CANCELLED, Order.EXPIRED, Order.REVIEW):
+                    order.status = Order.PAID
+                    order.stock_reserved = False
+                    order.stock_committed = True
+                    order.stripe_payment_intent_id = obj.get("payment_intent") or ""
+                    order.save(update_fields=["status", "stock_reserved", "stock_committed", "stripe_payment_intent_id", "updated_at"])
+                    if payment:
+                        payment.status = PaymentAttempt.SUCCEEDED
+                        payment.stripe_payment_intent_id = order.stripe_payment_intent_id
+                        payment.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+                else:
+                    order.status = Order.REVIEW
+                    order.stripe_payment_intent_id = obj.get("payment_intent") or ""
+                    order.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+                    if payment:
+                        payment.status = PaymentAttempt.REVIEW
+                        payment.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+                    logger.error("Late Stripe payment requires manual review for order %s", order.public_id)
+            else:
+                order.status = Order.AWAITING
+                order.save(update_fields=["status", "updated_at"])
+                if payment:
+                    payment.status = PaymentAttempt.PROCESSING
+                    payment.save(update_fields=["status", "updated_at"])
+        elif event_type in ("checkout.session.async_payment_failed", "checkout.session.expired"):
+            if order.status not in (Order.PAID, Order.REVIEW) and order.stock_reserved:
+                release_reserved_stock(order)
+                order.status = Order.EXPIRED if event_type.endswith("expired") else Order.CANCELLED
+                order.save(update_fields=["status", "stock_reserved", "updated_at"])
+                if payment:
+                    payment.status = PaymentAttempt.EXPIRED if event_type.endswith("expired") else PaymentAttempt.FAILED
+                    payment.save(update_fields=["status", "updated_at"])
+        return "processed"
