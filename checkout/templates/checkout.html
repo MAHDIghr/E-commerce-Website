@@ -16,7 +16,7 @@
   {% if not cart_items %}<div class="checkout-empty"><h2>Votre panier est vide ou doit être vérifié.</h2><p>Retournez à la boutique pour mettre à jour votre sélection.</p><a class="button button-primary" href="{% url 'shop:catalog' %}">Continuer mes achats</a></div>
   {% else %}
   <div class="checkout-layout">
-    <form method="post" class="checkout-form" id="checkout-form" novalidate data-free-shipping="{{ free_shipping|yesno:'true,false' }}" data-free-shipping-threshold="{{ free_shipping_threshold }}" data-standard-shipping="{{ standard_shipping }}" data-express-shipping="{{ express_shipping }}">
+    <form method="post" class="checkout-form" id="checkout-form" novalidate data-free-shipping="{{ free_shipping|yesno:'true,false' }}" data-free-shipping-threshold="{{ free_shipping_threshold }}" data-standard-shipping="{{ standard_shipping }}" data-express-shipping="{{ express_shipping }}" data-discounted-subtotal="{{ discounted_subtotal|default_if_none:'' }}">
       {% csrf_token %}
       {% if form.non_field_errors %}<div class="checkout-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
       <section class="checkout-card">
@@ -89,4 +89,4 @@
   {% endif %}
 </section>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/checkout.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/checkout-summary.js' %}" defer></script>{% endblock %}

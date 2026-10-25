@@ -188,7 +188,6 @@ const shippingText = document.querySelector("#shipping-text");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
 const cartCheckoutUrl = cartDrawer?.dataset.checkoutUrl || "/checkout/";
-const cartPageUrl = cartDrawer?.dataset.cartPageUrl || "/boutique/mon-panier/";
 const cartCheckoutButton = document.querySelector("#cart-checkout");
 const FREE_SHIPPING_THRESHOLD = 80;
 let cartSnapshot = { items: [], count: 0, subtotal: "0.00" };
@@ -622,7 +621,7 @@ async function addProductFromCard(button) {
             if (!selection || !selection.offerId) return false;
         }
         lastCartTrigger = button;
-        return await addToCart({ variantId, offerId: selection.offerId, selectedItemIds: selection.selectedItemIds }, { openDrawer: false });
+        return await addToCart({ variantId, offerId: selection.offerId, selectedItemIds: selection.selectedItemIds });
     } catch (error) {
         showCartStatus(error.message || "L'ajout au panier a échoué.", true);
         openCart();
@@ -747,7 +746,18 @@ document.querySelectorAll('[data-action="add-to-cart"], [data-action="quick-add"
         button.disabled = true;
         const added = await addProductFromCard(button);
         if (added) {
-            window.location.assign(cartPageUrl);
+            button.classList.add("is-done");
+            const label = button.querySelector(".product-cart__label");
+            const originalLabel = label ? label.textContent : "";
+            if (label) label.textContent = "Ajouté ✓";
+            button.setAttribute("aria-label", "Ajouté au panier");
+            window.setTimeout(() => {
+                if (!button.isConnected) return;
+                button.classList.remove("is-done");
+                if (label) label.textContent = originalLabel || "Ajouter";
+                button.setAttribute("aria-label", "Ajouter au panier");
+                button.disabled = false;
+            }, 1300);
             return;
         }
         if (button.isConnected) button.disabled = false;
@@ -755,6 +765,23 @@ document.querySelectorAll('[data-action="add-to-cart"], [data-action="quick-add"
 });
 cartReady = refreshCartUI();
 
+
+document.querySelectorAll("[data-copy-promo]").forEach((button) => {
+    button.addEventListener("click", async () => {
+        const code = button.dataset.copyPromo || "BIENVENUE";
+        const status = document.querySelector("#footer-news-msg");
+        const original = button.textContent;
+        try {
+            await navigator.clipboard.writeText(code);
+            button.textContent = "Code copié ✓";
+            if (status) status.textContent = "Le code BIENVENUE est prêt à être collé au moment de la commande.";
+        } catch (error) {
+            if (status) status.textContent = "Code à saisir au checkout : " + code;
+            button.textContent = code;
+        }
+        window.setTimeout(() => { if (button.isConnected) button.textContent = original; }, 1800);
+    });
+});
 
 const LANG_KEY = "site_lang";
 
@@ -829,7 +856,7 @@ const translations = {
         flash_sale_text: "⚡ Vente flash : -20% sur une sélection de sacs",
         flash_sale_cta: "J'en profite",
         welcome_title: "Bienvenue chez nous !",
-        welcome_desc: "Profitez de -10% sur votre première commande avec le code ci-dessous.",
+        welcome_desc: "Profitez de -15% sur votre première commande avec le code BIENVENUE.",
         welcome_cta: "Découvrir la collection",
         welcome_copy: "Copier le code",
         social_proof_stock: "produit(s) restant(s)",
@@ -838,9 +865,9 @@ const translations = {
         perk_ret: "Retours gratuits 30 jours",
         perk_pay: "Paiement sécurisé",
         perk_help: "Service client 7j/7",
-        footer_news_title: "-10 % sur votre première commande",
-        footer_news_desc: "Rejoignez la newsletter : nouveautés, offres privées et conseils style.",
-        footer_news_ok: "Merci ! Votre code : BIENVENUE10",
+        footer_news_title: "-15 % sur votre première commande",
+        footer_news_desc: "Profitez de 15 % sur votre première commande avec le code BIENVENUE.",
+        footer_news_ok: "Votre code : BIENVENUE",
         footer_news_err: "Saisissez une adresse e-mail valide.",
         footer_sale: "Promotions",
         footer_help: "Aide",
@@ -917,7 +944,7 @@ const translations = {
         flash_sale_text: "⚡ Flash sale: -20% on selected bags",
         flash_sale_cta: "Shop the offer",
         welcome_title: "Welcome!",
-        welcome_desc: "Enjoy -10% off your first order with the code below.",
+        welcome_desc: "Enjoy 15% off your first order with code BIENVENUE.",
         welcome_cta: "Discover the collection",
         welcome_copy: "Copy code",
         social_proof_stock: "left in stock",
@@ -926,9 +953,9 @@ const translations = {
         perk_ret: "Free returns, 30 days",
         perk_pay: "Secure payment",
         perk_help: "Customer support 7/7",
-        footer_news_title: "10% off your first order",
-        footer_news_desc: "Join the newsletter: new arrivals, private offers and styling tips.",
-        footer_news_ok: "Thank you! Your code: BIENVENUE10",
+        footer_news_title: "15% off your first order",
+        footer_news_desc: "Enjoy 15% off your first order with code BIENVENUE.",
+        footer_news_ok: "Your code: BIENVENUE",
         footer_news_err: "Please enter a valid email address.",
         footer_sale: "Sale",
         footer_help: "Help",

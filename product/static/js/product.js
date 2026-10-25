@@ -55,15 +55,10 @@
                     if (!selection || !selection.offerId) return;
                     selectedItemIds = selection.selectedItemIds || [];
                 }
-                const added = await addToCart({ variantId, offerId, selectedItemIds }, { openDrawer: false });
+                const added = await addToCart({ variantId, offerId, selectedItemIds }, { openDrawer: button.matches(".js-add") });
                 if (added && button.matches(".js-buy")) {
                     const checkoutUrl = document.querySelector("#cart-drawer")?.dataset.checkoutUrl || "/checkout/";
                     window.location.assign(checkoutUrl);
-                    return;
-                }
-                if (added && button.matches(".js-add")) {
-                    const cartUrl = document.querySelector("#cart-drawer")?.dataset.cartPageUrl || "/boutique/mon-panier/";
-                    window.location.assign(cartUrl);
                     return;
                 }
                 if (added) {

@@ -43,20 +43,17 @@
             <h3 id="footer-news-title" data-i18n="footer_news_title">-10 % sur votre première commande</h3>
             <p data-i18n="footer_news_desc">Rejoignez la newsletter : nouveautés, offres privées et conseils style.</p>
 
-            <form class="footer-news__form" id="footer-news-form" method="post" action="#" novalidate>
-                {% csrf_token %}
-                <label for="footer-news-email" class="visually-hidden" data-i18n="newsletter_placeholder">Votre adresse email</label>
-                <input id="footer-news-email" name="email" type="email" inputmode="email"
-                       data-i18n-placeholder="newsletter_placeholder" placeholder="Votre adresse email"
-                       autocomplete="email" maxlength="254" required>
-                <button type="submit" class="footer-news__btn" data-i18n="newsletter_button">S'inscrire</button>
-            </form>
+            <div class="footer-news__offer">
+                <code>BIENVENUE</code>
+                <button type="button" class="footer-news__btn" data-copy-promo="BIENVENUE">Copier le code</button>
+            </div>
             <p class="footer-news__msg" id="footer-news-msg" role="status" aria-live="polite"></p>
+            <a class="footer-news__link" href="{% url 'shop:catalog' %}">Découvrir la collection</a>
         </section>
 
         <!-- Marque + réseaux -->
         <div class="footer-brand">
-            <a href="{% url 'home:home' %}" class="footer-logo" aria-label="Ma Boutique - Accueil">
+            <a href="{% url 'home:home' %}" class="footer-logo" aria-label="My Line Collection - Accueil">
                 <img src="{% static 'images/mainLogo.svg' %}" alt="Ma Boutique" class="logo__image">
             </a>
             <p data-i18n="footer_tagline">Sacs et accessoires pensés pour l'élégance au quotidien.</p>
@@ -124,7 +121,7 @@
                 <li><a href="#" data-i18n="footer_privacy">Politique de confidentialité</a></li>
                 <li><a href="#" data-i18n="footer_terms">CGV</a></li>
             </ul>
-            <p class="footer-copy">© 2026 Ma Boutique. <span data-i18n="footer_rights">Tous droits réservés.</span></p>
+            <p class="footer-copy">© 2026 My Line Collection. <span data-i18n="footer_rights">Tous droits réservés.</span></p>
         </div>
     </div>
 </footer>

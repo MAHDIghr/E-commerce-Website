@@ -1282,3 +1282,15 @@ body.cart-open { overflow: hidden; }
 .cart-item__gift-prices del { color: var(--color-ink-muted); font-size: .68rem; }
 .cart-item__gift-prices > strong { color: var(--color-success); font-size: .72rem; }
 .cart-item__gift-prices em { color: var(--color-success); font-size: .62rem; font-style: normal; font-weight: 800; letter-spacing: .04em; }
+
+
+/* Promo welcome — cohérente entre tiroir panier et pied de page */
+.cart-promo { margin:0 0 1.25rem; padding:1rem; border:1px solid var(--color-line); border-radius:var(--radius-md); background:linear-gradient(135deg,#fff,var(--color-bg-alt)); }
+.cart-promo__eyebrow { display:block; margin-bottom:.25rem; color:var(--color-accent-dark); font-size:.65rem; font-weight:700; letter-spacing:.13em; }
+.cart-promo p { margin:0 0 .5rem; font-size:.85rem; }
+.cart-promo p strong { color:var(--color-accent-dark); font-size:1.1rem; }
+.cart-promo code, .footer-news__offer code { padding:.25rem .45rem; border:1px dashed var(--color-accent); border-radius:5px; background:#fff; letter-spacing:.12em; font-weight:700; }
+.cart-promo button { color:var(--color-accent-dark); font-size:.78rem; font-weight:700; text-decoration:underline; }
+.cart-promo small { display:block; margin-top:.35rem; color:var(--color-ink-muted); font-size:.7rem; }
+.footer-news__offer { display:flex; flex-wrap:wrap; align-items:center; gap:.8rem; margin-top:1rem; }
+.footer-news__link { display:inline-block; margin-top:.85rem; color:var(--color-accent-dark); font-size:.78rem; font-weight:700; text-decoration:underline; }
