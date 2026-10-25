@@ -11,7 +11,7 @@
   {% else %}<p class="checkout-eyebrow">CONFIRMATION EN COURS</p><h1 id="result-title">Nous attendons la confirmation du paiement.</h1><p>Votre commande n’est pas encore marquée comme payée. Actualisez cette page dans quelques instants. Seule la notification sécurisée de Stripe confirme le paiement.</p>{% endif %}
   <div class="checkout-result__status"><strong>Référence :</strong> {{ order.public_id }}<br><strong>État :</strong> {{ order.get_status_display }}<br><strong>Total :</strong> {{ order.total|floatformat:2 }} {{ order.currency|upper }}</div>
   <ul class="checkout-result__items">{% for line in order.lines.all %}<li>{{ line.quantity }} × {{ line.product_name }} — {{ line.line_total|floatformat:2 }} €</li>{% endfor %}</ul>
-  {% if cancelled_return and order.status != "paid" and order.status != "cancelled" and order.status != "expired" %}<a class="button button-primary" href="{% url 'checkout:checkout' %}">Reprendre le paiement</a>{% endif %}
+  {% if cancelled_return or order.status == "cancelled" or order.status == "expired" %}<a class="button button-primary" href="{% url 'checkout:checkout' %}">Reprendre la commande</a>{% endif %}
   <a class="button button-primary" href="{% url 'shop:catalog' %}">Retour à la boutique</a>
 </section>
 {% endblock %}
