@@ -77,6 +77,14 @@ def catalog(request):
 
 
 @require_GET
+
+@ensure_csrf_cookie
+@require_GET
+def cart_page(request):
+    """Affiche le panier complet ; les prix et disponibilités restent recalculés côté serveur."""
+    return render(request, "cart_page.html", {"cart": _cart_payload(request)})
+
+
 def search_suggestions(request):
     query = " ".join(request.GET.get("q", "").split())[:100]
     if len(query) < 2:
