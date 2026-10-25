@@ -38,6 +38,7 @@ class Order(models.Model):
     stock_reserved = models.BooleanField(default=False, db_index=True)
     stock_committed = models.BooleanField(default=False)
     stock_requirements_snapshot = models.JSONField(default=dict, blank=True)
+    cart_snapshot = models.JSONField(default=dict, blank=True)
     stripe_session_id = models.CharField(max_length=255, blank=True, db_index=True)
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
