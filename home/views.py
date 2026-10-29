@@ -1,9 +1,24 @@
-"""Page d'accueil : les sections commerciales sont issues des modèles."""
+"""Page d'accueil et parcours publics d'information/newsletter."""
+import hashlib
+import logging
+import secrets
+from datetime import timedelta
+
+from django.conf import settings
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.db import transaction
 from django.db.models import F, Prefetch
-from django.shortcuts import render
+from django.http import Http404
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from product.models import Category, ProductMedia, ProductOffer, ProductVariant, Review
-from .models import SignatureSelection
+from .models import NewsletterSubscription, SignatureSelection
 from product.selectors import published_products
 
 
@@ -42,6 +57,8 @@ def home(request):
         "signature_selections": signature_selections,
         "new_products": new_products,
         "featured_reviews": featured_reviews,
+        "newsletter_notice": request.session.pop("newsletter_notice", ""),
+        "newsletter_error": request.session.pop("newsletter_error", ""),
     })
 
 
@@ -175,3 +192,172 @@ def robots_txt(request):
         f"Sitemap: {sitemap}\\n"
     )
     return HttpResponse(body, content_type="text/plain; charset=utf-8")
+
+
+logger = logging.getLogger(__name__)
+
+
+@require_POST
+def newsletter_subscribe(request):
+    """Enregistre le consentement puis demande une confirmation par e-mail."""
+    remote_addr = request.META.get("REMOTE_ADDR", "unknown")
+    rate_key = "newsletter-submit:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
+    attempts = cache.get(rate_key, 0) + 1
+    cache.set(rate_key, attempts, timeout=900)
+    if attempts > 5:
+        request.session["newsletter_error"] = "Trop de tentatives. Réessayez dans quelques minutes."
+        return redirect("home:home")
+
+    # Champ piège pour limiter les inscriptions automatisées sans révéler le contrôle.
+    if request.POST.get("website", "").strip():
+        request.session["newsletter_notice"] = "Si une confirmation est nécessaire, un e-mail sera envoyé."
+        return redirect("home:home")
+
+    email = request.POST.get("email", "").strip().lower()
+    if len(email) > 254:
+        request.session["newsletter_error"] = "Saisissez une adresse e-mail valide."
+        return redirect("home:home")
+    try:
+        validate_email(email)
+    except ValidationError:
+        request.session["newsletter_error"] = "Saisissez une adresse e-mail valide."
+        return redirect("home:home")
+
+    if request.POST.get("consent") != "yes":
+        request.session["newsletter_error"] = "Votre consentement est nécessaire pour recevoir la newsletter."
+        return redirect("home:home")
+
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    now = timezone.now()
+    confirmation_url = request.build_absolute_uri(
+        reverse("home:newsletter_confirm", kwargs={"token": token})
+    )
+    send_confirmation = False
+
+    with transaction.atomic():
+        subscription = NewsletterSubscription.objects.select_for_update().filter(email=email).first()
+        if subscription is None:
+            subscription = NewsletterSubscription.objects.create(
+                email=email,
+                is_confirmed=False,
+                is_active=False,
+                consent_at=now,
+                consent_version="newsletter-v1",
+                confirmation_token_hash=token_hash,
+                confirmation_expires_at=now + timedelta(hours=24),
+            )
+            send_confirmation = True
+        elif not (subscription.is_confirmed and subscription.is_active):
+            subscription.is_active = False
+            subscription.consent_at = now
+            subscription.consent_version = "newsletter-v1"
+            subscription.confirmation_token_hash = token_hash
+            subscription.confirmation_expires_at = now + timedelta(hours=24)
+            subscription.unsubscribed_at = None
+            subscription.save(update_fields=[
+                "is_active", "consent_at", "consent_version",
+                "confirmation_token_hash", "confirmation_expires_at",
+                "unsubscribed_at", "updated_at",
+            ])
+            send_confirmation = True
+
+    if send_confirmation:
+        try:
+            send_mail(
+                subject="Confirmez votre inscription — My Line Collection",
+                message=(
+                    "Bonjour,\\n\\nVous avez demandé à recevoir les actualités de My Line Collection. "
+                    "Pour confirmer votre inscription, ouvrez ce lien dans les 24 heures :\\n"
+                    f"{confirmation_url}\\n\\n"
+                    "Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail. "
+                    "Aucune inscription marketing ne sera activée sans confirmation.\\n\\n"
+                    "My Line Collection"
+                ),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as exc:
+            logger.warning("Newsletter confirmation delivery failed (%s)", type(exc).__name__)
+
+    request.session["newsletter_notice"] = (
+        "Si cette adresse nécessite une confirmation, un e-mail vous sera envoyé. "
+        "Vérifiez votre boîte de réception et vos courriers indésirables."
+    )
+    return redirect("home:home")
+
+
+@require_GET
+def newsletter_confirm(request, token):
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    now = timezone.now()
+    with transaction.atomic():
+        subscription = NewsletterSubscription.objects.select_for_update().filter(
+            confirmation_token_hash=token_hash,
+            confirmation_expires_at__gt=now,
+            is_confirmed=False,
+        ).first()
+        if subscription:
+            subscription.is_confirmed = True
+            subscription.is_active = True
+            subscription.confirmed_at = now
+            subscription.confirmation_token_hash = ""
+            subscription.confirmation_expires_at = None
+            subscription.save(update_fields=[
+                "is_confirmed", "is_active", "confirmed_at",
+                "confirmation_token_hash", "confirmation_expires_at", "updated_at",
+            ])
+    if not subscription:
+        return render(request, "newsletter_status.html", {
+            "title": "Lien de confirmation invalide",
+            "message": "Ce lien est invalide, a déjà été utilisé ou a expiré. Vous pouvez demander une nouvelle confirmation depuis la page d’accueil.",
+            "success": False,
+        }, status=400)
+    response = render(request, "newsletter_status.html", {
+        "title": "Inscription confirmée",
+        "message": "Votre adresse est confirmée. Vous recevrez les communications de la newsletter conformément à votre consentement.",
+        "success": True,
+    })
+    response["Cache-Control"] = "no-store"
+    response["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+@require_http_methods(["GET", "POST"])
+def newsletter_unsubscribe(request, token):
+    subscription = NewsletterSubscription.objects.filter(unsubscribe_token=token).first()
+    if not subscription:
+        return render(request, "newsletter_status.html", {
+            "title": "Lien de désinscription invalide",
+            "message": "Ce lien de désinscription n’est pas valide.",
+            "success": False,
+        }, status=404)
+
+    if request.method == "GET":
+        return render(request, "newsletter_status.html", {
+            "title": "Se désinscrire de la newsletter",
+            "message": "Confirmez la désinscription pour ne plus recevoir les communications de la newsletter.",
+            "confirm_unsubscribe": True,
+            "unsubscribe_token": token,
+            "success": True,
+        })
+
+    with transaction.atomic():
+        subscription = NewsletterSubscription.objects.select_for_update().get(pk=subscription.pk)
+        subscription.is_active = False
+        subscription.unsubscribed_at = timezone.now()
+        subscription.confirmation_token_hash = ""
+        subscription.confirmation_expires_at = None
+        subscription.save(update_fields=[
+            "is_active", "unsubscribed_at", "confirmation_token_hash",
+            "confirmation_expires_at", "updated_at",
+        ])
+    response = render(request, "newsletter_status.html", {
+        "title": "Désinscription enregistrée",
+        "message": "Votre adresse ne recevra plus les communications de la newsletter.",
+        "success": True,
+    })
+    response["Cache-Control"] = "no-store"
+    response["Referrer-Policy"] = "no-referrer"
+    return response
