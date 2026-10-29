@@ -42,6 +42,15 @@ class CheckoutIntegrationTests(TestCase):
         self.add_to_cart()
         self.assertNotIn("checkout_attempt_key", self.client.session)
 
+    def test_checkout_and_result_reject_unsupported_http_methods(self):
+        self.assertEqual(self.client.put(reverse("checkout:checkout")).status_code, 405)
+        self.assertEqual(
+            self.client.post(
+                reverse("checkout:result", kwargs={"public_id": uuid.uuid4()})
+            ).status_code,
+            405,
+        )
+
     def test_unknown_checkout_session_webhook_is_retryable_and_not_deduplicated(self):
         event = {"id": "evt_unknown_session", "type": "checkout.session.completed", "data": {"object": {
             "object": "checkout.session", "id": "cs_session_not_yet_associated",
