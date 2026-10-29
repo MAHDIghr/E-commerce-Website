@@ -16,7 +16,9 @@ from django.db import transaction
 from django.db.models import F, Sum
 from django.utils import timezone
 
-from product.models import ProductVariant\n\nfrom .models import (
+from product.models import ProductVariant
+
+from .models import (
     Order, OrderEvent, OrderIncident, OrderNotification, Refund, ReturnLine,
     ReturnRequest, Shipment, ShipmentEvent, ShipmentLine,
 )
