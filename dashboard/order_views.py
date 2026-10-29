@@ -139,6 +139,7 @@ def order_update_fulfillment(request, pk):
             return redirect("dashboard:order_detail", pk=order.pk)
 
         now = timezone.now()
+        previous_status = order.fulfillment_status
         changed_fields = ["fulfillment_status", "shipping_carrier", "tracking_number", "internal_note", "updated_at"]
         order.fulfillment_status = new_status
         order.shipping_carrier = carrier
