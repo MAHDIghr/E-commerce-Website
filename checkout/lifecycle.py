@@ -311,15 +311,26 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None,
         refund.failure_reason = str(exc.user_message or "Erreur Stripe")[:2000]
         refund.save(update_fields=["status", "failure_reason"])
         raise LifecycleProblem("Stripe n'a pas confirmé le remboursement. Consultez le détail avant toute nouvelle tentative.") from exc
-    refund.stripe_refund_id = result.id
-    # Stripe can return pending; only a succeeded provider state confirms the refund.
-    refund.status = Refund.SUCCEEDED if result.status == "succeeded" else Refund.PROCESSING
-    if refund.status == Refund.SUCCEEDED:
-        refund.confirmed_at = timezone.now()
-    refund.save(update_fields=["stripe_refund_id", "status", "confirmed_at"])
-    if refund.status == Refund.SUCCEEDED:
-        record_order_event(order, "refund_confirmed", source="stripe", external_reference=result.id,
-                           metadata={"refund_id": refund.pk, "amount": str(amount)})
+    with transaction.atomic():
+        refund = Refund.objects.select_for_update().get(pk=refund.pk)
+        previous_status = refund.status
+        if not refund.stripe_refund_id:
+            refund.stripe_refund_id = result.id
+        # A webhook can beat the synchronous API response; never downgrade its state.
+        if refund.status != Refund.SUCCEEDED:
+            refund.status = Refund.SUCCEEDED if result.status == "succeeded" else Refund.PROCESSING
+            if refund.status == Refund.SUCCEEDED:
+                refund.confirmed_at = timezone.now()
+        refund.save(update_fields=["stripe_refund_id", "status", "confirmed_at"])
+        if refund.status == Refund.SUCCEEDED and previous_status != Refund.SUCCEEDED:
+            record_order_event(order, "refund_confirmed", source="stripe", external_reference=result.id,
+                               metadata={"refund_id": refund.pk, "amount": str(amount)})
+            from .services import _queue_order_email
+            _queue_order_email(
+                order, f"refund_confirmed_{refund.pk}",
+                f"Remboursement confirmé pour la commande {str(order.public_id)[:8]}",
+                f"Bonjour {order.full_name},\\n\\nStripe a confirmé un remboursement de {refund.amount} {refund.currency.upper()}.\\nRéférence de commande : {order.public_id}\\n\\nMy Line Collection",
+            )
     return refund
 
 
