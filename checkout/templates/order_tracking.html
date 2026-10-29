@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Suivi de commande | My Line Collection{% endblock %}
+{% block meta_description %}Consultez le suivi sécurisé de votre commande My Line Collection.{% endblock %}
+{% block body_class %}page-checkout page-order-tracking{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/checkout.css' %}">
+<style>
+.order-tracking{max-width:980px;margin:3rem auto;padding:0 1rem 4rem;color:#292721}
+.order-tracking__header,.tracking-panel{background:#fff;border:1px solid #e9e4dc;border-radius:18px;padding:clamp(1rem,3vw,2rem);margin-bottom:1rem}
+.order-tracking h1{font-size:clamp(1.8rem,4vw,3rem);margin:.35rem 0}
+.order-tracking h2{font-size:1.25rem;margin:0 0 1rem}
+.order-tracking__muted{color:#716c64;overflow-wrap:anywhere}
+.tracking-row{display:flex;justify-content:space-between;gap:1rem;padding:.8rem 0;border-bottom:1px solid #eee9e1}
+.tracking-row:last-child{border-bottom:0}
+.tracking-row p{margin:.25rem 0;overflow-wrap:anywhere}
+.tracking-status{display:inline-block;padding:.35rem .6rem;border-radius:999px;background:#f3eee7;font-size:.85rem}
+.tracking-form{display:grid;gap:.9rem;max-width:720px}
+.tracking-form label{display:grid;gap:.35rem;font-weight:600}
+.tracking-form input,.tracking-form select,.tracking-form textarea{width:100%;max-width:100%;box-sizing:border-box;border:1px solid #d8d2c8;border-radius:9px;padding:.75rem;font:inherit}
+.tracking-form button{justify-self:start}
+.tracking-error{padding:.8rem;border:1px solid #b54735;background:#fff5f3;border-radius:10px;margin-bottom:1rem}
+@media(max-width:600px){.order-tracking{margin:1.25rem auto}.tracking-row{display:block}.tracking-status{margin-top:.5rem}}
+</style>
+{% endblock %}
+{% block content %}
+<main class="order-tracking">
+  <header class="order-tracking__header">
+    <p class="checkout-eyebrow">MY LINE COLLECTION · ESPACE CLIENT</p>
+    <h1>Suivi de commande</h1>
+    <p class="order-tracking__muted">Référence {{ order.public_id }} · Commandée le {{ order.created_at|date:"d/m/Y à H:i" }}</p>
+    <p><span class="tracking-status">{{ order.get_status_display }}</span> <span class="tracking-status">{{ order.get_fulfillment_status_display }}</span></p>
+  </header>
+
+  {% if return_error %}<div class="tracking-error" role="alert">{{ return_error }}</div>{% endif %}
+
+  <section class="tracking-panel">
+    <h2>Articles commandés</h2>
+    {% for line in order.lines.all %}
+    <div class="tracking-row"><div><strong>{{ line.product_name }}</strong>{% if line.variant_name %}<p class="order-tracking__muted">Variante : {{ line.variant_name }}</p>{% endif %}<p class="order-tracking__muted">Quantité : {{ line.quantity }} · {{ line.unit_price|floatformat:2 }} € / unité</p></div><strong>{{ line.line_total|floatformat:2 }} €</strong></div>
+    {% empty %}<p class="order-tracking__muted">Aucun détail d'article disponible.</p>{% endfor %}
+    <div class="tracking-row"><strong>Total de la commande</strong><strong>{{ order.total|floatformat:2 }} {{ order.currency|upper }}</strong></div>
+  </section>
+
+  <section class="tracking-panel">
+    <h2>Livraison et colis</h2>
+    {% for shipment in order.shipments.all %}
+    <article class="tracking-row"><div><strong>Colis {{ forloop.counter }}</strong><p><span class="tracking-status">{{ shipment.get_status_display }}</span></p>
+      {% if shipment.carrier %}<p>{{ shipment.carrier }}{% if shipment.tracking_number %} · {{ shipment.tracking_number }}{% endif %}</p>{% endif %}
+      {% if shipment.tracking_url %}<p><a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Suivre auprès du transporteur</a></p>{% endif %}
+      {% for event in shipment.events.all %}<p class="order-tracking__muted">{{ event.occurred_at|default:event.created_at|date:"d/m/Y H:i" }} · {{ event.get_status_display }}{% if event.description %} — {{ event.description }}{% endif %}</p>{% endfor %}
+    </div></article>
+    {% empty %}<p class="order-tracking__muted">La préparation de votre colis n'a pas encore commencé.</p>{% endfor %}
+  </section>
+
+  <section class="tracking-panel">
+    <h2>Retours et demandes en cours</h2>
+    {% for return_request in order.return_requests.all %}
+      <div class="tracking-row"><div><strong>{{ return_request.get_reason_category_display }}</strong><p>{{ return_request.get_status_display }} · {{ return_request.requested_at|date:"d/m/Y" }}</p><p class="order-tracking__muted">{{ return_request.reason }}</p></div></div>
+    {% empty %}<p class="order-tracking__muted">Aucune demande de retour enregistrée.</p>{% endfor %}
+  </section>
+
+  {% if order.status == "paid" %}
+  <section class="tracking-panel">
+    <h2>Demander un retour ou signaler un problème</h2>
+    <p class="order-tracking__muted">Sélectionnez les articles concernés et décrivez la situation. L'éligibilité sera examinée selon le motif et les règles applicables ; cette demande ne constitue pas une confirmation automatique de remboursement.</p>
+    <form method="post" action="{% url 'checkout:return_request' order.public_id %}" class="tracking-form">
+      {% csrf_token %}
+      <input type="hidden" name="token" value="{{ tracking_token }}">
+      {% for line in order.lines.all %}
+      <label>{{ line.product_name }}{% if line.variant_name %} — {{ line.variant_name }}{% endif %} (commandé : {{ line.quantity }})
+        <input type="number" name="line_{{ line.pk }}" min="1" max="{{ line.quantity }}" step="1" inputmode="numeric" placeholder="Quantité concernée">
+      </label>
+      {% endfor %}
+      <label>Motif
+        <select name="reason_category" required><option value="">Choisir un motif</option><option value="withdrawal">Rétractation</option><option value="non_conformity">Non-conformité</option><option value="defective">Produit défectueux</option><option value="transport_damage">Dommage de transport</option><option value="missing_item">Article manquant</option><option value="other">Autre / geste commercial</option></select>
+      </label>
+      <label>Décrivez votre demande
+        <textarea name="reason" rows="4" maxlength="5000" required></textarea>
+      </label>
+      <label>Information complémentaire (facultatif)
+        <textarea name="customer_note" rows="3" maxlength="4000"></textarea>
+      </label>
+      <button class="button button-primary" type="submit">Envoyer ma demande</button>
+    </form>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}
