@@ -244,17 +244,18 @@ def newsletter_subscribe(request):
     send_confirmation = False
 
     with transaction.atomic():
-        subscription = NewsletterSubscription.objects.select_for_update().filter(email=email).first()
-        if subscription is None:
-            subscription = NewsletterSubscription.objects.create(
-                email=email,
-                is_confirmed=False,
-                is_active=False,
-                consent_at=now,
-                consent_version="newsletter-v1",
-                confirmation_token_hash=token_hash,
-                confirmation_expires_at=now + timedelta(hours=24),
-            )
+        subscription, created = NewsletterSubscription.objects.select_for_update().get_or_create(
+            email=email,
+            defaults={
+                "is_confirmed": False,
+                "is_active": False,
+                "consent_at": now,
+                "consent_version": "newsletter-v1",
+                "confirmation_token_hash": token_hash,
+                "confirmation_expires_at": now + timedelta(hours=24),
+            },
+        )
+        if created:
             send_confirmation = True
         elif not (subscription.is_confirmed and subscription.is_active):
             # Toute réinscription doit repasser par le double opt-in, y compris
