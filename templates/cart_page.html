@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Mon panier | My Line Collection{% endblock %}
 {% block meta_description %}Vérifiez votre sélection, les quantités et la disponibilité avant de finaliser votre commande.{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">{% endblock %}
 {% block body_class %}page-cart{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/cart-page.css' %}">{% endblock %}
 {% block content %}
