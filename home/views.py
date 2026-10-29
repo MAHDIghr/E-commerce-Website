@@ -322,11 +322,14 @@ def newsletter_confirm(request, token):
                 "confirmation_token_hash", "confirmation_expires_at", "updated_at",
             ])
     if not subscription:
-        return render(request, "newsletter_status.html", {
+        response = render(request, "newsletter_status.html", {
             "title": "Lien de confirmation invalide",
             "message": "Ce lien est invalide, a déjà été utilisé ou a expiré. Vous pouvez demander une nouvelle confirmation depuis la page d’accueil.",
             "success": False,
         }, status=400)
+        response["Cache-Control"] = "no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
     response = render(request, "newsletter_status.html", {
         "title": "Inscription confirmée",
         "message": "Votre adresse est confirmée. Vous recevrez les communications de la newsletter conformément à votre consentement.",
@@ -341,20 +344,26 @@ def newsletter_confirm(request, token):
 def newsletter_unsubscribe(request, token):
     subscription = NewsletterSubscription.objects.filter(unsubscribe_token=token).first()
     if not subscription:
-        return render(request, "newsletter_status.html", {
+        response = render(request, "newsletter_status.html", {
             "title": "Lien de désinscription invalide",
             "message": "Ce lien de désinscription n’est pas valide.",
             "success": False,
         }, status=404)
+        response["Cache-Control"] = "no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
 
     if request.method == "GET":
-        return render(request, "newsletter_status.html", {
+        response = render(request, "newsletter_status.html", {
             "title": "Se désinscrire de la newsletter",
             "message": "Confirmez la désinscription pour ne plus recevoir les communications de la newsletter.",
             "confirm_unsubscribe": True,
             "unsubscribe_token": token,
             "success": True,
         })
+        response["Cache-Control"] = "no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
 
     with transaction.atomic():
         subscription = NewsletterSubscription.objects.select_for_update().get(pk=subscription.pk)
