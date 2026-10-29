@@ -92,9 +92,16 @@ def order_detail(request, pk):
         Order.objects.prefetch_related("lines", "payment_attempts"),
         pk=pk,
     )
+    confirmed_refunds = order.refunds.filter(status=Refund.SUCCEEDED).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    can_cancel_paid_order = (
+        order.status == Order.PAID and not order.shipments.exists()
+        and confirmed_refunds >= order.total
+    )
     return render(request, "dashboard/order_detail.html", {
         "order": order,
-        "can_manage_fulfillment": order.status == Order.PAID,\n        "can_cancel_order": order.status in {Order.PENDING, Order.AWAITING},
+        "can_manage_fulfillment": order.status == Order.PAID,
+        "can_cancel_order": order.status in {Order.PENDING, Order.AWAITING} or can_cancel_paid_order,
+        "can_cancel_paid_order": can_cancel_paid_order,
         "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),
         "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),
         "refunds": order.refunds.all(),
