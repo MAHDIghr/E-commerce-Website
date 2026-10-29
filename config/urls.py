@@ -18,8 +18,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from home import views as home_views
 
 urlpatterns = [
+    path('sitemap.xml', home_views.sitemap_xml, name='sitemap'),
+    path('robots.txt', home_views.robots_txt, name='robots'),
     path('admin/', admin.site.urls),
     path("", include("home.urls")),
     path("boutique/", include("shop.urls")),
