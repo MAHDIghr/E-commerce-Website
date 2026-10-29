@@ -229,12 +229,17 @@ def order_create_refund(request, pk):
         refund = request_refund(
             order.pk, amount=request.POST.get("amount", ""),
             reason=request.POST.get("reason", ""), actor=request.user,\n            idempotency_key=request.POST.get("idempotency_key", ""),
+            return_request=ReturnRequest.objects.filter(
+                pk=request.POST.get("return_request", ""), order=order,
+            ).first() if request.POST.get("return_request") else None,
         )
     except (LifecycleProblem, ValueError) as exc:
         messages.error(request, str(exc))
     else:
         if refund.status == Refund.SUCCEEDED:
             messages.success(request, "Stripe a confirmé le remboursement.")
+        elif refund.status == Refund.FAILED:
+            messages.error(request, refund.failure_reason or "Le remboursement a échoué.")
         else:
             messages.warning(request, "La demande est enregistrée, mais Stripe n'a pas encore confirmé le remboursement.")
     return redirect("dashboard:order_detail", pk=pk)
