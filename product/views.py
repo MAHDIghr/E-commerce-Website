@@ -1,4 +1,5 @@
 """Vues produit : données métier issues de la base, sans catalogue fictif."""
+import json
 from decimal import Decimal
 
 from django.db.models import Prefetch
@@ -228,4 +229,39 @@ def detail(request, slug):
     context_product["tagline"] = context_product["tagline"] or ""
     context_product["seo_title"] = context_product["seo_title"] or product.name
     context_product["seo_description"] = product.seo_description or product.short_description or product.name
+    context_product["category"] = product.category.name
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": context_product["name"],
+        "description": context_product["seo_description"],
+        "sku": str(product.pk),
+        "brand": {"@type": "Brand", "name": "My Line Collection"},
+        "category": context_product["category"],
+        "url": request.build_absolute_uri(reverse("product:detail", kwargs={"slug": product.slug})),
+        "image": [
+            request.build_absolute_uri(item["src"])
+            for item in media if item["type"] == ProductMedia.IMAGE and item.get("src")
+        ],
+        "offers": {
+            "@type": "AggregateOffer",
+            "priceCurrency": "EUR",
+            "lowPrice": min(item["price"] for item in offers),
+            "highPrice": max(item["price"] for item in offers),
+            "offerCount": len(offers),
+            "availability": "https://schema.org/InStock" if any(item["stock"] > 0 for item in context_product["colors"]) else "https://schema.org/OutOfStock",
+            "url": request.build_absolute_uri(reverse("product:detail", kwargs={"slug": product.slug})),
+        },
+    }
+    if reviews_count:
+        structured_data["aggregateRating"] = {
+            "@type": "AggregateRating",
+            "ratingValue": rating,
+            "reviewCount": reviews_count,
+            "bestRating": 5,
+            "worstRating": 1,
+        }
+    context_product["structured_data_json"] = json.dumps(
+        structured_data, ensure_ascii=False, separators=(",", ":")
+    ).replace("<", "\\u003C").replace(">", "\\u003E").replace("&", "\\u0026")
     return render(request, "product.html", {"product": context_product})
