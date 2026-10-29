@@ -25,6 +25,7 @@
       <a class="nav-link {% if request.resolver_match.url_name == 'products' or request.resolver_match.url_name == 'product_add' or request.resolver_match.url_name == 'product_edit' %}is-active{% endif %}" href="{% url 'dashboard:products' %}"><span>◇</span> Produits</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'categories' or request.resolver_match.url_name == 'category_edit' %}is-active{% endif %}" href="{% url 'dashboard:categories' %}"><span>▦</span> Catégories</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'offers' %}is-active{% endif %}" href="{% url 'dashboard:offers' %}"><span>✳</span> Offres commerciales</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'orders' or request.resolver_match.url_name == 'order_detail' or request.resolver_match.url_name == 'order_update_fulfillment' %}is-active{% endif %}" href="{% url 'dashboard:orders' %}"><span>▤</span> Commandes</a>
       <p class="nav-label nav-label-spaced">CONTENU & CONTRÔLE</p>
       <a class="nav-link" href="{% url 'admin:product_review_changelist' %}"><span>☆</span> Avis clients</a>
       <a class="nav-link" href="{% url 'admin:product_product_changelist' %}"><span>↗</span> Contenus avancés</a>
