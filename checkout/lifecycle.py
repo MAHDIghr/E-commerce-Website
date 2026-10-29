@@ -104,7 +104,7 @@ def transition_order_commercial_status(order_id, new_status, *, actor=None, reas
     }
     if new_status in paid_required and order.status != Order.PAID:
         raise LifecycleProblem("Le paiement doit être confirmé avant cette étape commerciale.")
-    if new_status == Order.COMMERCIAL_SHIPPED and not _all_order_quantities_covered(
+    if new_status == Order.COMMERCIAL_SHIPPED and not all_order_quantities_covered(
         order, SHIPMENT_HANDED_OVER_STATUSES
     ):
         raise LifecycleProblem(
@@ -114,7 +114,7 @@ def transition_order_commercial_status(order_id, new_status, *, actor=None, reas
     if new_status == Order.COMMERCIAL_DELIVERED and (
         not order.shipments.exists()
         or order.shipments.exclude(status=Shipment.DELIVERED).exists()
-        or not _all_order_quantities_covered(order, {Shipment.DELIVERED})
+        or not all_order_quantities_covered(order, {Shipment.DELIVERED})
     ):
         raise LifecycleProblem(
             "Tous les colis et toutes les quantités commandées doivent être attestés livrés avant cette transition."
@@ -248,7 +248,7 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
                 "Le colis ne peut être remis au transporteur que pour une commande payée et prête à expédier."
             )
         old = order.fulfillment_status
-        all_units_handed_over = _all_order_quantities_covered(
+        all_units_handed_over = all_order_quantities_covered(
             order, SHIPMENT_HANDED_OVER_STATUSES
         )
         order.fulfillment_status = (
@@ -275,7 +275,7 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
     if new_status == Shipment.DELIVERED:
         order = shipment.order
         all_shipments_delivered = not order.shipments.exclude(status=Shipment.DELIVERED).exists()
-        all_units_delivered = _all_order_quantities_covered(order, {Shipment.DELIVERED})
+        all_units_delivered = all_order_quantities_covered(order, {Shipment.DELIVERED})
         if all_shipments_delivered and all_units_delivered:
             old = order.fulfillment_status
             order.fulfillment_status = Order.FULFILLMENT_DELIVERED
@@ -293,7 +293,7 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
             )
         else:
             old = order.fulfillment_status
-            all_units_handed_over = _all_order_quantities_covered(
+            all_units_handed_over = all_order_quantities_covered(
                 order, SHIPMENT_HANDED_OVER_STATUSES
             )
             summary_status = (
