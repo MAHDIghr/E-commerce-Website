@@ -22,6 +22,16 @@ from .lifecycle import LifecycleProblem, create_return_request, queue_notificati
 logger = logging.getLogger(__name__)
 
 
+def _increment_rate_limit(key, timeout):
+    """Compteur de limitation atomique avec récupération si la clé expire en course."""
+    cache.add(key, 0, timeout=timeout)
+    try:
+        return cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=timeout)
+        return 1
+
+
 def checkout(request):
     cart_items, subtotal, cart_error = [], None, ""
     try:
@@ -194,8 +204,7 @@ def order_tracking_lookup(request):
     if request.method == "POST":
         remote_addr = request.META.get("REMOTE_ADDR", "unknown")
         rate_key = "order-tracking-lookup:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
-        attempts = cache.get(rate_key, 0) + 1
-        cache.set(rate_key, attempts, timeout=300)
+        attempts = _increment_rate_limit(rate_key, 300)
         if attempts > 10:
             return render(request, "order_tracking_lookup.html", {
                 "error": "Trop de tentatives. Réessayez dans quelques minutes.",
@@ -226,8 +235,7 @@ def order_tracking(request, public_id):
     if order is None:
         remote_addr = request.META.get("REMOTE_ADDR", "unknown")
         rate_key = "order-tracking-invalid:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
-        attempts = cache.get(rate_key, 0) + 1
-        cache.set(rate_key, attempts, timeout=300)
+        attempts = _increment_rate_limit(rate_key, 300)
         if attempts > 30:
             return HttpResponse("Trop de requêtes. Réessayez dans quelques minutes.", status=429)
         raise Http404
@@ -259,7 +267,7 @@ def order_return_request(request, public_id):
         response["Cache-Control"] = "private, no-store"
         response["Referrer-Policy"] = "no-referrer"
         return response
-    cache.set(rate_key, attempts + 1, timeout=900)
+    _increment_rate_limit(rate_key, 900)
 
     lines = {}
     for line in order.lines.all():
