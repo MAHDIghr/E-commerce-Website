@@ -281,23 +281,48 @@ def process_stripe_event(event):
         if event_type in ("refund.updated", "refund.failed"):
             refund = Refund.objects.select_for_update().filter(stripe_refund_id=obj.get("id", "")).first()
             if not refund:
-                if obj.get("metadata", {}).get("local_refund_id"):
-                    raise RetryableWebhookError(f"Unknown local refund for Stripe refund {obj.get('id', '')}")
-                return "ignored"
-            if obj.get("status") == "succeeded":
-                refund.status = Refund.SUCCEEDED
-                refund.confirmed_at = timezone.now()
-            elif obj.get("status") == "failed" or event_type == "refund.failed":
+                local_refund_id = (obj.get("metadata") or {}).get("local_refund_id")
+                if local_refund_id:
+                    refund = Refund.objects.select_for_update().filter(pk=local_refund_id).first()
+                    if refund and not refund.stripe_refund_id:
+                        refund.stripe_refund_id = obj.get("id", "")
+                        refund.save(update_fields=["stripe_refund_id"])
+                if not refund:
+                    if local_refund_id:
+                        raise RetryableWebhookError(f"Unknown local refund for Stripe refund {obj.get('id', '')}")
+                    return "ignored"
+            if obj.get("currency") and obj.get("currency").lower() != refund.currency.lower():
                 refund.status = Refund.FAILED
-                refund.failure_reason = str(obj.get("failure_reason") or "Stripe a signalé l'échec du remboursement.")[:2000]
-            else:
-                refund.status = Refund.PROCESSING
-            refund.save(update_fields=["status", "confirmed_at", "failure_reason"])
-            if refund.status == Refund.SUCCEEDED:
+                refund.failure_reason = "La devise du remboursement Stripe ne correspond pas à la demande locale."
+                refund.save(update_fields=["status", "failure_reason"])
+                return "mismatch"
+            if obj.get("amount") is not None and int(obj["amount"]) != int(refund.amount * 100):
+                refund.status = Refund.FAILED
+                refund.failure_reason = "Le montant du remboursement Stripe ne correspond pas à la demande locale."
+                refund.save(update_fields=["status", "failure_reason"])
+                return "mismatch"
+            previous_status = refund.status
+            if previous_status != Refund.SUCCEEDED:
+                if obj.get("status") == "succeeded":
+                    refund.status = Refund.SUCCEEDED
+                    refund.confirmed_at = timezone.now()
+                    refund.failure_reason = ""
+                elif obj.get("status") == "failed" or event_type == "refund.failed":
+                    refund.status = Refund.FAILED
+                    refund.failure_reason = str(obj.get("failure_reason") or "Stripe a signalé l'échec du remboursement.")[:2000]
+                elif previous_status != Refund.FAILED:
+                    refund.status = Refund.PROCESSING
+                refund.save(update_fields=["status", "confirmed_at", "failure_reason"])
+            if refund.status == Refund.SUCCEEDED and previous_status != Refund.SUCCEEDED:
                 OrderEvent.objects.create(
                     order=refund.order, event_type="refund_confirmed", source="stripe",
                     external_reference=refund.stripe_refund_id,
                     metadata={"refund_id": refund.pk, "amount": str(refund.amount)},
+                )
+                _queue_order_email(
+                    refund.order, f"refund_confirmed_{refund.pk}",
+                    f"Remboursement confirmé pour la commande {str(refund.order.public_id)[:8]}",
+                    f"Bonjour {refund.order.full_name},\n\nStripe a confirmé un remboursement de {refund.amount} {refund.currency.upper()}.\nRéférence de commande : {refund.order.public_id}\n\nMy Line Collection",
                 )
             return "processed"
         if obj.get("object") != "checkout.session":
