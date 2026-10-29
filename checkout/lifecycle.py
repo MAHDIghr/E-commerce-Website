@@ -169,8 +169,8 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
 @transaction.atomic
 def create_return_request(order_id, *, reason_category, reason, lines, customer=None, customer_note="", source="customer"):
     order = Order.objects.select_for_update().get(pk=order_id)
-    if order.status != Order.PAID:
-        raise LifecycleProblem("Une demande de retour exige une commande payée.")
+    if order.status != Order.PAID or order.commercial_status == Order.COMMERCIAL_CANCELLED:
+        raise LifecycleProblem("Une demande de retour exige une commande payée et non annulée.")
     if reason_category not in dict(ReturnRequest.REASONS):
         raise LifecycleProblem("Le motif de retour n'est pas valide.")
     if not reason or not reason.strip():
