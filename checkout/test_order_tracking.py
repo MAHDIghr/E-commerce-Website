@@ -2,14 +2,16 @@ import uuid
 from decimal import Decimal
 
 from django.core import signing
+from django.core.cache import cache
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import reverse\nfrom unittest.mock import patch
 
-from checkout.models import Order, OrderLine, ReturnRequest
+from checkout.models import Order, OrderLine, ReturnRequest, OrderNotification
 
 
 class SignedOrderTrackingTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.order = Order.objects.create(
             checkout_key=uuid.uuid4(), email="private-client@example.test",
             full_name="Client Privé", address_line1="1 rue de Test",
@@ -63,3 +65,25 @@ class SignedOrderTrackingTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(ReturnRequest.objects.filter(order=self.order).count(), 1)
+
+    @patch("checkout.lifecycle.send_mail", return_value=1)
+    def test_tracking_lookup_sends_signed_link_without_revealing_order_details(self, send_mail_mock):
+        response = self.client.post(reverse("checkout:tracking_lookup"), {
+            "reference": str(self.order.public_id), "email": self.order.email,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "un lien privé de suivi")
+        notification = OrderNotification.objects.get(order=self.order, recipient=self.order.email)
+        self.assertEqual(notification.status, OrderNotification.SENT)
+        self.assertIn("token=", notification.payload["message"])
+        send_mail_mock.assert_called_once()
+
+    @patch("checkout.lifecycle.send_mail", return_value=1)
+    def test_tracking_lookup_does_not_disclose_when_email_does_not_match(self, send_mail_mock):
+        response = self.client.post(reverse("checkout:tracking_lookup"), {
+            "reference": str(self.order.public_id), "email": "wrong@example.test",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "un lien privé de suivi")
+        self.assertFalse(OrderNotification.objects.filter(order=self.order).exists())
+        send_mail_mock.assert_not_called()
