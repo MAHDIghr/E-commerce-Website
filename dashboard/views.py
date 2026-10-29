@@ -49,6 +49,7 @@ def dashboard_admin_required(view_func):
 
 
 @dashboard_admin_required
+@require_GET
 def home(request):
     context = {
         "product_count": Product.objects.count(),
@@ -69,6 +70,7 @@ def home(request):
 
 
 @dashboard_admin_required
+@require_GET
 def products(request):
     query = request.GET.get("q", "").strip()[:100]
     queryset = Product.objects.select_related("category").prefetch_related("variants", "offers", "media_items")
@@ -226,6 +228,7 @@ def category_delete(request, pk):
 
 
 @dashboard_admin_required
+@require_GET
 def offers(request):
     product_filter = request.GET.get("product", "").strip()
     badge_filter = request.GET.get("badge", "").strip()
