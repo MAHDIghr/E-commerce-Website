@@ -76,7 +76,14 @@ def order_detail(request, pk):
         pk=pk,
     )
     return render(request, "dashboard/order_detail.html", {
-        "order": order,\n        "can_manage_fulfillment": order.status == Order.PAID,\n        "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),\n        "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),\n        "refunds": order.refunds.all(),\n        "incidents": order.incidents.select_related("shipment").all(),\n        "lifecycle_events": order.lifecycle_events.select_related("actor").all()[:50],\n        "notifications": order.notifications.all()[:30],
+        "order": order,
+        "can_manage_fulfillment": order.status == Order.PAID,
+        "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),
+        "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),
+        "refunds": order.refunds.all(),
+        "incidents": order.incidents.select_related("shipment").all(),
+        "lifecycle_events": order.lifecycle_events.select_related("actor").all()[:50],
+        "notifications": order.notifications.all()[:30],
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
