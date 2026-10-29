@@ -173,3 +173,234 @@ class StripeWebhookEvent(models.Model):
 
     class Meta:
         ordering = ("-processed_at",)
+
+
+class OrderEvent(models.Model):
+    """Historique immuable des changements métier importants d'une commande."""
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="lifecycle_events")
+    event_type = models.CharField(max_length=40, db_index=True)
+    from_value = models.CharField(max_length=40, blank=True)
+    to_value = models.CharField(max_length=40, blank=True)
+    source = models.CharField(max_length=24, default="system")
+    reason = models.TextField(blank=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    external_reference = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ("-created_at", "-pk")
+
+
+class Shipment(models.Model):
+    """Un colis physique. Une commande peut avoir plusieurs expéditions."""
+    DRAFT = "draft"
+    LABEL_CREATED = "label_created"
+    READY = "ready"
+    ACCEPTED = "accepted"
+    IN_TRANSIT = "in_transit"
+    OUT_FOR_DELIVERY = "out_for_delivery"
+    DELIVERY_FAILED = "delivery_failed"
+    PICKUP_POINT = "pickup_point"
+    DELIVERED = "delivered"
+    INCIDENT = "incident"
+    LOST = "lost"
+    RETURNING = "returning"
+    RETURNED = "returned"
+    STATUS_CHOICES = [
+        (DRAFT, "Brouillon"), (LABEL_CREATED, "Étiquette créée"),
+        (READY, "Prêt à collecter"), (ACCEPTED, "Pris en charge"),
+        (IN_TRANSIT, "En transit"), (OUT_FOR_DELIVERY, "En cours de livraison"),
+        (DELIVERY_FAILED, "Échec de livraison"), (PICKUP_POINT, "En point relais"),
+        (DELIVERED, "Livré"), (INCIDENT, "Incident"), (LOST, "Perdu après investigation"),
+        (RETURNING, "Retour expéditeur"), (RETURNED, "Retour reçu"),
+    ]
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="shipments")
+    carrier = models.CharField(max_length=80, blank=True)
+    service = models.CharField(max_length=80, blank=True)
+    shipping_method = models.CharField(max_length=40, blank=True)
+    tracking_number = models.CharField(max_length=120, blank=True, db_index=True)
+    tracking_url = models.URLField(max_length=500, blank=True)
+    label_reference = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=DRAFT, db_index=True)
+    weight_grams = models.PositiveIntegerField(null=True, blank=True)
+    length_cm = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    width_cm = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    height_cm = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    actual_shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    customer_shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_shipments")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    handed_over_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.CheckConstraint(condition=Q(customer_shipping_amount__gte=0), name="shipment_customer_shipping_nonnegative"),
+        ]
+
+
+class ShipmentLine(models.Model):
+    shipment = models.ForeignKey(Shipment, on_delete=models.CASCADE, related_name="lines")
+    order_line = models.ForeignKey(OrderLine, on_delete=models.PROTECT, related_name="shipment_allocations")
+    quantity = models.PositiveSmallIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("shipment", "order_line"), name="shipment_line_unique"),
+            models.CheckConstraint(condition=Q(quantity__gte=1), name="shipment_line_quantity_positive"),
+        ]
+
+
+class ShipmentEvent(models.Model):
+    shipment = models.ForeignKey(Shipment, on_delete=models.PROTECT, related_name="events")
+    status = models.CharField(max_length=24, choices=Shipment.STATUS_CHOICES)
+    source = models.CharField(max_length=24, default="manual")
+    external_event_id = models.CharField(max_length=255, blank=True, unique=True)
+    description = models.TextField(blank=True)
+    occurred_at = models.DateTimeField(null=True, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-occurred_at", "-created_at")
+
+
+class ReturnRequest(models.Model):
+    RECEIVED = "received"
+    REVIEW = "under_review"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    IN_TRANSIT = "in_transit"
+    ARRIVED = "arrived"
+    INSPECTING = "inspecting"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+    STATUS_CHOICES = [
+        (RECEIVED, "Demande reçue"), (REVIEW, "En examen"), (ACCEPTED, "Acceptée"),
+        (REJECTED, "Refusée"), (IN_TRANSIT, "Retour expédié"),
+        (ARRIVED, "Retour reçu"), (INSPECTING, "Inspection"),
+        (RESOLVED, "Résolue"), (CLOSED, "Clôturée"),
+    ]
+    REASONS = [
+        ("withdrawal", "Rétractation"), ("non_conformity", "Non-conformité"),
+        ("defective", "Produit défectueux"), ("transport_damage", "Dommage de transport"),
+        ("missing_item", "Article manquant"), ("other", "Autre / geste commercial"),
+    ]
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="return_requests")
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=RECEIVED, db_index=True)
+    reason_category = models.CharField(max_length=24, choices=REASONS)
+    reason = models.TextField()
+    customer_note = models.TextField(blank=True)
+    admin_note = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    received_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="decided_returns")
+
+    class Meta:
+        ordering = ("-requested_at",)
+
+
+class ReturnLine(models.Model):
+    return_request = models.ForeignKey(ReturnRequest, on_delete=models.CASCADE, related_name="lines")
+    order_line = models.ForeignKey(OrderLine, on_delete=models.PROTECT, related_name="return_allocations")
+    quantity = models.PositiveSmallIntegerField()
+    disposition = models.CharField(max_length=24, blank=True)
+    inspected = models.BooleanField(default=False)
+    restock_approved = models.BooleanField(default=False)
+    inspected_at = models.DateTimeField(null=True, blank=True)
+    inspection_note = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("return_request", "order_line"), name="return_line_unique"),
+            models.CheckConstraint(condition=Q(quantity__gte=1), name="return_line_quantity_positive"),
+        ]
+
+
+class Refund(models.Model):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (PENDING, "En attente"), (PROCESSING, "En cours"),
+        (SUCCEEDED, "Confirmé"), (FAILED, "Échec"), (CANCELLED, "Annulé"),
+    ]
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="refunds")
+    return_request = models.ForeignKey(ReturnRequest, null=True, blank=True, on_delete=models.PROTECT, related_name="refunds")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3, default="eur")
+    reason = models.TextField()
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=PENDING, db_index=True)
+    stripe_refund_id = models.CharField(max_length=255, blank=True, unique=True)
+    idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    external_payment_reference = models.CharField(max_length=255, blank=True)
+    initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    failure_reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-requested_at",)
+        constraints = [models.CheckConstraint(condition=Q(amount__gt=0), name="refund_amount_positive")]
+
+
+class OrderIncident(models.Model):
+    OPEN = "open"
+    INVESTIGATING = "investigating"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+    STATUS_CHOICES = [(OPEN, "Ouvert"), (INVESTIGATING, "En cours"), (RESOLVED, "Résolu"), (CLOSED, "Clôturé")]
+    CATEGORIES = [
+        ("delay", "Retard"), ("failed_delivery", "Livraison échouée"),
+        ("address", "Adresse incorrecte"), ("lost", "Colis perdu"),
+        ("not_received", "Non-réception"), ("damage", "Article endommagé"),
+        ("missing", "Article manquant"), ("other", "Autre"),
+    ]
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="incidents")
+    shipment = models.ForeignKey(Shipment, null=True, blank=True, on_delete=models.PROTECT, related_name="incidents")
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=OPEN, db_index=True)
+    category = models.CharField(max_length=24, choices=CATEGORIES)
+    description = models.TextField()
+    resolution = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_order_incidents")
+    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="resolved_order_incidents")
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+
+class OrderNotification(models.Model):
+    PENDING = "pending"
+    SENDING = "sending"
+    SENT = "sent"
+    FAILED = "failed"
+    STATUS_CHOICES = [(PENDING, "En attente"), (SENDING, "En cours"), (SENT, "Acceptée par le prestataire"), (FAILED, "Échec")]
+    order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.PROTECT, related_name="notifications")
+    event_key = models.CharField(max_length=100)
+    recipient = models.EmailField()
+    channel = models.CharField(max_length=16, default="email")
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=PENDING, db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    external_id = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField(blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("order", "event_key", "recipient", "channel"), name="order_notification_dedupe"),
+        ]
+        ordering = ("-created_at",)
