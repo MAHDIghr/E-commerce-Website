@@ -220,17 +220,18 @@ def order_tracking_lookup(request):
 @require_GET
 def order_tracking(request, public_id):
     """La référence UUID agit comme un secret de capacité ; aucun compte client requis."""
-    remote_addr = request.META.get("REMOTE_ADDR", "unknown")
-    rate_key = "order-tracking-view:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
-    attempts = cache.get(rate_key, 0) + 1
-    cache.set(rate_key, attempts, timeout=300)
-    if attempts > 30:
-        return HttpResponse("Trop de requêtes. Réessayez dans quelques minutes.", status=429)
+    order = Order.objects.prefetch_related(
+        "lines", "shipments__events", "return_requests__lines__order_line"
+    ).filter(public_id=public_id).first()
+    if order is None:
+        remote_addr = request.META.get("REMOTE_ADDR", "unknown")
+        rate_key = "order-tracking-invalid:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
+        attempts = cache.get(rate_key, 0) + 1
+        cache.set(rate_key, attempts, timeout=300)
+        if attempts > 30:
+            return HttpResponse("Trop de requêtes. Réessayez dans quelques minutes.", status=429)
+        raise Http404
 
-    order = get_object_or_404(
-        Order.objects.prefetch_related("lines", "shipments__events", "return_requests__lines__order_line"),
-        public_id=public_id,
-    )
     response = render(request, "order_tracking.html", {"order": order})
     response["Referrer-Policy"] = "no-referrer"
     response["Cache-Control"] = "private, no-store"
