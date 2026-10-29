@@ -65,7 +65,7 @@ class DashboardOrderManagementTests(TestCase):
         self.assertContains(response, "Cabas camel")
         self.assertContains(response, "Camille Martin")
         self.assertContains(response, "Historique de paiement")
-        self.assertContains(response, "89.90")
+        self.assertContains(response, "89,90")
 
     def test_unpaid_order_cannot_be_marked_as_preparing(self):
         self.order.status = Order.PENDING
