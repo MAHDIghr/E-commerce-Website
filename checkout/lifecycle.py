@@ -59,8 +59,8 @@ def record_order_event(order, event_type, *, from_value="", to_value="", source=
 def create_shipment(order_id, *, actor=None, carrier="", service="", tracking_number="",
                     tracking_url="", notes="", line_quantities=None):
     order = Order.objects.select_for_update().get(pk=order_id)
-    if order.status != Order.PAID:
-        raise LifecycleProblem("Une expédition ne peut être créée que pour une commande payée.")
+    if order.status != Order.PAID or order.commercial_status in {Order.COMMERCIAL_CANCELLED, Order.COMMERCIAL_ON_HOLD}:
+        raise LifecycleProblem("Une expédition exige une commande payée, active et non suspendue.")
     if tracking_url:
         parsed = urlparse(tracking_url)
         if parsed.scheme != "https" or not parsed.netloc:
