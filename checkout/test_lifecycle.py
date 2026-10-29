@@ -98,8 +98,6 @@ class OrderLifecycleServiceTests(TestCase):
 
     @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
     @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
-    @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
-    @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
     def test_ambiguous_stripe_refund_failure_remains_processing(self):
         with patch(
             "checkout.lifecycle.stripe.Refund.create",
