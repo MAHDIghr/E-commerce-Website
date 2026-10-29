@@ -281,6 +281,8 @@ def process_stripe_event(event):
         if event_type in ("refund.updated", "refund.failed"):
             refund = Refund.objects.select_for_update().filter(stripe_refund_id=obj.get("id", "")).first()
             if not refund:
+                if obj.get("metadata", {}).get("local_refund_id"):
+                    raise RetryableWebhookError(f"Unknown local refund for Stripe refund {obj.get('id', '')}")
                 return "ignored"
             if obj.get("status") == "succeeded":
                 refund.status = Refund.SUCCEEDED
