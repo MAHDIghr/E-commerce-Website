@@ -77,6 +77,7 @@ class OrderLifecycleServiceTests(TestCase):
         with self.assertRaises(LifecycleProblem):
             create_shipment(self.order.pk, actor=self.admin, line_quantities={self.line.pk: 1})
 
+    @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
     @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
     def test_refund_request_is_idempotent(self):
         request_key = uuid.uuid4()
