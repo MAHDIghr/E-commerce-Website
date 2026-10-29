@@ -244,6 +244,23 @@ def order_return_request(request, public_id):
     if order.status != Order.PAID:
         raise Http404
 
+    remote_addr = request.META.get("REMOTE_ADDR", "unknown")
+    rate_material = f"{remote_addr}:{public_id}".encode("utf-8")
+    rate_key = "order-return-submit:" + hashlib.sha256(rate_material).hexdigest()
+    attempts = cache.get(rate_key, 0)
+    if attempts >= 5:
+        order = Order.objects.prefetch_related(
+            "lines", "shipments__events", "return_requests__lines__order_line"
+        ).get(pk=order.pk)
+        response = render(request, "order_tracking.html", {
+            "order": order,
+            "return_error": "Trop de demandes depuis cette connexion. Réessayez dans quelques minutes.",
+        }, status=429)
+        response["Cache-Control"] = "private, no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
+    cache.set(rate_key, attempts + 1, timeout=900)
+
     lines = {}
     for line in order.lines.all():
         raw = request.POST.get(f"line_{line.pk}", "").strip()
