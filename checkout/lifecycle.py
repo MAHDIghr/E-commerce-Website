@@ -112,9 +112,13 @@ def transition_order_commercial_status(order_id, new_status, *, actor=None, reas
             "commandées ont été prises en charge par le transporteur."
         )
     if new_status == Order.COMMERCIAL_DELIVERED and (
-        not order.shipments.exists() or order.shipments.exclude(status=Shipment.DELIVERED).exists()
+        not order.shipments.exists()
+        or order.shipments.exclude(status=Shipment.DELIVERED).exists()
+        or not _all_order_quantities_covered(order, {Shipment.DELIVERED})
     ):
-        raise LifecycleProblem("Tous les colis doivent être attestés livrés avant cette transition.")
+        raise LifecycleProblem(
+            "Tous les colis et toutes les quantités commandées doivent être attestés livrés avant cette transition."
+        )
     if new_status == Order.COMMERCIAL_COMPLETED:
         if order.commercial_status != Order.COMMERCIAL_DELIVERED:
             raise LifecycleProblem("Seule une commande livrée peut être terminée.")
