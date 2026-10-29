@@ -63,4 +63,15 @@ class ProcessOrderNotificationsCommandTests(TestCase):
             call_command("process_order_notifications", "--stale-minutes", "15")
             notification.refresh_from_db()
             self.assertEqual(notification.status, OrderNotification.FAILED)
+            # The recovered notification observes exponential backoff before retry.
+            deliver.assert_not_called()
+
+    def test_failed_notification_retries_after_backoff(self):
+        notification = self.make_notification(status=OrderNotification.FAILED, attempts=1)
+        OrderNotification.objects.filter(pk=notification.pk).update(
+            updated_at=timezone.now() - timedelta(minutes=3)
+        )
+        with patch("checkout.management.commands.process_order_notifications.deliver_notification") as deliver:
+            deliver.return_value = notification
+            call_command("process_order_notifications")
             deliver.assert_called_once_with(notification.pk)
