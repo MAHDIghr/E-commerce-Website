@@ -2,16 +2,15 @@
 import logging
 import os
 import uuid
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from decimal import Decimal
 import stripe
 from django.db import transaction
+from django.core.cache import cache
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
@@ -187,33 +186,52 @@ def stripe_webhook(request):
 
 
 @require_GET
+@require_http_methods(["GET", "POST"])
+def order_tracking_lookup(request):
+    """Recherche publique par référence de commande, sans compte client."""
+    error = ""
+    if request.method == "POST":
+        reference = request.POST.get("reference", "").strip().replace("#", "")
+        try:
+            public_id = uuid.UUID(reference)
+        except (ValueError, AttributeError, TypeError):
+            public_id = None
+
+        if public_id is not None:
+            order = Order.objects.filter(public_id=public_id).only("public_id").first()
+            if order:
+                return redirect("checkout:tracking", public_id=order.public_id)
+
+        # Limite les tentatives de découverte de références inexistantes par IP.
+        # En production, configurez un cache partagé pour plusieurs processus web.
+        import hashlib
+        remote_addr = request.META.get("REMOTE_ADDR", "unknown")
+        key = "order-tracking-fail:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
+        attempts = cache.get(key, 0) + 1
+        cache.set(key, attempts, timeout=300)
+        if attempts >= 10:
+            return render(request, "order_tracking_lookup.html", {
+                "error": "Trop de tentatives. Réessayez dans quelques minutes.",
+            }, status=429)
+        error = "Référence introuvable. Vérifiez le code indiqué dans votre e-mail de confirmation."
+
+    return render(request, "order_tracking_lookup.html", {"error": error})
+
+
+@require_GET
 def order_tracking(request, public_id):
-    token = request.GET.get("token", "").strip()
-    if not token:
-        raise Http404
-    try:
-        claims = signing.loads(token, salt="checkout.order-tracking", max_age=90 * 24 * 60 * 60)
-    except signing.BadSignature:
-        raise Http404
-    if claims.get("public_id") != str(public_id) or not claims.get("email"):
-        raise Http404
+    """Affiche le suivi associé à la référence difficile à deviner de la commande."""
     order = get_object_or_404(
         Order.objects.prefetch_related("lines", "shipments__events", "return_requests__lines__order_line"),
-        public_id=public_id, email__iexact=claims["email"],
+        public_id=public_id,
     )
-    return render(request, "order_tracking.html", {"order": order, "tracking_token": token})
+    return render(request, "order_tracking.html", {"order": order})
 
 
 @require_POST
 def order_return_request(request, public_id):
-    token = request.POST.get("token", "").strip()
-    try:
-        claims = signing.loads(token, salt="checkout.order-tracking", max_age=90 * 24 * 60 * 60)
-    except signing.BadSignature:
-        raise Http404
-    if claims.get("public_id") != str(public_id) or not claims.get("email"):
-        raise Http404
-    order = get_object_or_404(Order, public_id=public_id, email__iexact=claims["email"])
+    """Enregistre une demande de retour pour la commande identifiée par sa référence."""
+    order = get_object_or_404(Order, public_id=public_id)
     lines = {}
     for line in order.lines.all():
         raw = request.POST.get(f"line_{line.pk}", "").strip()
@@ -226,59 +244,10 @@ def order_return_request(request, public_id):
             customer=order.customer, customer_note=request.POST.get("customer_note", ""),
         )
     except LifecycleProblem as exc:
+        order = Order.objects.prefetch_related(
+            "lines", "shipments__events", "return_requests__lines__order_line"
+        ).get(pk=order.pk)
         return render(request, "order_tracking.html", {
-            "order": order, "tracking_token": token, "return_error": str(exc),
+            "order": order, "return_error": str(exc),
         }, status=400)
-    return redirect(f"{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}")
-
-
-@login_required(login_url="checkout:customer_login")
-@require_GET
-def customer_orders(request):
-    """Liste privée : une session authentifiée ne voit que ses propres commandes."""
-    orders = Order.objects.filter(customer=request.user).prefetch_related("lines", "shipments").order_by("-created_at")
-    return render(request, "checkout/my_orders.html", {"orders": orders})
-
-
-@login_required(login_url="checkout:customer_login")
-@require_GET
-def customer_order_detail(request, public_id):
-    """Détail et suivi accessibles uniquement au propriétaire authentifié."""
-    order = get_object_or_404(
-        Order.objects.filter(customer=request.user).prefetch_related(
-            "lines", "shipments__events", "return_requests__lines__order_line",
-            "refunds", "lifecycle_events",
-        ),
-        public_id=public_id,
-    )
-    return render(request, "checkout/customer_order_detail.html", {
-        "order": order,
-        "return_choices": ReturnRequest.REASONS,
-    })
-
-
-@login_required(login_url="checkout:customer_login")
-@require_POST
-def customer_return_request(request, public_id):
-    """Crée une demande de retour sans jamais accepter un order_id fourni comme autorité."""
-    order = get_object_or_404(Order.objects.filter(customer=request.user), public_id=public_id)
-    quantities = {}
-    for line in order.lines.all():
-        raw = request.POST.get(f"line_{line.pk}", "").strip()
-        if raw:
-            quantities[line.pk] = raw
-    try:
-        return_request = create_return_request(
-            order.pk,
-            reason_category=request.POST.get("reason_category", "").strip(),
-            reason=request.POST.get("reason", ""),
-            customer_note=request.POST.get("customer_note", "")[:2000],
-            lines=quantities,
-            customer=request.user,
-        )
-    except (LifecycleProblem, ValueError) as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, "Votre demande de retour a été enregistrée. Elle sera examinée par notre équipe.")
-        return redirect("checkout:customer_order_detail", public_id=order.public_id)
-    return redirect("checkout:customer_order_detail", public_id=order.public_id)
+    return redirect("checkout:tracking", public_id=order.public_id)
