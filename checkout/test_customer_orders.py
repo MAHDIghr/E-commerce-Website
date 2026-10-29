@@ -37,6 +37,13 @@ class PublicOrderTrackingTests(TestCase):
         self.assertNotContains(response, self.order.email)
         self.assertNotContains(response, self.order.address_line1)
 
+    def test_direct_tracking_route_is_rate_limited(self):
+        url = reverse("checkout:tracking", kwargs={"public_id": self.order.public_id})
+        for _ in range(30):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get(url).status_code, 429)
+
     def test_reference_form_redirects_to_matching_order_tracking(self):
         response = self.client.post(
             reverse("checkout:tracking_lookup"),
