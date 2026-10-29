@@ -45,6 +45,7 @@ def _search_queryset(queryset, query):
     return queryset
 
 
+@require_GET
 def catalog(request):
     categories = list(Category.objects.filter(is_active=True).order_by("position", "name"))
     query = " ".join(request.GET.get("q", "").split())[:100]
@@ -77,8 +78,6 @@ def catalog(request):
     })
 
 
-@require_GET
-
 @ensure_csrf_cookie
 @require_GET
 def cart_page(request):
@@ -86,6 +85,7 @@ def cart_page(request):
     return render(request, "cart_page.html", {"cart": _cart_payload(request)})
 
 
+@require_GET
 def search_suggestions(request):
     query = " ".join(request.GET.get("q", "").split())[:100]
     if len(query) < 2:
