@@ -282,7 +282,10 @@ def order_return_request(request, public_id):
         order = Order.objects.prefetch_related(
             "lines", "shipments__events", "return_requests__lines__order_line"
         ).get(pk=order.pk)
-        return render(request, "order_tracking.html", {
+        response = render(request, "order_tracking.html", {
             "order": order, "return_error": str(exc),
         }, status=400)
+        response["Cache-Control"] = "private, no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
     return redirect("checkout:tracking", public_id=order.public_id)
