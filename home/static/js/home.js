@@ -129,20 +129,6 @@ renderRecentlyViewed();
 
 
 /* ==========================================================================
-   Newsletter
-   ========================================================================== */
-
-const newsletterForm = document.querySelector(".newsletter-form");
-
-if (newsletterForm) {
-    newsletterForm.addEventListener("submit", (event) => {
-        /* Le formulaire n'est pas encore relié à une vue Django. */
-        event.preventDefault();
-    });
-}
-
-
-/* ==========================================================================
    Apparition au scroll (toutes les sections marquées .reveal)
    ========================================================================== */
 
