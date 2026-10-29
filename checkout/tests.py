@@ -112,6 +112,9 @@ class CheckoutIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 404)
         response = self.client.get(reverse("checkout:result", kwargs={"public_id": order.public_id}), {"session_id": "cs_test_expected"})
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertContains(response, 'name="robots" content="noindex, nofollow"')
         order.refresh_from_db()
         self.assertEqual(order.status, Order.PENDING)
 
