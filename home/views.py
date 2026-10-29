@@ -22,6 +22,7 @@ from .models import NewsletterSubscription, SignatureSelection
 from product.selectors import published_products
 
 
+@require_GET
 def home(request):
     categories = Category.objects.filter(is_active=True).order_by("position", "name")
     signature_selections = SignatureSelection.objects.filter(
@@ -138,6 +139,7 @@ INFO_PAGES = {
 }
 
 
+@require_GET
 def information_page(request, page):
     from django.http import Http404
 
@@ -147,6 +149,7 @@ def information_page(request, page):
     return render(request, "info_page.html", {"page": content})
 
 
+@require_GET
 def sitemap_xml(request):
     """Expose uniquement les URL publiques canoniques et les produits publiés."""
     from xml.sax.saxutils import escape
@@ -177,6 +180,7 @@ def sitemap_xml(request):
     return HttpResponse(xml, content_type="application/xml; charset=utf-8")
 
 
+@require_GET
 def robots_txt(request):
     """Robots.txt public ; ces règles ne remplacent jamais le contrôle d'accès."""
     from django.http import HttpResponse
