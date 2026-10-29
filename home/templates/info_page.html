@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ page.title }} | My Line Collection{% endblock %}
 {% block meta_description %}{{ page.description }}{% endblock %}
+{% block extra_head %}{% if page.draft_notice %}<meta name="robots" content="noindex, nofollow">{% endif %}{% endblock %}
 {% block body_class %}page-information{% endblock %}
 {% block extra_css %}
 <style>
