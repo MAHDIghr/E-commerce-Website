@@ -197,13 +197,22 @@ def robots_txt(request):
 logger = logging.getLogger(__name__)
 
 
+def _increment_rate_limit(key, timeout):
+    """Compteur atomique de limitation des tentatives publiques."""
+    cache.add(key, 0, timeout=timeout)
+    try:
+        return cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=timeout)
+        return 1
+
+
 @require_POST
 def newsletter_subscribe(request):
     """Enregistre le consentement puis demande une confirmation par e-mail."""
     remote_addr = request.META.get("REMOTE_ADDR", "unknown")
     rate_key = "newsletter-submit:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
-    attempts = cache.get(rate_key, 0) + 1
-    cache.set(rate_key, attempts, timeout=900)
+    attempts = _increment_rate_limit(rate_key, 900)
     if attempts > 5:
         request.session["newsletter_error"] = "Trop de tentatives. Réessayez dans quelques minutes."
         return redirect("home:home")
