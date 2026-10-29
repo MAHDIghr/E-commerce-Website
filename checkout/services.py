@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from product.models import ProductVariant
 from shop.views import _cart_key_parts, _cart_state
-from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent
+from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent, OrderEvent, OrderNotification, Refund
 
 logger = logging.getLogger(__name__)
 CENT = Decimal("0.01")
@@ -251,6 +251,23 @@ def create_stripe_session(order, request=None):
     return session
 
 
+def _queue_order_email(order, event_key, subject, message):
+    """Persiste l'e-mail avant de tenter l'envoi; l'échec n'annule pas le paiement."""
+    notification, _created = OrderNotification.objects.get_or_create(
+        order=order, event_key=event_key, recipient=order.email, channel="email",
+        defaults={"payload": {"subject": subject, "message": message}},
+    )
+    if notification.status != OrderNotification.SENT:
+        def deliver():
+            from .lifecycle import deliver_notification
+            try:
+                deliver_notification(notification.pk)
+            except Exception:
+                logger.exception("Order email delivery failed for notification %s", notification.pk)
+        transaction.on_commit(deliver, robust=True)
+    return notification
+
+
 def process_stripe_event(event):
     """Traite un événement signé une seule fois et protège les transitions de commande."""
     event_id, event_type = event["id"], event["type"]
@@ -259,6 +276,27 @@ def process_stripe_event(event):
         if StripeWebhookEvent.objects.filter(event_id=event_id).exists():
             return "duplicate"
         StripeWebhookEvent.objects.create(event_id=event_id, event_type=event_type)
+        # Stripe refund events can arrive independently of Checkout Session events.
+        if event_type in ("refund.updated", "refund.failed"):
+            refund = Refund.objects.select_for_update().filter(stripe_refund_id=obj.get("id", "")).first()
+            if not refund:
+                return "ignored"
+            if obj.get("status") == "succeeded":
+                refund.status = Refund.SUCCEEDED
+                refund.confirmed_at = timezone.now()
+            elif obj.get("status") == "failed" or event_type == "refund.failed":
+                refund.status = Refund.FAILED
+                refund.failure_reason = str(obj.get("failure_reason") or "Stripe a signalé l'échec du remboursement.")[:2000]
+            else:
+                refund.status = Refund.PROCESSING
+            refund.save(update_fields=["status", "confirmed_at", "failure_reason"])
+            if refund.status == Refund.SUCCEEDED:
+                OrderEvent.objects.create(
+                    order=refund.order, event_type="refund_confirmed", source="stripe",
+                    external_reference=refund.stripe_refund_id,
+                    metadata={"refund_id": refund.pk, "amount": str(refund.amount)},
+                )
+            return "processed"
         if obj.get("object") != "checkout.session":
             return "ignored"
         session_id = obj.get("id", "")
@@ -281,6 +319,12 @@ def process_stripe_event(event):
                 return "mismatch"
             paid = obj.get("payment_status") == "paid" or event_type.endswith("async_payment_succeeded")
             if paid:
+                # Distinct Stripe event IDs may describe the same successful payment.
+                if order.status == Order.PAID and order.stripe_payment_intent_id == (obj.get("payment_intent") or order.stripe_payment_intent_id):
+                    if payment and payment.status != PaymentAttempt.SUCCEEDED:
+                        payment.status = PaymentAttempt.SUCCEEDED
+                        payment.save(update_fields=["status", "updated_at"])
+                    return "already_paid"
                 if order.stock_reserved and order.status not in (Order.CANCELLED, Order.EXPIRED, Order.REVIEW):
                     order.status = Order.PAID
                     order.stock_reserved = False
@@ -291,6 +335,16 @@ def process_stripe_event(event):
                         payment.status = PaymentAttempt.SUCCEEDED
                         payment.stripe_payment_intent_id = order.stripe_payment_intent_id
                         payment.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+                    OrderEvent.objects.create(
+                        order=order, event_type="payment_confirmed", source="stripe",
+                        external_reference=event_id,
+                        metadata={"payment_intent": order.stripe_payment_intent_id},
+                    )
+                    _queue_order_email(
+                        order, "payment_confirmed",
+                        f"Confirmation de commande {str(order.public_id)[:8]}",
+                        f"Bonjour {order.full_name},\n\nNous avons confirmé le paiement de votre commande.\nRéférence : {order.public_id}\nMontant : {order.total} {order.currency.upper()}\n\nMerci pour votre confiance,\nMy Line Collection",
+                    )
                 else:
                     order.status = Order.REVIEW
                     order.stripe_payment_intent_id = obj.get("payment_intent") or ""
@@ -313,4 +367,13 @@ def process_stripe_event(event):
                 if payment:
                     payment.status = PaymentAttempt.EXPIRED if event_type.endswith("expired") else PaymentAttempt.FAILED
                     payment.save(update_fields=["status", "updated_at"])
+                OrderEvent.objects.create(
+                    order=order, event_type="payment_failed" if event_type.endswith("failed") else "payment_expired",
+                    source="stripe", external_reference=event_id,
+                )
+                _queue_order_email(
+                    order, "payment_failed" if event_type.endswith("failed") else "payment_expired",
+                    f"Mise à jour de votre commande {str(order.public_id)[:8]}",
+                    f"Bonjour {order.full_name},\n\nLe paiement de votre commande n'a pas abouti ou a expiré. Aucun paiement réussi n'est enregistré.\nRéférence : {order.public_id}\n\nMy Line Collection",
+                )
         return "processed"
