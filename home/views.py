@@ -186,7 +186,6 @@ def robots_txt(request):
         "User-agent: *\n"
         "Disallow: /admin/\n"
         "Disallow: /gestion/\n"
-        "Disallow: /boutique/mon-panier/\n"
         "Disallow: /boutique/panier/\n"
         "Disallow: /boutique/recherche/\n"
         f"Sitemap: {sitemap}\n"
