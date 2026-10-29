@@ -67,7 +67,12 @@ Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale 
 - Téléversement local d'images via `ImageField`, avec une organisation automatique des fichiers.
 - Compatibilité conservée avec certaines URL externes de médias.
 - Checkout serveur avec création idempotente de commande, réservation du stock, codes promotionnels persistants et confirmation Stripe par webhook signé.
-- Dashboard privé de commandes : recherche, filtres, détail client/produits/montants, tentatives de paiement, suivi logistique et journal d’audit.\n- Cycle logistique étendu : expéditions multiples par commande, affectation des quantités aux colis, transitions de suivi distinctes et historique des événements.\n- Suivi client via lien signé à durée limitée, sans exposition d’une commande par simple connaissance de son identifiant.\n- Demandes de retour partielles, décisions administratives, dossiers d’incident et historique rattaché à la commande.\n- Demandes de remboursement Stripe liées au paiement d’origine, clé d’idempotence, contrôles du montant remboursable et traitement des événements de remboursement.\n- Notifications transactionnelles persistées pour les principaux événements de paiement, expédition et retour, avec état, nombre de tentatives et relance administrative.
+- Dashboard privé de commandes : recherche, filtres, détail client/produits/montants, tentatives de paiement, suivi logistique et journal d’audit.
+- Cycle logistique étendu : expéditions multiples par commande, affectation des quantités aux colis, transitions de suivi distinctes et historique des événements.
+- Suivi client via lien signé à durée limitée, sans exposition d’une commande par simple connaissance de son identifiant.
+- Demandes de retour partielles, décisions administratives, dossiers d’incident et historique rattaché à la commande.
+- Demandes de remboursement Stripe liées au paiement d’origine, clé d’idempotence, contrôles du montant remboursable et traitement des événements de remboursement.
+- Notifications transactionnelles persistées pour les principaux événements de paiement, expédition et retour, avec état, nombre de tentatives et relance administrative.
 - États logistiques distincts du paiement : à préparer, en préparation, expédiée, livrée et en attente logistique.
 - Migrations checkout dédiées au suivi logistique, aux codes promotionnels et aux entités de cycle de vie (expéditions, retours, remboursements, notifications et audit).
 
