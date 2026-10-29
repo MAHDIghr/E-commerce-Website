@@ -131,8 +131,8 @@ def order_detail(request, pk):
 def order_update_fulfillment(request, pk):
     with transaction.atomic():
         order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
-        if order.status != Order.PAID:
-            messages.error(request, "La préparation logistique est réservée aux commandes dont le paiement est confirmé.")
+        if order.status != Order.PAID or order.commercial_status == Order.COMMERCIAL_CANCELLED:
+            messages.error(request, "La préparation logistique exige une commande payée et non annulée.")
             return redirect("dashboard:order_detail", pk=order.pk)
 
         new_status = request.POST.get("fulfillment_status", "").strip()
