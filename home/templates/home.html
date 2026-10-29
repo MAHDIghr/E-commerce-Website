@@ -7,6 +7,11 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <style>
+      .newsletter-honeypot{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
+      .newsletter-consent{display:block;font-size:.9rem;line-height:1.5;margin:1rem 0}
+      .newsletter-consent input{margin-right:.5rem}
+    </style>
 {% endblock %}
 
 {% block content %}
