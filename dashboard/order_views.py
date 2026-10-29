@@ -101,9 +101,17 @@ def order_detail(request, pk):
     )
     confirmed_refunds = order.refunds.filter(status=Refund.SUCCEEDED).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
     can_cancel_paid_order = (
-        order.status == Order.PAID and not order.shipments.exists()
-        and confirmed_refunds >= order.total
+        order.status == Order.PAID and order.commercial_status != Order.COMMERCIAL_CANCELLED
+        and not order.shipments.exists() and confirmed_refunds >= order.total
     )
+    allowed_commercial_transitions = set(COMMERCIAL_TRANSITIONS.get(order.commercial_status, set()))
+    if order.status != Order.PAID:
+        allowed_commercial_transitions.difference_update({
+            Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_PROCESSING,
+            Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_READY_TO_SHIP,
+            Order.COMMERCIAL_SHIPPED, Order.COMMERCIAL_DELIVERED,
+            Order.COMMERCIAL_COMPLETED,
+        })
     return render(request, "dashboard/order_detail.html", {
         "order": order,
         "can_manage_fulfillment": order.status == Order.PAID and order.commercial_status != Order.COMMERCIAL_CANCELLED,
