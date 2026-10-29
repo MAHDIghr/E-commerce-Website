@@ -52,3 +52,51 @@
 .break-anywhere{overflow-wrap:anywhere;max-width:190px}
 @media(max-width:1150px){.order-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.order-search{grid-column:1/-1}.filter-actions{justify-content:flex-start}.order-detail-grid{grid-template-columns:minmax(0,1fr)}.order-side-column{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.order-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.order-filters{grid-template-columns:minmax(0,1fr);padding:13px}.order-search{grid-column:auto}.filter-actions{display:grid;grid-template-columns:1fr 1fr}.order-detail-heading{align-items:flex-start;flex-direction:column}.order-detail-heading .button{width:100%}.order-side-column{grid-template-columns:minmax(0,1fr)}.fulfillment-grid{grid-template-columns:minmax(0,1fr)}.order-panel-heading{align-items:flex-start}.order-panel-heading>.order-status{max-width:135px}.order-line{align-items:flex-start}.order-line-total{font-size:11px}.order-totals>div,.order-facts>div{gap:9px}.order-totals dd,.order-facts dd{max-width:62%}.order-pagination{gap:8px;flex-wrap:wrap}}
+
+
+/* Order lifecycle panels */
+.lifecycle-panel { margin-top: 1.25rem; min-width: 0; }
+.lifecycle-record {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .72fr);
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border, #e5e7df);
+  min-width: 0;
+}
+.lifecycle-record > div, .lifecycle-action-form { min-width: 0; }
+.lifecycle-record p { overflow-wrap: anywhere; }
+.lifecycle-record small { display: block; margin-top: .35rem; color: var(--muted, #687067); }
+.lifecycle-record .order-status { display: inline-flex; margin-left: .5rem; }
+.lifecycle-action-form, .lifecycle-create form {
+  display: grid;
+  gap: .75rem;
+  align-content: start;
+}
+.lifecycle-action-form label, .lifecycle-create label {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+}
+.lifecycle-action-form label > span, .lifecycle-create label > span {
+  font-size: .84rem;
+  font-weight: 600;
+}
+.lifecycle-action-form input, .lifecycle-action-form select, .lifecycle-action-form textarea,
+.lifecycle-create input, .lifecycle-create select, .lifecycle-create textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.lifecycle-create { border-top: 1px solid var(--border, #e5e7df); padding-top: 1rem; margin-top: 1rem; }
+.lifecycle-create summary { cursor: pointer; font-weight: 700; padding: .5rem 0 1rem; }
+.lifecycle-create form { max-width: 760px; }
+.lifecycle-panel .helper-note { margin-top: .75rem; }
+.lifecycle-panel a { overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .lifecycle-record { grid-template-columns: minmax(0, 1fr); }
+  .lifecycle-record .order-status { margin-left: 0; margin-top: .35rem; }
+  .lifecycle-action-form { border-top: 1px dashed var(--border, #e5e7df); padding-top: .8rem; }
+  .lifecycle-panel { padding: 1rem; }
+}
