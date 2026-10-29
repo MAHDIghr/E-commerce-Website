@@ -1,0 +1,45 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% block title %}Commandes{% endblock %}
+{% block section %}Commandes{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'dashboard/orders.css' %}">{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div><p class="eyebrow">VENTES & LOGISTIQUE</p><h1>Commandes</h1><p class="muted">Retrouvez les commandes, contrôlez le paiement et suivez chaque préparation.</p></div>
+</section>
+<section class="stat-grid order-stat-grid" aria-label="Indicateurs des commandes">
+  <article class="stat-card stat-featured"><span class="stat-icon">↗</span><p>Commandes enregistrées</p><strong>{{ total_orders }}</strong><small>Tous les états confondus</small></article>
+  <article class="stat-card"><span class="stat-icon">◷</span><p>Paiement en attente</p><strong>{{ awaiting_payment_count }}</strong><small>À surveiller, non expédiables</small></article>
+  <article class="stat-card"><span class="stat-icon">▣</span><p>À préparer</p><strong>{{ paid_to_prepare_count }}</strong><small>Paiement confirmé</small></article>
+  <article class="stat-card"><span class="stat-icon">➜</span><p>En livraison</p><strong>{{ shipped_count }}</strong><small>Suivi logistique en cours</small></article>
+</section>
+<form class="order-filters" method="get" role="search">
+  <label class="order-search"><span>Recherche</span><input type="search" name="q" value="{{ query }}" maxlength="160" placeholder="Nom, e-mail, ville ou UUID exact"></label>
+  <label><span>Paiement</span><select name="payment"><option value="">Tous les états</option>{% for value,label in payment_choices %}<option value="{{ value }}" {% if selected_payment == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label><span>Préparation</span><select name="fulfillment"><option value="">Tous les états</option>{% for value,label in fulfillment_choices %}<option value="{{ value }}" {% if selected_fulfillment == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <div class="filter-actions"><button class="button button-primary" type="submit">Filtrer</button><a class="button button-secondary" href="{% url 'dashboard:orders' %}">Réinitialiser</a></div>
+</form>
+<div class="table-card">
+  <div class="table-card-heading"><div><h2>Historique des commandes</h2><p class="muted">{{ page_obj.paginator.count }} résultat(s) · 25 par page maximum</p></div></div>
+  <div class="table-scroll"><table class="orders-table"><thead><tr><th>Commande</th><th>Client</th><th>Date</th><th>Articles</th><th>Total</th><th>Paiement</th><th>Préparation</th><th></th></tr></thead><tbody>
+  {% for order in orders %}
+    <tr>
+      <td><a class="order-number" href="{% url 'dashboard:order_detail' order.pk %}">#{{ order.public_id|truncatechars:13 }}</a><small class="cell-sub">{{ order.public_id }}</small></td>
+      <td><strong>{{ order.full_name }}</strong><small class="cell-sub">{{ order.email }}</small></td>
+      <td><time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d/m/Y" }}<small class="cell-sub">{{ order.created_at|date:"H:i" }}</small></time></td>
+      <td>{{ order.line_count }}</td>
+      <td><strong>{{ order.total|floatformat:2 }} €</strong><small class="cell-sub">{{ order.currency|upper }}</small></td>
+      <td><span class="order-status payment-{{ order.status }}">{{ order.get_status_display }}</span></td>
+      <td><span class="order-status fulfillment-{{ order.fulfillment_status }}">{{ order.get_fulfillment_status_display }}</span></td>
+      <td><a class="button button-small button-secondary" href="{% url 'dashboard:order_detail' order.pk %}">Détails <span aria-hidden="true">↗</span></a></td>
+    </tr>
+  {% empty %}<tr><td colspan="8" class="empty-state">Aucune commande ne correspond à ces filtres.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if page_obj.paginator.num_pages > 1 %}<nav class="order-pagination" aria-label="Pagination des commandes">
+    {% if page_obj.has_previous %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&page={{ page_obj.previous_page_number }}">← Précédent</a>{% endif %}
+    <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&page={{ page_obj.next_page_number }}">Suivant →</a>{% endif %}
+  </nav>{% endif %}
+</div>
+<p class="helper-note">Le statut de paiement est confirmé uniquement par le webhook Stripe. Une commande non payée ne peut pas passer en préparation ni être expédiée.</p>
+{% endblock %}
