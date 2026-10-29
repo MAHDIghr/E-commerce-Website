@@ -3,6 +3,13 @@ from django.urls import reverse
 
 
 class PublicInformationPagesTests(TestCase):
+    def test_homepage_renders_newsletter_signup(self):
+        response = self.client.get(reverse("home:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "newsletter_subscribe")
+        self.assertContains(response, "footer-news-email")
+        self.assertContains(response, 'name="consent"')
+
     def test_help_pages_are_available(self):
         for name in ("delivery", "returns", "faq", "contact"):
             with self.subTest(page=name):
