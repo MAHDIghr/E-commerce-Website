@@ -128,6 +128,12 @@ def order_update_fulfillment(request, pk):
         if new_status != order.fulfillment_status and new_status not in FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()):
             messages.error(request, "Cette transition logistique n’est pas autorisée.")
             return redirect("dashboard:order_detail", pk=order.pk)
+        if new_status == Order.FULFILLMENT_SHIPPED and not order.shipments.filter(status__in=[Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY, Shipment.PICKUP_POINT, Shipment.DELIVERED]).exists():
+            messages.error(request, "Enregistrez d'abord un colis puis sa prise en charge effective par le transporteur.")
+            return redirect("dashboard:order_detail", pk=order.pk)
+        if new_status == Order.FULFILLMENT_DELIVERED and (not order.shipments.exists() or order.shipments.exclude(status=Shipment.DELIVERED).exists()):
+            messages.error(request, "La livraison doit être attestée pour tous les colis avant de clôturer le suivi.")
+            return redirect("dashboard:order_detail", pk=order.pk)
         if len(carrier) > 80 or len(tracking_number) > 120 or len(internal_note) > 4000:
             messages.error(request, "Un des champs dépasse la longueur maximale autorisée.")
             return redirect("dashboard:order_detail", pk=order.pk)
