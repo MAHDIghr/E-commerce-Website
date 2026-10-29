@@ -159,6 +159,18 @@ class CatalogViewTests(TestCase):
         self.assertIn("background: var(--color-ink);", css_source)
         self.assertIn("color: #fff;", css_source)
 
+    def test_product_page_exposes_consistent_json_ld_from_published_data(self):
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'type="application/ld+json"')
+        structured = json.loads(response.context["product"]["structured_data_json"])
+        self.assertEqual(structured["@type"], "Product")
+        self.assertEqual(structured["name"], self.product.name)
+        self.assertEqual(structured["offers"]["priceCurrency"], "EUR")
+        self.assertEqual(structured["offers"]["lowPrice"], 89.9)
+        self.assertEqual(structured["offers"]["availability"], "https://schema.org/InStock")
+        self.assertEqual(structured["image"], ["https://cdn.example.test/cabas.webp"])
+
     def test_offer_is_not_hidden_when_default_color_is_out_of_stock_but_another_color_is_available(self):
         self.variant.stock_quantity = 0
         self.variant.save(update_fields=["stock_quantity"])
