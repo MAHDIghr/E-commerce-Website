@@ -2,6 +2,7 @@
 import uuid
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
@@ -9,8 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from checkout.models import Order, OrderLine, PaymentAttempt
-from .views import is_dashboard_admin
+from checkout.models import (Order, OrderLine, PaymentAttempt, OrderEvent, Shipment, ShipmentEvent, ReturnRequest, Refund, OrderIncident, OrderNotification)\nfrom checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification\nfrom .views import is_dashboard_admin
 
 
 def dashboard_admin_required(view_func):
@@ -74,8 +74,7 @@ def order_detail(request, pk):
         pk=pk,
     )
     return render(request, "dashboard/order_detail.html", {
-        "order": order,
-        "can_manage_fulfillment": order.status == Order.PAID,
+        "order": order,\n        "can_manage_fulfillment": order.status == Order.PAID,\n        "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),\n        "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),\n        "refunds": order.refunds.all(),\n        "incidents": order.incidents.select_related("shipment").all(),\n        "lifecycle_events": order.lifecycle_events.select_related("actor").all()[:50],\n        "notifications": order.notifications.all()[:30],
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
@@ -122,3 +121,124 @@ def order_update_fulfillment(request, pk):
 
     messages.success(request, "Suivi de commande enregistré.")
     return redirect("dashboard:order_detail", pk=order.pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_create_shipment(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    quantities = {}
+    for line in order.lines.all():
+        raw = request.POST.get(f"line_{line.pk}", "").strip()
+        if raw:
+            quantities[line.pk] = raw
+    try:
+        shipment = create_shipment(
+            order.pk, actor=request.user,
+            carrier=request.POST.get("carrier", ""),
+            service=request.POST.get("service", ""),
+            tracking_number=request.POST.get("tracking_number", ""),
+            tracking_url=request.POST.get("tracking_url", ""),
+            notes=request.POST.get("notes", ""),
+            line_quantities=quantities,
+        )
+    except (LifecycleProblem, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"Expédition {shipment.public_id} créée en brouillon. Elle n'est pas considérée comme expédiée.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def shipment_update_status(request, pk, shipment_pk):
+    shipment = get_object_or_404(Shipment.objects.select_related("order"), pk=shipment_pk, order_id=pk)
+    status = request.POST.get("status", "").strip()
+    reason = request.POST.get("reason", "").strip()[:2000]
+    try:
+        transition_shipment(shipment.pk, status, actor=request.user, reason=reason)
+    except LifecycleProblem as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Événement de suivi enregistré.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def return_update_status(request, pk, return_pk):
+    return_request = get_object_or_404(ReturnRequest, pk=return_pk, order_id=pk)
+    try:
+        decide_return(
+            return_request.pk, new_status=request.POST.get("status", "").strip(),
+            actor=request.user, note=request.POST.get("note", "")[:4000],
+        )
+    except LifecycleProblem as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Dossier de retour mis à jour.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_create_refund(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    try:
+        refund = request_refund(
+            order.pk, amount=request.POST.get("amount", ""),
+            reason=request.POST.get("reason", ""), actor=request.user,
+        )
+    except (LifecycleProblem, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        if refund.status == Refund.SUCCEEDED:
+            messages.success(request, "Stripe a confirmé le remboursement.")
+        else:
+            messages.warning(request, "La demande est enregistrée, mais Stripe n'a pas encore confirmé le remboursement.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_create_incident(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    category = request.POST.get("category", "").strip()
+    description = request.POST.get("description", "").strip()
+    if category not in dict(OrderIncident.CATEGORIES) or not description:
+        messages.error(request, "Le type d'incident et sa description sont obligatoires.")
+    else:
+        incident = OrderIncident.objects.create(
+            order=order, category=category, description=description[:5000],
+            created_by=request.user,
+        )
+        OrderEvent.objects.create(
+            order=order, event_type="incident_created", source="admin",
+            reason=description[:1000], actor=request.user,
+            metadata={"incident_id": incident.pk, "category": category},
+        )
+        messages.success(request, "Incident enregistré dans l'historique.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_retry_notification(request, pk, notification_pk):
+    notification = get_object_or_404(OrderNotification, pk=notification_pk, order_id=pk)
+    if notification.attempts >= 5:
+        messages.error(request, "Le nombre maximal de tentatives est atteint.")
+    else:
+        notification.status = OrderNotification.PENDING
+        notification.error_message = ""
+        notification.save(update_fields=["status", "error_message", "updated_at"])
+        try:
+            deliver_notification(notification.pk)
+        except Exception:
+            messages.error(request, "La relance a échoué. Consultez l'état de la notification.")
+        else:
+            notification.refresh_from_db()
+            if notification.status == OrderNotification.SENT:
+                messages.success(request, "Le prestataire e-mail a accepté l'envoi.")
+            else:
+                messages.error(request, "L'envoi n'a pas abouti. Le statut et l'erreur sont conservés.")
+    return redirect("dashboard:order_detail", pk=pk)
