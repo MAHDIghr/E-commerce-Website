@@ -249,16 +249,20 @@ def newsletter_subscribe(request):
             )
             send_confirmation = True
         elif not (subscription.is_confirmed and subscription.is_active):
+            # Toute réinscription doit repasser par le double opt-in, y compris
+            # une adresse confirmée auparavant puis désinscrite.
+            subscription.is_confirmed = False
             subscription.is_active = False
+            subscription.confirmed_at = None
             subscription.consent_at = now
             subscription.consent_version = "newsletter-v1"
             subscription.confirmation_token_hash = token_hash
             subscription.confirmation_expires_at = now + timedelta(hours=24)
             subscription.unsubscribed_at = None
             subscription.save(update_fields=[
-                "is_active", "consent_at", "consent_version",
-                "confirmation_token_hash", "confirmation_expires_at",
-                "unsubscribed_at", "updated_at",
+                "is_confirmed", "is_active", "confirmed_at",
+                "consent_at", "consent_version", "confirmation_token_hash",
+                "confirmation_expires_at", "unsubscribed_at", "updated_at",
             ])
             send_confirmation = True
 
