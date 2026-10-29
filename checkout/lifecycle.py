@@ -286,36 +286,52 @@ def queue_notification(*, order=None, event_key, recipient, payload=None, channe
 
 
 def deliver_notification(notification_id):
-    """Tentative d'envoi explicite; peut être appelée par une tâche ou un outil d'administration."""
-    notification = OrderNotification.objects.get(pk=notification_id)
-    if notification.status == OrderNotification.SENT:
-        return notification
-    if notification.attempts >= 5:
-        notification.status = OrderNotification.FAILED
-        notification.error_message = "Nombre maximal de tentatives atteint."
-        notification.save(update_fields=["status", "error_message", "updated_at"])
-        return notification
-    notification.attempts += 1
-    notification.status = OrderNotification.SENDING
-    notification.save(update_fields=["attempts", "status", "updated_at"])
-    payload = notification.payload or {}
+    """Envoi avec réservation atomique pour limiter les doubles envois concurrents.
+
+    L'appel réseau reste hors transaction. Une notification bloquée en « sending »
+    après un arrêt brutal doit être contrôlée avant d'être relancée manuellement.
+    """
+    with transaction.atomic():
+        notification = OrderNotification.objects.select_for_update().get(pk=notification_id)
+        if notification.status in {OrderNotification.SENT, OrderNotification.SENDING}:
+            return notification
+        if notification.attempts >= 5:
+            notification.status = OrderNotification.FAILED
+            notification.error_message = "Nombre maximal de tentatives atteint."
+            notification.save(update_fields=["status", "error_message", "updated_at"])
+            return notification
+        notification.attempts += 1
+        notification.status = OrderNotification.SENDING
+        notification.error_message = ""
+        notification.save(update_fields=["attempts", "status", "error_message", "updated_at"])
+        recipient = notification.recipient
+        payload = notification.payload or {}
+        subject = str(payload.get("subject") or "Mise à jour de votre commande My Line Collection")[:200]
+        message = str(payload.get("message") or "Votre commande a été mise à jour.")[:10000]
+
     try:
         sent = send_mail(
-            subject=str(payload.get("subject") or "Mise à jour de votre commande My Line Collection")[:200],
-            message=str(payload.get("message") or "Votre commande a été mise à jour.")[:10000],
+            subject=subject,
+            message=message,
             from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            recipient_list=[notification.recipient],
+            recipient_list=[recipient],
             fail_silently=False,
         )
         if sent != 1:
             raise RuntimeError("Le backend e-mail n'a pas confirmé l'envoi.")
     except Exception as exc:
-        logger.warning("Order notification %s failed: %s", notification.pk, type(exc).__name__)
-        notification.status = OrderNotification.FAILED
-        notification.error_message = type(exc).__name__[:200]
+        logger.warning("Order notification %s failed: %s", notification_id, type(exc).__name__)
+        status = OrderNotification.FAILED
+        error_message = type(exc).__name__[:200]
+        sent_at = None
     else:
-        notification.status = OrderNotification.SENT
-        notification.sent_at = timezone.now()
-        notification.error_message = ""
-    notification.save(update_fields=["status", "sent_at", "error_message", "updated_at"])
-    return notification
+        status = OrderNotification.SENT
+        error_message = ""
+        sent_at = timezone.now()
+
+    # Only finalize the attempt still marked as sending. This avoids overwriting
+    # an administrative decision made while the provider call was in progress.
+    OrderNotification.objects.filter(pk=notification_id, status=OrderNotification.SENDING).update(
+        status=status, sent_at=sent_at, error_message=error_message, updated_at=timezone.now()
+    )
+    return OrderNotification.objects.get(pk=notification_id)
