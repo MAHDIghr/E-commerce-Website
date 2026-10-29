@@ -272,6 +272,8 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None,
                 return existing_request
         if order.status != Order.PAID or not order.stripe_payment_intent_id:
             raise LifecycleProblem("Aucun paiement Stripe confirmé n'est disponible pour cette commande.")
+        if return_request and return_request.order_id != order.pk:
+            raise LifecycleProblem("Le dossier de retour ne correspond pas à cette commande.")
         existing = Refund.objects.filter(order=order, status__in=[Refund.PENDING, Refund.PROCESSING, Refund.SUCCEEDED]).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
         if existing + amount > order.total:
             raise LifecycleProblem("Le montant demandé dépasse le solde remboursable.")
