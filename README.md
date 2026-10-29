@@ -248,7 +248,7 @@ Les contraintes et validations Django sont des protections utiles, mais il faut 
 
 Une offre possède un prix affiché et des éléments associés. Le produit principal peut utiliser la variante choisie sur la fiche ; les autres éléments utilisent une variante fixe. Les validations du modèle contrôlent la cohérence de ces références.
 
-Le libellé de livraison d'une offre est éditorial : il ne calcule pas les frais de livraison réels. Le checkout et les paiements ne doivent pas être considérés comme fonctionnels simplement parce que les offres sont configurables.
+Le libellé de livraison d'une offre est éditorial : il ne calcule pas les frais de livraison réels. Le checkout recalcule les montants et frais de livraison côté serveur ; les paiements ne sont considérés comme confirmés qu'après réception d'un webhook Stripe signé.
 
 ### Avis
 
