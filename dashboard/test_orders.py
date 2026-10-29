@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from checkout.models import Order, OrderLine, PaymentAttempt
+from checkout.models import Order, OrderLine, PaymentAttempt, Refund
 from .order_views import FULFILLMENT_TRANSITIONS
 
 
@@ -166,3 +166,31 @@ class DashboardOrderManagementTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.PAID)
+
+    def test_paid_order_cancellation_requires_full_refund_and_restores_unshipped_stock(self):
+        from product.models import Category, Product, ProductVariant
+        category = Category.objects.create(name="Accessoires", slug="accessoires-test")
+        product = Product.objects.create(category=category, name="Sac test", slug="sac-test-stock")
+        variant = ProductVariant.objects.create(
+            product=product, sku="SAC-TEST-STOCK", color_name="Noir",
+            color_slug="noir", color_code="#111111", stock_quantity=4,
+        )
+        self.order.stock_committed = True
+        self.order.stock_requirements_snapshot = {str(variant.pk): 1}
+        self.order.stripe_payment_intent_id = "pi_test_cancel"
+        self.order.save(update_fields=["stock_committed", "stock_requirements_snapshot", "stripe_payment_intent_id"])
+        Refund.objects.create(
+            order=self.order, amount=self.order.total, currency="eur",
+            reason="Remboursement total confirmé", status=Refund.SUCCEEDED,
+        )
+        response = self.client.post(
+            reverse("dashboard:order_cancel", args=[self.order.pk]),
+            {"reason": "Commande annulée avant expédition"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.order.refresh_from_db()
+        variant.refresh_from_db()
+        self.assertEqual(self.order.status, Order.PAID)
+        self.assertEqual(self.order.commercial_status, Order.COMMERCIAL_CANCELLED)
+        self.assertFalse(self.order.stock_committed)
+        self.assertEqual(variant.stock_quantity, 5)
