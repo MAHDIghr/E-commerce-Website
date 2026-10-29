@@ -1,6 +1,56 @@
 {% extends "dashboard/base.html" %}
 {% load static %}
-{% block title %}Détail de commande
+{% block title %}Détail de commande{% endblock %}
+{% block section %}Commandes / Détail{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'dashboard/orders.css' %}">{% endblock %}
+{% block content %}
+<section class="page-heading order-detail-heading">
+  <div><p class="eyebrow">COMMANDE CLIENT</p><h1>Commande #{{ order.public_id|truncatechars:13 }}</h1><p class="muted">Créée le {{ order.created_at|date:"d/m/Y à H:i" }} · Référence complète : {{ order.public_id }}</p></div>
+  <div class="order-heading-actions">
+    {% if can_cancel_order %}
+    <details class="lifecycle-create"><summary>Annuler la commande</summary><form method="post" action="{% url 'dashboard:order_cancel' order.pk %}" class="fulfillment-form">{% csrf_token %}<label><span>Motif (facultatif)</span><textarea name="reason" rows="2" maxlength="2000"></textarea></label><button class="button button-secondary" type="submit">Confirmer l'annulation</button><p class="helper-note">{% if can_cancel_paid_order %}Le remboursement total est confirmé. Cette action annule le cycle commercial et remet en stock les variantes uniquement si aucune expédition n'existe.{% else %}La réservation de stock active sera libérée. Une commande payée exige un remboursement total confirmé et aucune expédition.{% endif %}</p></form></details>
+    {% endif %}
+    <a class="button button-secondary" href="{% url 'dashboard:orders' %}">← Toutes les commandes</a>
+  </div>
+</section>
+<section class="order-detail-grid">
+  <div class="order-main-column">
+    <section class="form-panel">
+      <div class="order-panel-heading"><div><h2>Articles commandés</h2><p class="muted">Instantané conservé au moment de la commande.</p></div><span class="order-status payment-{{ order.status }}">{{ order.get_status_display }}</span></div>
+      <div class="order-lines">{% for line in order.lines.all %}
+        <article class="order-line"><div class="order-line-visual" aria-hidden="true">◇</div><div class="order-line-info"><strong>{{ line.product_name }}</strong>{% if line.variant_name %}<small>Variante : {{ line.variant_name }}</small>{% endif %}<small>Quantité : {{ line.quantity }} · Prix unitaire : {{ line.unit_price|floatformat:2 }} €</small>{% if line.components_snapshot %}<small>Composition : {{ line.components_snapshot|length }} élément(s)</small>{% endif %}</div><strong class="order-line-total">{{ line.line_total|floatformat:2 }} €</strong></article>
+      {% empty %}<p class="empty-state">Aucune ligne détaillée n’est rattachée à cette commande.</p>{% endfor %}</div>
+      <dl class="order-totals"><div><dt>Sous-total</dt><dd>{{ order.subtotal|floatformat:2 }} €</dd></div>{% if order.promo_code_snapshot %}<div><dt>Code promotionnel ({{ order.promo_code_snapshot }})</dt><dd>−{{ order.discount_amount|floatformat:2 }} €</dd></div>{% endif %}<div><dt>Livraison ({{ order.shipping_method|title }})</dt><dd>{{ order.shipping_amount|floatformat:2 }} €</dd></div><div class="total-row"><dt>Total payé / dû</dt><dd>{{ order.total|floatformat:2 }} €</dd></div></dl>
+    </section>
+    <section class="form-panel">
+      <div class="order-panel-heading"><div><h2>Suivi de préparation</h2><p class="muted">L’état logistique est indépendant du statut de paiement.</p></div><span class="order-status fulfillment-{{ order.fulfillment_status }}">{{ order.get_fulfillment_status_display }}</span></div>
+      {% if can_manage_fulfillment %}
+      <form method="post" action="{% url 'dashboard:order_update_fulfillment' order.pk %}" class="fulfillment-form">
+        {% csrf_token %}
+        <label><span>État logistique</span><select name="fulfillment_status" required>{% for value,label in fulfillment_choices %}<option value="{{ value }}" {% if order.fulfillment_status == value %}selected{% endif %} {% if value != order.fulfillment_status and value not in allowed_transitions %}disabled{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <p class="helper-note">Les transitions sont contrôlées côté serveur. L’état de paiement n’est jamais modifiable depuis cet écran.</p>
+        <div class="fulfillment-grid"><label><span>Transporteur (facultatif)</span><input name="shipping_carrier" maxlength="80" value="{{ order.shipping_carrier }}" placeholder="Ex. Colissimo"></label><label><span>Numéro de suivi (facultatif)</span><input name="tracking_number" maxlength="120" value="{{ order.tracking_number }}" placeholder="Référence de suivi"></label></div>
+        <label><span>Note interne (visible uniquement dans l’administration)</span><textarea name="internal_note" rows="4" maxlength="4000" placeholder="Préparation, emballage, consigne logistique…">{{ order.internal_note }}</textarea></label>
+        <div class="order-timestamps">{% if order.shipped_at %}<span>Expédiée le {{ order.shipped_at|date:"d/m/Y à H:i" }}</span>{% endif %}{% if order.delivered_at %}<span>Livrée le {{ order.delivered_at|date:"d/m/Y à H:i" }}</span>{% endif %}</div>
+        <button class="button button-primary" type="submit">Enregistrer le suivi</button>
+      </form>
+      {% else %}<div class="order-payment-warning"><strong>Préparation indisponible</strong><p>Cette commande n’a pas un paiement confirmé. Le webhook Stripe reste la seule source autorisée pour confirmer le paiement.</p></div>{% endif %}
+    </section>
+    <section class="form-panel">
+      <div class="order-panel-heading"><div><h2>Historique de paiement</h2><p class="muted">Tentatives enregistrées par le parcours de checkout.</p></div></div>
+      <div class="payment-attempt-list">{% for attempt in payment_attempts %}<article><div><strong>{{ attempt.provider|upper }} · {{ attempt.get_status_display }}</strong><small>{{ attempt.created_at|date:"d/m/Y à H:i" }}</small>{% if attempt.failure_code %}<small>Code retour : {{ attempt.failure_code }}</small>{% endif %}{% if attempt.stripe_session_id %}<small>Session : {{ attempt.stripe_session_id }}</small>{% endif %}</div><strong>{{ attempt.amount|floatformat:2 }} €</strong></article>{% empty %}<p class="empty-state">Aucune tentative de paiement enregistrée.</p>{% endfor %}</div>
+    </section>
+  </div>
+  <aside class="order-side-column">
+    <section class="form-panel"><div class="order-panel-heading"><div><h2>Client</h2><p class="muted">Coordonnées de livraison.</p></div></div>
+      <dl class="order-facts"><div><dt>Nom</dt><dd>{{ order.full_name }}</dd></div><div><dt>E-mail</dt><dd><a href="mailto:{{ order.email }}">{{ order.email }}</a></dd></div>{% if order.phone %}<div><dt>Téléphone</dt><dd>{{ order.phone }}</dd></div>{% endif %}<div><dt>Adresse</dt><dd>{{ order.address_line1 }}{% if order.address_line2 %}<br>{{ order.address_line2 }}{% endif %}<br>{{ order.postal_code }} {{ order.city }}<br>{{ order.country }}</dd></div></dl>
+    </section>
+    <section class="form-panel"><div class="order-panel-heading"><div><h2>Informations de paiement</h2><p class="muted">Montants et références enregistrés.</p></div></div>
+      <dl class="order-facts"><div><dt>État du paiement</dt><dd><span class="order-status payment-{{ order.status }}">{{ order.get_status_display }}</span></dd></div><div><dt>Référence Stripe</dt><dd class="break-anywhere">{{ order.stripe_payment_intent_id|default:"Non disponible" }}</dd></div><div><dt>Session Stripe</dt><dd class="break-anywhere">{{ order.stripe_session_id|default:"Non disponible" }}</dd></div><div><dt>Stock réservé</dt><dd>{% if order.stock_reserved %}Oui{% else %}Non{% endif %}</dd></div><div><dt>Stock confirmé</dt><dd>{% if order.stock_committed %}Oui{% else %}Non{% endif %}</dd></div></dl>
+    </section>
+  </aside>
+</section>
+
 <section class="form-panel lifecycle-panel">
   <div class="order-panel-heading"><div><h2>Expéditions et suivi colis</h2><p class="muted">Une commande peut contenir plusieurs colis. La création d'une étiquette ne signifie pas que le colis a été remis au transporteur.</p></div></div>
   {% for shipment in shipments %}
@@ -98,54 +148,5 @@
   {% for event in lifecycle_events %}<article class="lifecycle-record"><div><strong>{{ event.event_type }}</strong><small>{{ event.created_at|date:"d/m/Y H:i:s" }} · {{ event.get_source_display|default:event.source }}{% if event.actor %} · {{ event.actor }}{% endif %}</small>{% if event.from_value or event.to_value %}<p>{{ event.from_value|default:"—" }} → {{ event.to_value|default:"—" }}</p>{% endif %}{% if event.reason %}<p class="muted">{{ event.reason }}</p>{% endif %}</div></article>{% empty %}<p class="empty-state">Aucun événement d'audit enregistré pour le moment.</p>{% endfor %}
 </section>
 
-{% endblock %}
-{% block section %}Commandes / Détail{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'dashboard/orders.css' %}">{% endblock %}
-{% block content %}
-<section class="page-heading order-detail-heading">
-  <div><p class="eyebrow">COMMANDE CLIENT</p><h1>Commande #{{ order.public_id|truncatechars:13 }}</h1><p class="muted">Créée le {{ order.created_at|date:"d/m/Y à H:i" }} · Référence complète : {{ order.public_id }}</p></div>
-  <div class="order-heading-actions">
-    {% if can_cancel_order %}
-    <details class="lifecycle-create"><summary>Annuler la commande</summary><form method="post" action="{% url 'dashboard:order_cancel' order.pk %}" class="fulfillment-form">{% csrf_token %}<label><span>Motif (facultatif)</span><textarea name="reason" rows="2" maxlength="2000"></textarea></label><button class="button button-secondary" type="submit">Confirmer l'annulation</button><p class="helper-note">{% if can_cancel_paid_order %}Le remboursement total est confirmé. Cette action annule le cycle commercial et remet en stock les variantes uniquement si aucune expédition n'existe.{% else %}La réservation de stock active sera libérée. Une commande payée exige un remboursement total confirmé et aucune expédition.{% endif %}</p></form></details>
-    {% endif %}
-    <a class="button button-secondary" href="{% url 'dashboard:orders' %}">← Toutes les commandes</a>
-  </div>
-</section>
-<section class="order-detail-grid">
-  <div class="order-main-column">
-    <section class="form-panel">
-      <div class="order-panel-heading"><div><h2>Articles commandés</h2><p class="muted">Instantané conservé au moment de la commande.</p></div><span class="order-status payment-{{ order.status }}">{{ order.get_status_display }}</span></div>
-      <div class="order-lines">{% for line in order.lines.all %}
-        <article class="order-line"><div class="order-line-visual" aria-hidden="true">◇</div><div class="order-line-info"><strong>{{ line.product_name }}</strong>{% if line.variant_name %}<small>Variante : {{ line.variant_name }}</small>{% endif %}<small>Quantité : {{ line.quantity }} · Prix unitaire : {{ line.unit_price|floatformat:2 }} €</small>{% if line.components_snapshot %}<small>Composition : {{ line.components_snapshot|length }} élément(s)</small>{% endif %}</div><strong class="order-line-total">{{ line.line_total|floatformat:2 }} €</strong></article>
-      {% empty %}<p class="empty-state">Aucune ligne détaillée n’est rattachée à cette commande.</p>{% endfor %}</div>
-      <dl class="order-totals"><div><dt>Sous-total</dt><dd>{{ order.subtotal|floatformat:2 }} €</dd></div>{% if order.promo_code_snapshot %}<div><dt>Code promotionnel ({{ order.promo_code_snapshot }})</dt><dd>−{{ order.discount_amount|floatformat:2 }} €</dd></div>{% endif %}<div><dt>Livraison ({{ order.shipping_method|title }})</dt><dd>{{ order.shipping_amount|floatformat:2 }} €</dd></div><div class="total-row"><dt>Total payé / dû</dt><dd>{{ order.total|floatformat:2 }} €</dd></div></dl>
-    </section>
-    <section class="form-panel">
-      <div class="order-panel-heading"><div><h2>Suivi de préparation</h2><p class="muted">L’état logistique est indépendant du statut de paiement.</p></div><span class="order-status fulfillment-{{ order.fulfillment_status }}">{{ order.get_fulfillment_status_display }}</span></div>
-      {% if can_manage_fulfillment %}
-      <form method="post" action="{% url 'dashboard:order_update_fulfillment' order.pk %}" class="fulfillment-form">
-        {% csrf_token %}
-        <label><span>État logistique</span><select name="fulfillment_status" required>{% for value,label in fulfillment_choices %}<option value="{{ value }}" {% if order.fulfillment_status == value %}selected{% endif %} {% if value != order.fulfillment_status and value not in allowed_transitions %}disabled{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-        <p class="helper-note">Les transitions sont contrôlées côté serveur. L’état de paiement n’est jamais modifiable depuis cet écran.</p>
-        <div class="fulfillment-grid"><label><span>Transporteur (facultatif)</span><input name="shipping_carrier" maxlength="80" value="{{ order.shipping_carrier }}" placeholder="Ex. Colissimo"></label><label><span>Numéro de suivi (facultatif)</span><input name="tracking_number" maxlength="120" value="{{ order.tracking_number }}" placeholder="Référence de suivi"></label></div>
-        <label><span>Note interne (visible uniquement dans l’administration)</span><textarea name="internal_note" rows="4" maxlength="4000" placeholder="Préparation, emballage, consigne logistique…">{{ order.internal_note }}</textarea></label>
-        <div class="order-timestamps">{% if order.shipped_at %}<span>Expédiée le {{ order.shipped_at|date:"d/m/Y à H:i" }}</span>{% endif %}{% if order.delivered_at %}<span>Livrée le {{ order.delivered_at|date:"d/m/Y à H:i" }}</span>{% endif %}</div>
-        <button class="button button-primary" type="submit">Enregistrer le suivi</button>
-      </form>
-      {% else %}<div class="order-payment-warning"><strong>Préparation indisponible</strong><p>Cette commande n’a pas un paiement confirmé. Le webhook Stripe reste la seule source autorisée pour confirmer le paiement.</p></div>{% endif %}
-    </section>
-    <section class="form-panel">
-      <div class="order-panel-heading"><div><h2>Historique de paiement</h2><p class="muted">Tentatives enregistrées par le parcours de checkout.</p></div></div>
-      <div class="payment-attempt-list">{% for attempt in payment_attempts %}<article><div><strong>{{ attempt.provider|upper }} · {{ attempt.get_status_display }}</strong><small>{{ attempt.created_at|date:"d/m/Y à H:i" }}</small>{% if attempt.failure_code %}<small>Code retour : {{ attempt.failure_code }}</small>{% endif %}{% if attempt.stripe_session_id %}<small>Session : {{ attempt.stripe_session_id }}</small>{% endif %}</div><strong>{{ attempt.amount|floatformat:2 }} €</strong></article>{% empty %}<p class="empty-state">Aucune tentative de paiement enregistrée.</p>{% endfor %}</div>
-    </section>
-  </div>
-  <aside class="order-side-column">
-    <section class="form-panel"><div class="order-panel-heading"><div><h2>Client</h2><p class="muted">Coordonnées de livraison.</p></div></div>
-      <dl class="order-facts"><div><dt>Nom</dt><dd>{{ order.full_name }}</dd></div><div><dt>E-mail</dt><dd><a href="mailto:{{ order.email }}">{{ order.email }}</a></dd></div>{% if order.phone %}<div><dt>Téléphone</dt><dd>{{ order.phone }}</dd></div>{% endif %}<div><dt>Adresse</dt><dd>{{ order.address_line1 }}{% if order.address_line2 %}<br>{{ order.address_line2 }}{% endif %}<br>{{ order.postal_code }} {{ order.city }}<br>{{ order.country }}</dd></div></dl>
-    </section>
-    <section class="form-panel"><div class="order-panel-heading"><div><h2>Informations de paiement</h2><p class="muted">Montants et références enregistrés.</p></div></div>
-      <dl class="order-facts"><div><dt>État du paiement</dt><dd><span class="order-status payment-{{ order.status }}">{{ order.get_status_display }}</span></dd></div><div><dt>Référence Stripe</dt><dd class="break-anywhere">{{ order.stripe_payment_intent_id|default:"Non disponible" }}</dd></div><div><dt>Session Stripe</dt><dd class="break-anywhere">{{ order.stripe_session_id|default:"Non disponible" }}</dd></div><div><dt>Stock réservé</dt><dd>{% if order.stock_reserved %}Oui{% else %}Non{% endif %}</dd></div><div><dt>Stock confirmé</dt><dd>{% if order.stock_committed %}Oui{% else %}Non{% endif %}</dd></div></dl>
-    </section>
-  </aside>
-</section>
+
 {% endblock %}
