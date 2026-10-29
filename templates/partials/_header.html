@@ -20,6 +20,12 @@
         </nav>
 
         <div class="header-actions">
+            {% if user.is_authenticated %}
+                <a class="header-action" href="{% url 'checkout:customer_orders' %}" aria-label="Mes commandes">Mes commandes</a>
+                <form method="post" action="{% url 'checkout:customer_logout' %}" class="header-account-form">{% csrf_token %}<button class="header-action" type="submit">Déconnexion</button></form>
+            {% else %}
+                <a class="header-action" href="{% url 'checkout:customer_login' %}">Connexion</a>
+            {% endif %}
             <button class="header-action lang-switch" type="button" id="lang-switch"
                     aria-label="Changer de langue / Switch language">
                 <span data-lang-label>EN</span>
