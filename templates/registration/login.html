@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Connexion | My Line Collection{% endblock %}
+{% block extra_css %}<style>.auth-page{max-width:520px;margin:3rem auto;padding:0 1rem 3rem}.auth-card{border:1px solid #e8e2dc;border-radius:16px;padding:1.5rem}.auth-card label{display:block;font-weight:600;margin:.8rem 0 .35rem}.auth-card input{box-sizing:border-box;width:100%;padding:.75rem;border:1px solid #cfc5bc;border-radius:8px;font:inherit}.auth-card button{margin-top:1rem;border:0;border-radius:8px;background:#29231f;color:white;padding:.8rem 1rem;font:inherit;cursor:pointer}.auth-error{color:#9b2c2c}.auth-help{color:#625b55;font-size:.92rem}</style>{% endblock %}
+{% block content %}
+<main class="auth-page"><section class="auth-card">
+  <p>MY LINE COLLECTION · ESPACE CLIENT</p><h1>Connexion</h1>
+  <p class="auth-help">Connectez-vous pour consulter vos commandes et leur suivi.</p>
+  {% if form.errors %}<p class="auth-error" role="alert">Identifiants incorrects. Vérifiez votre nom d’utilisateur et votre mot de passe.</p>{% endif %}
+  <form method="post">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+    {% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<p class="auth-error">{{ field.errors|striptags }}</p>{% endif %}{% endfor %}
+    <button type="submit">Se connecter</button>
+  </form>
+  <p>Pas encore de compte ? <a href="{% url 'checkout:customer_signup' %}">Créer un compte</a></p>
+</section></main>
+{% endblock %}
