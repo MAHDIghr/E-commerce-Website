@@ -201,7 +201,7 @@ def order_tracking_lookup(request):
                 "error": "Trop de tentatives. Réessayez dans quelques minutes.",
             }, status=429)
 
-        reference = request.POST.get("reference", "").strip().replace("#", "")
+        reference = request.POST.get("reference", "").strip().removeprefix("#").strip()
         try:
             public_id = uuid.UUID(reference)
         except (ValueError, AttributeError, TypeError):
