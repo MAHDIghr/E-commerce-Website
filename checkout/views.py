@@ -32,6 +32,7 @@ def _increment_rate_limit(key, timeout):
         return 1
 
 
+@require_http_methods(["GET", "POST"])
 def checkout(request):
     cart_items, subtotal, cart_error = [], None, ""
     try:
@@ -139,6 +140,7 @@ def checkout(request):
     })
 
 
+@require_GET
 @require_GET
 def order_result(request, public_id):
     order = get_object_or_404(Order.objects.prefetch_related("lines"), public_id=public_id)
