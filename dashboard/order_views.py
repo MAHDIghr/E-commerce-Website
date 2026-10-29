@@ -177,6 +177,17 @@ def order_update_fulfillment(request, pk):
             messages.error(request, "Un des champs dépasse la longueur maximale autorisée.")
             return redirect("dashboard:order_detail", pk=order.pk)
 
+        if new_status == Order.FULFILLMENT_ON_HOLD and order.commercial_status != Order.COMMERCIAL_ON_HOLD:
+            try:
+                transition_order_commercial_status(
+                    order.pk, Order.COMMERCIAL_ON_HOLD, actor=request.user,
+                    reason="Mise en attente logistique depuis le dashboard.",
+                )
+            except LifecycleProblem as exc:
+                messages.error(request, str(exc))
+                return redirect("dashboard:order_detail", pk=order.pk)
+            order.refresh_from_db(fields=["commercial_status"])
+
         if new_status == Order.FULFILLMENT_SHIPPED and order.commercial_status != Order.COMMERCIAL_SHIPPED:
             try:
                 transition_order_commercial_status(
