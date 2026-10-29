@@ -1,6 +1,102 @@
 {% extends "dashboard/base.html" %}
 {% load static %}
-{% block title %}Détail de commande{% endblock %}
+{% block title %}Détail de commande
+<section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Expéditions et suivi colis</h2><p class="muted">Une commande peut contenir plusieurs colis. La création d'une étiquette ne signifie pas que le colis a été remis au transporteur.</p></div></div>
+  {% for shipment in shipments %}
+    <article class="lifecycle-record">
+      <div><strong>Colis {{ shipment.public_id|truncatechars:13 }}</strong><span class="order-status">{{ shipment.get_status_display }}</span><p class="muted">{{ shipment.carrier|default:"Transporteur non renseigné" }}{% if shipment.tracking_number %} · Suivi : {{ shipment.tracking_number }}{% endif %}</p>
+      {% if shipment.tracking_url %}<p><a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Ouvrir le suivi transporteur</a></p>{% endif %}
+      <small>{{ shipment.lines.count }} ligne(s) de commande · créé le {{ shipment.created_at|date:"d/m/Y H:i" }}</small>
+      {% for event in shipment.events.all %}<p class="muted">{{ event.created_at|date:"d/m/Y H:i" }} · {{ event.get_status_display }}{% if event.description %} — {{ event.description }}{% endif %}</p>{% endfor %}
+      </div>
+      {% if can_manage_fulfillment %}
+      <form method="post" action="{% url 'dashboard:shipment_update_status' order.pk shipment.pk %}" class="lifecycle-action-form">
+        {% csrf_token %}
+        <label><span>Nouvel événement</span><select name="status" required>{% for value,label in shipment_choices %}<option value="{{ value }}" {% if shipment.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label><span>Commentaire / motif</span><input name="reason" maxlength="2000" placeholder="Information de suivi vérifiée"></label>
+        <button class="button button-secondary button-small" type="submit">Enregistrer l'événement</button>
+      </form>
+      {% endif %}
+    </article>
+  {% empty %}<p class="empty-state">Aucune expédition enregistrée.</p>{% endfor %}
+  {% if can_manage_fulfillment %}
+  <details class="lifecycle-create"><summary>Créer une expédition manuelle</summary>
+    <form method="post" action="{% url 'dashboard:order_create_shipment' order.pk %}" class="fulfillment-form">
+      {% csrf_token %}
+      <div class="fulfillment-grid"><label><span>Transporteur</span><input name="carrier" maxlength="80"></label><label><span>Service</span><input name="service" maxlength="80"></label></div>
+      <div class="fulfillment-grid"><label><span>Numéro de suivi</span><input name="tracking_number" maxlength="120"></label><label><span>URL de suivi HTTPS</span><input name="tracking_url" type="url" maxlength="500" placeholder="https://…"></label></div>
+      <p class="muted">Saisis les quantités affectées à ce colis. Laisse vide les articles qui ne sont pas dans ce colis.</p>
+      {% for line in order.lines.all %}<label><span>{{ line.product_name }}{% if line.variant_name %} — {{ line.variant_name }}{% endif %} (commandé : {{ line.quantity }})</span><input type="number" min="1" max="{{ line.quantity }}" name="line_{{ line.pk }}" inputmode="numeric" placeholder="Quantité dans ce colis"></label>{% endfor %}
+      <label><span>Note interne</span><textarea name="notes" rows="2" maxlength="4000"></textarea></label>
+      <button class="button button-primary" type="submit">Créer le colis en brouillon</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+<section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Retours et réclamations</h2><p class="muted">Les décisions sont historisées séparément du statut de la commande.</p></div></div>
+  {% for return_request in return_requests %}
+    <article class="lifecycle-record">
+      <div><strong>Retour {{ return_request.public_id|truncatechars:13 }}</strong><span class="order-status">{{ return_request.get_status_display }}</span><p>{{ return_request.get_reason_category_display }} — {{ return_request.reason }}</p>
+      <small>Demandé le {{ return_request.requested_at|date:"d/m/Y H:i" }}</small>
+      {% for line in return_request.lines.all %}<p class="muted">{{ line.order_line.product_name }} · quantité : {{ line.quantity }}{% if line.inspected %} · inspecté{% endif %}{% if line.restock_approved %} · remise en stock autorisée{% endif %}</p>{% endfor %}
+      {% if return_request.admin_note %}<p class="muted">Note administrative : {{ return_request.admin_note }}</p>{% endif %}</div>
+      <form method="post" action="{% url 'dashboard:return_update_status' order.pk return_request.pk %}" class="lifecycle-action-form">
+        {% csrf_token %}
+        <label><span>Décision / étape</span><select name="status" required>{% for value,label in return_choices %}<option value="{{ value }}" {% if return_request.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label><span>Motif / note</span><textarea name="note" rows="2" maxlength="4000">{{ return_request.admin_note }}</textarea></label>
+        <button class="button button-secondary button-small" type="submit">Mettre à jour le dossier</button>
+      </form>
+    </article>
+  {% empty %}<p class="empty-state">Aucune demande de retour enregistrée.</p>{% endfor %}
+  <p class="helper-note">La demande client de retour et son formulaire public restent à raccorder. N'applique pas un délai automatique sans examen du motif et des droits applicables.</p>
+</section>
+
+<section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Remboursements</h2><p class="muted">Le statut « confirmé » est réservé à une confirmation du prestataire.</p></div></div>
+  {% for refund in refunds %}
+    <article class="lifecycle-record"><div><strong>{{ refund.amount|floatformat:2 }} {{ refund.currency|upper }}</strong><span class="order-status">{{ refund.get_status_display }}</span><p>{{ refund.reason }}</p><small>Demandé le {{ refund.requested_at|date:"d/m/Y H:i" }}{% if refund.confirmed_at %} · Confirmé le {{ refund.confirmed_at|date:"d/m/Y H:i" }}{% endif %}</small>{% if refund.stripe_refund_id %}<p class="muted">Référence Stripe : {{ refund.stripe_refund_id }}</p>{% endif %}{% if refund.failure_reason %}<p class="muted">Erreur : {{ refund.failure_reason }}</p>{% endif %}</div></article>
+  {% empty %}<p class="empty-state">Aucun remboursement enregistré.</p>{% endfor %}
+  {% if order.status == "paid" and order.stripe_payment_intent_id %}
+  <details class="lifecycle-create"><summary>Demander un remboursement Stripe</summary>
+    <form method="post" action="{% url 'dashboard:order_create_refund' order.pk %}" class="fulfillment-form">
+      {% csrf_token %}
+      <label><span>Montant ({{ order.currency|upper }})</span><input type="number" name="amount" min="0.01" max="{{ order.total }}" step="0.01" required></label>
+      <label><span>Motif obligatoire</span><textarea name="reason" rows="3" maxlength="2000" required></textarea></label>
+      <p class="helper-note">Cette action appelle Stripe. Vérifie le paiement d'origine et les montants déjà remboursés avant de confirmer.</p>
+      <button class="button button-primary" type="submit">Envoyer la demande de remboursement</button>
+    </form>
+  </details>
+  {% else %}<p class="helper-note">Le remboursement Stripe est indisponible : paiement non confirmé ou référence de paiement manquante.</p>{% endif %}
+</section>
+
+<section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Incidents</h2><p class="muted">Retards, non-réception, dommages ou autres réclamations.</p></div></div>
+  {% for incident in incidents %}<article class="lifecycle-record"><div><strong>{{ incident.get_category_display }}</strong><span class="order-status">{{ incident.get_status_display }}</span><p>{{ incident.description }}</p>{% if incident.resolution %}<p class="muted">Résolution : {{ incident.resolution }}</p>{% endif %}<small>Créé le {{ incident.created_at|date:"d/m/Y H:i" }}</small></div></article>{% empty %}<p class="empty-state">Aucun incident déclaré.</p>{% endfor %}
+  <form method="post" action="{% url 'dashboard:order_create_incident' order.pk %}" class="fulfillment-form">
+    {% csrf_token %}
+    <label><span>Type d'incident</span><select name="category" required><option value="">Sélectionner…</option>{% for value,label in incident_categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+    <label><span>Description</span><textarea name="description" rows="3" maxlength="5000" required></textarea></label>
+    <button class="button button-secondary" type="submit">Enregistrer l'incident</button>
+  </form>
+</section>
+
+<section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Notifications transactionnelles</h2><p class="muted">Historique des tentatives. L'envoi e-mail dépend de la configuration du serveur.</p></div></div>
+  {% for notification in notifications %}
+    <article class="lifecycle-record"><div><strong>{{ notification.event_key }}</strong><span class="order-status">{{ notification.get_status_display }}</span><p>{{ notification.recipient }} · {{ notification.attempts }} tentative(s)</p>{% if notification.error_message %}<p class="muted">Erreur : {{ notification.error_message }}</p>{% endif %}{% if notification.sent_at %}<small>Acceptée le {{ notification.sent_at|date:"d/m/Y H:i" }}</small>{% endif %}</div>
+    {% if notification.status != "sent" %}<form method="post" action="{% url 'dashboard:order_retry_notification' order.pk notification.pk %}">{% csrf_token %}<button class="button button-secondary button-small" type="submit">Relancer</button></form>{% endif %}</article>
+  {% empty %}<p class="empty-state">Aucune notification en file pour cette commande.</p>{% endfor %}
+</section>
+
+<section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Journal d'audit</h2><p class="muted">50 derniers événements métier enregistrés.</p></div></div>
+  {% for event in lifecycle_events %}<article class="lifecycle-record"><div><strong>{{ event.event_type }}</strong><small>{{ event.created_at|date:"d/m/Y H:i:s" }} · {{ event.get_source_display|default:event.source }}{% if event.actor %} · {{ event.actor }}{% endif %}</small>{% if event.from_value or event.to_value %}<p>{{ event.from_value|default:"—" }} → {{ event.to_value|default:"—" }}</p>{% endif %}{% if event.reason %}<p class="muted">{{ event.reason }}</p>{% endif %}</div></article>{% empty %}<p class="empty-state">Aucun événement d'audit enregistré pour le moment.</p>{% endfor %}
+</section>
+
+{% endblock %}
 {% block section %}Commandes / Détail{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'dashboard/orders.css' %}">{% endblock %}
 {% block content %}
