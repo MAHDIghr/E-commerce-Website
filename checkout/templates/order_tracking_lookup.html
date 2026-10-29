@@ -19,7 +19,7 @@
     <form method="post" action="{% url 'checkout:tracking_lookup' %}">
       {% csrf_token %}
       <label for="order-reference">Référence de commande</label>
-      <input id="order-reference" name="reference" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ex. : 8b2f…-…-…" maxlength="36" required>
+      <input id="order-reference" name="reference" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ex. : 8b2f…-…-…" maxlength="37" required>
       <button class="button button-primary" type="submit">Consulter ma commande</button>
     </form>
     <p class="tracking-lookup__hint">Vous ne retrouvez plus votre référence ? Consultez l’e-mail de confirmation ou contactez le service client.</p>
