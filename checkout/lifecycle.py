@@ -232,14 +232,14 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
         if new_status == Shipment.ACCEPTED:
             _queue_order_email(
                 shipment.order, f"shipment_handed_over_{shipment.pk}",
-                f"Votre commande {str(shipment.order.public_id)[:8]} a été expédiée",
-                f"Bonjour {shipment.order.full_name},\n\nVotre colis a été pris en charge par le transporteur.\nRéférence de commande : {shipment.order.public_id}\nNuméro de suivi : {shipment.tracking_number or 'en cours de saisie'}\n\nMy Line Collection",
+                f"Un colis de votre commande {str(shipment.order.public_id)[:8]} a été pris en charge",
+                f"Bonjour {shipment.order.full_name},\n\nUn colis de votre commande a été pris en charge par le transporteur.\nRéférence de commande : {shipment.order.public_id}\nNuméro de suivi : {shipment.tracking_number or 'en cours de saisie'}\n\nMy Line Collection",
             )
         else:
             _queue_order_email(
                 shipment.order, f"shipment_delivered_{shipment.pk}",
-                f"Votre commande {str(shipment.order.public_id)[:8]} a été livrée",
-                f"Bonjour {shipment.order.full_name},\n\nLe suivi indique que votre colis a été livré. Si vous constatez un problème, vous pouvez le signaler via votre lien de suivi sécurisé.\nRéférence de commande : {shipment.order.public_id}\n\nMy Line Collection",
+                f"Un colis de votre commande {str(shipment.order.public_id)[:8]} a été livré",
+                f"Bonjour {shipment.order.full_name},\n\nLe suivi indique que ce colis a été livré. Si vous constatez un problème, consultez la page de suivi de commande avec votre référence.\nRéférence de commande : {shipment.order.public_id}\n\nMy Line Collection",
             )
     if new_status == Shipment.ACCEPTED:
         order = shipment.order
