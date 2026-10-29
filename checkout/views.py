@@ -18,7 +18,6 @@ from django.views.decorators.http import require_GET, require_POST
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
 from .models import Order, PaymentAttempt, ReturnRequest
-from .lifecycle import create_return_request, LifecycleProblem
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
 from .lifecycle import LifecycleProblem, create_return_request
 
@@ -135,6 +134,13 @@ def order_result(request, public_id):
     order = get_object_or_404(Order.objects.prefetch_related("lines"), public_id=public_id)
     session_id = request.GET.get("session_id", "")
     if session_id and session_id != order.stripe_session_id:
+        return HttpResponseNotFound("Commande introuvable.")
+
+    # UUID seul ne suffit pas à autoriser l’accès à une commande invitée.
+    owns_order = bool(request.user.is_authenticated and order.customer_id == request.user.pk)
+    checkout_key_matches = request.session.get("checkout_attempt_key", "") == str(order.checkout_key)
+    stripe_return_matches = bool(session_id and session_id == order.stripe_session_id)
+    if not (owns_order or checkout_key_matches or stripe_return_matches):
         return HttpResponseNotFound("Commande introuvable.")
 
     cancelled_return = request.GET.get("cancelled") == "1"
