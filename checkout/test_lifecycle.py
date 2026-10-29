@@ -49,9 +49,13 @@ class OrderLifecycleServiceTests(TestCase):
         with self.assertRaises(LifecycleProblem):
             transition_shipment(shipment.pk, Shipment.DELIVERED, actor=self.admin)
         transition_shipment(shipment.pk, Shipment.READY, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_CONFIRMED, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PROCESSING, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PREPARING, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_READY_TO_SHIP, actor=self.admin)
         transition_shipment(shipment.pk, Shipment.ACCEPTED, actor=self.admin)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_SHIPPED)
+        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_PREPARING)
 
     def test_shipment_allocations_cannot_exceed_ordered_quantity(self):
         create_shipment(self.order.pk, actor=self.admin, line_quantities={self.line.pk: 2})
@@ -135,7 +139,7 @@ class OrderLifecycleServiceTests(TestCase):
             transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_SHIPPED, actor=self.admin)
 
         shipment = create_shipment(
-            self.order.pk, actor=self.admin, line_quantities={self.line.pk: 1},
+            self.order.pk, actor=self.admin, line_quantities={self.line.pk: 2},
         )
         for status in (Shipment.READY, Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.DELIVERED):
             transition_shipment(shipment.pk, status, actor=self.admin)
