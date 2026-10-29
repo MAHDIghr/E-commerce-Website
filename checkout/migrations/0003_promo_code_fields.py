@@ -16,6 +16,10 @@ class Migration(migrations.Migration):
             name="discount_amount",
             field=models.DecimalField(decimal_places=2, default=Decimal("0.00"), max_digits=10),
         ),
+        migrations.AddConstraint(
+            model_name="order",
+            constraint=models.CheckConstraint(condition=models.Q(("discount_amount__gte", 0)), name="order_discount_nonnegative"),
+        ),
         migrations.CreateModel(
             name="PromoCode",
             fields=[
