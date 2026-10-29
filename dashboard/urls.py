@@ -4,7 +4,7 @@ from .views import (
     DashboardLoginView, DashboardLogoutView, categories, category_delete, category_edit,
     home, offers, product_delete, product_edit, products,
 )
-from .order_views import orders, order_detail, order_update_fulfillment
+from .order_views import (\n    orders, order_detail, order_update_fulfillment, order_create_shipment,\n    shipment_update_status, return_update_status, order_create_refund,\n    order_create_incident, order_retry_notification,\n)
 
 app_name = "dashboard"
 
@@ -22,5 +22,5 @@ urlpatterns = [
     path("offres/", offers, name="offers"),
     path("commandes/", orders, name="orders"),
     path("commandes/<int:pk>/", order_detail, name="order_detail"),
-    path("commandes/<int:pk>/suivi/", order_update_fulfillment, name="order_update_fulfillment"),
+    path("commandes/<int:pk>/suivi/", order_update_fulfillment, name="order_update_fulfillment"),\n    path("commandes/<int:pk>/expeditions/ajouter/", order_create_shipment, name="order_create_shipment"),\n    path("commandes/<int:pk>/expeditions/<int:shipment_pk>/etat/", shipment_update_status, name="shipment_update_status"),\n    path("commandes/<int:pk>/retours/<int:return_pk>/etat/", return_update_status, name="return_update_status"),\n    path("commandes/<int:pk>/remboursements/ajouter/", order_create_refund, name="order_create_refund"),\n    path("commandes/<int:pk>/incidents/ajouter/", order_create_incident, name="order_create_incident"),\n    path("commandes/<int:pk>/notifications/<int:notification_pk>/relancer/", order_retry_notification, name="order_retry_notification"),
 ]
