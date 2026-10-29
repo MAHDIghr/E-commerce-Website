@@ -101,7 +101,7 @@ def order_detail(request, pk):
         "notifications": order.notifications.all()[:30],
         "shipment_choices": Shipment.STATUS_CHOICES,
         "return_choices": ReturnRequest.STATUS_CHOICES,
-        "incident_categories": OrderIncident.CATEGORIES,
+        "incident_categories": OrderIncident.CATEGORIES,\n        "incident_status_choices": OrderIncident.STATUS_CHOICES,
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
@@ -281,4 +281,28 @@ def order_retry_notification(request, pk, notification_pk):
                 messages.success(request, "Le prestataire e-mail a accepté l'envoi.")
             else:
                 messages.error(request, "L'envoi n'a pas abouti. Le statut et l'erreur sont conservés.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_update_incident(request, pk, incident_pk):
+    incident = get_object_or_404(OrderIncident, pk=incident_pk, order_id=pk)
+    new_status = request.POST.get("status", "").strip()
+    resolution = request.POST.get("resolution", "").strip()[:4000]
+    if new_status not in dict(OrderIncident.STATUS_CHOICES):
+        messages.error(request, "État d'incident invalide.")
+        return redirect("dashboard:order_detail", pk=pk)
+    incident.status = new_status
+    incident.resolution = resolution
+    if new_status in {OrderIncident.RESOLVED, OrderIncident.CLOSED}:
+        incident.resolved_at = timezone.now()
+        incident.resolved_by = request.user
+    incident.save(update_fields=["status", "resolution", "resolved_at", "resolved_by"])
+    OrderEvent.objects.create(
+        order=incident.order, event_type="incident_status", source="admin",
+        to_value=new_status, reason=resolution, actor=request.user,
+        metadata={"incident_id": incident.pk, "category": incident.category},
+    )
+    messages.success(request, "Incident mis à jour.")
     return redirect("dashboard:order_detail", pk=pk)
