@@ -1,18 +1,19 @@
 """Gestion privée des commandes et de leur préparation logistique."""
 import uuid
+from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_POST
 
 from checkout.models import (Order, OrderLine, PaymentAttempt, OrderEvent, Shipment, ShipmentEvent, ReturnRequest, Refund, OrderIncident, OrderNotification)
-from checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification
+from checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification, restock_unshipped_cancelled_order
 from checkout.services import release_reserved_stock
 from .views import is_dashboard_admin
 
@@ -325,9 +326,49 @@ def order_update_incident(request, pk, incident_pk):
 def order_cancel(request, pk):
     with transaction.atomic():
         order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
-        if order.status not in {Order.PENDING, Order.AWAITING}:
-            messages.error(request, "Seules les commandes en attente de paiement peuvent être annulées ici. Une commande payée exige un traitement financier séparé.")
+        previous_commercial_status = order.commercial_status
+        payment_status_before = order.status
+        if order.status in {Order.PENDING, Order.AWAITING}:
+            if order.shipments.filter(status__in=[
+                Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY,
+                Shipment.PICKUP_POINT, Shipment.DELIVERED,
+            ]).exists():
+                messages.error(request, "Une commande déjà prise en charge par le transporteur ne peut pas être annulée via cette action.")
+                return redirect("dashboard:order_detail", pk=pk)
+            if order.stock_reserved:
+                release_reserved_stock(order)
+            order.status = Order.CANCELLED
+            order.commercial_status = Order.COMMERCIAL_CANCELLED
+            order.save(update_fields=["status", "commercial_status", "stock_reserved", "updated_at"])
+            order.payment_attempts.filter(status__in=[
+                PaymentAttempt.CREATED, PaymentAttempt.OPEN, PaymentAttempt.PROCESSING,
+            ]).update(status=PaymentAttempt.FAILED)
+        elif order.status == Order.PAID:
+            confirmed_refunds = order.refunds.filter(status=Refund.SUCCEEDED).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+            if order.shipments.exists() or confirmed_refunds < order.total:
+                messages.error(request, "Pour annuler une commande payée, confirmez d'abord le remboursement total et assurez-vous qu'aucun colis n'a été créé.")
+                return redirect("dashboard:order_detail", pk=pk)
+            if order.stock_committed:
+                restock_unshipped_cancelled_order(order.pk, actor=request.user)
+            order.commercial_status = Order.COMMERCIAL_CANCELLED
+            order.save(update_fields=["commercial_status", "updated_at"])
+        else:
+            messages.error(request, "Cette commande ne peut pas être annulée dans son état actuel.")
             return redirect("dashboard:order_detail", pk=pk)
+        OrderEvent.objects.create(
+            order=order, event_type="order_cancelled", from_value=previous_commercial_status,
+            to_value=Order.COMMERCIAL_CANCELLED, source="admin", actor=request.user,
+            reason=request.POST.get("reason", "").strip()[:2000],
+            metadata={"payment_status_at_cancellation": payment_status_before},
+        )
+        from checkout.services import _queue_order_email
+        _queue_order_email(
+            order, "order_cancelled",
+            f"Commande {str(order.public_id)[:8]} annulée",
+            f"Bonjour {order.full_name},\n\nVotre commande a été annulée. Le statut du paiement historique reste consultable séparément.\nRéférence : {order.public_id}\n\nMy Line Collection",
+        )
+    messages.success(request, "Commande annulée. Le paiement historique et le remboursement restent enregistrés séparément.")
+    return redirect("dashboard:order_detail", pk=pk)
         if order.shipments.filter(status__in=[
             Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY,
             Shipment.PICKUP_POINT, Shipment.DELIVERED,
