@@ -112,7 +112,9 @@ class Order(models.Model):
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=PENDING, db_index=True)\n    commercial_status = models.CharField(max_length=24, choices=COMMERCIAL_STATUS_CHOICES, default=COMMERCIAL_PENDING_PAYMENT, db_index=True)\n    fulfillment_status = models.CharField(
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=PENDING, db_index=True)
+    commercial_status = models.CharField(max_length=24, choices=COMMERCIAL_STATUS_CHOICES, default=COMMERCIAL_PENDING_PAYMENT, db_index=True)
+    fulfillment_status = models.CharField(
         max_length=20, choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_UNFULFILLED, db_index=True,
     )
