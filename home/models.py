@@ -38,3 +38,36 @@ class SignatureSelection(models.Model):
 
     def __str__(self):
         return f"{self.position}. {self.product.name}"
+
+
+import uuid
+from django.utils import timezone
+
+
+class NewsletterSubscription(models.Model):
+    """Inscription newsletter avec double opt-in et consentement horodaté."""
+
+    email = models.EmailField(max_length=254, unique=True)
+    is_confirmed = models.BooleanField(default=False, db_index=True)
+    is_active = models.BooleanField(default=False, db_index=True)
+    consent_at = models.DateTimeField(default=timezone.now)
+    consent_version = models.CharField(max_length=32, default="newsletter-v1")
+    confirmation_token_hash = models.CharField(max_length=64, blank=True)
+    confirmation_expires_at = models.DateTimeField(null=True, blank=True)
+    unsubscribe_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    unsubscribed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "inscription à la newsletter"
+        verbose_name_plural = "inscriptions à la newsletter"
+
+    def save(self, *args, **kwargs):
+        self.email = (self.email or "").strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
