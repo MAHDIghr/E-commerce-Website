@@ -68,6 +68,7 @@ Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale 
 - Compatibilité conservée avec certaines URL externes de médias.
 - Checkout serveur avec création idempotente de commande, réservation du stock, codes promotionnels persistants et confirmation Stripe par webhook signé.
 - Dashboard privé de commandes : recherche, filtres, détail client/produits/montants, tentatives de paiement, suivi logistique et journal d’audit.
+- Cycle commercial distinct du paiement et de la logistique : état de commande dédié, annulation auditée, transitions logistiques et historique des événements.
 - Cycle logistique étendu : expéditions multiples par commande, affectation des quantités aux colis, transitions de suivi distinctes et historique des événements.
 - Suivi client via lien signé à durée limitée, sans exposition d’une commande par simple connaissance de son identifiant.
 - Demandes de retour partielles, décisions administratives, dossiers d’incident et historique rattaché à la commande.
