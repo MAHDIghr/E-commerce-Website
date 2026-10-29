@@ -50,7 +50,7 @@ class LifecycleProblem(Exception):
 SHIPMENT_HANDED_OVER_STATUSES = {
     Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY,
     Shipment.PICKUP_POINT, Shipment.DELIVERY_FAILED, Shipment.INCIDENT,
-    Shipment.LOST, Shipment.DELIVERED, Shipment.RETURNING, Shipment.RETURNED,
+    Shipment.DELIVERED,
 }
 
 
@@ -185,7 +185,7 @@ def create_shipment(order_id, *, actor=None, carrier="", service="", tracking_nu
         if quantity < 1:
             raise LifecycleProblem("La quantité expédiée doit être positive.")
         already_allocated = ShipmentLine.objects.filter(order_line=line).exclude(
-            shipment__status=Shipment.RETURNED
+            shipment__status__in=[Shipment.RETURNED, Shipment.LOST]
         ).aggregate(total=Sum("quantity"))["total"] or 0
         if quantity + already_allocated > line.quantity:
             raise LifecycleProblem("La quantité totale expédiée dépasserait la quantité commandée.")
@@ -272,9 +272,36 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
                 reason="Toutes les quantités commandées ont été remises au transporteur.",
             )
 
+    if new_status in {Shipment.LOST, Shipment.RETURNING, Shipment.RETURNED}:
+        order = shipment.order
+        if order.commercial_status not in {Order.COMMERCIAL_CANCELLED, Order.COMMERCIAL_COMPLETED}:
+            if order.commercial_status != Order.COMMERCIAL_ON_HOLD:
+                transition_order_commercial_status(
+                    order.pk, Order.COMMERCIAL_ON_HOLD, actor=actor,
+                    reason=f"Expédition {shipment.public_id} : {shipment.get_status_display()}.",
+                )
+            old_fulfillment = order.fulfillment_status
+            if old_fulfillment != Order.FULFILLMENT_ON_HOLD:
+                order.fulfillment_status = Order.FULFILLMENT_ON_HOLD
+                order.save(update_fields=["fulfillment_status", "updated_at"])
+                record_order_event(
+                    order, "fulfillment_status", from_value=old_fulfillment,
+                    to_value=Order.FULFILLMENT_ON_HOLD, source=source,
+                    reason="Une expédition nécessite une vérification avant la poursuite de la commande.",
+                    actor=actor,
+                )
+            from .services import _queue_order_email
+            _queue_order_email(
+                order, f"shipment_exception_{shipment.pk}_{new_status}",
+                f"Vérification nécessaire pour un colis de la commande {str(order.public_id)[:8]}",
+                f"Bonjour {order.full_name},\\n\\nLe suivi d'un colis nécessite une vérification. La commande est mise en attente afin que la situation soit examinée.\\nRéférence de commande : {order.public_id}\\nMy Line Collection",
+            )
+
     if new_status == Shipment.DELIVERED:
         order = shipment.order
-        all_shipments_delivered = not order.shipments.exclude(status=Shipment.DELIVERED).exists()
+        all_shipments_delivered = not order.shipments.exclude(
+            status__in=[Shipment.DELIVERED, Shipment.LOST, Shipment.RETURNED]
+        ).exists()
         all_units_delivered = all_order_quantities_covered(order, {Shipment.DELIVERED})
         if all_shipments_delivered and all_units_delivered:
             old = order.fulfillment_status
