@@ -67,21 +67,26 @@ Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale 
 - Téléversement local d'images via `ImageField`, avec une organisation automatique des fichiers.
 - Compatibilité conservée avec certaines URL externes de médias.
 - Checkout serveur avec création idempotente de commande, réservation du stock, codes promotionnels persistants et confirmation Stripe par webhook signé.
-- Dashboard privé de commandes : recherche, filtres par état de paiement et de préparation, détail client/produits/montants, historique des tentatives de paiement, transporteur, numéro de suivi et note interne.
+- Dashboard privé de commandes : recherche, filtres, détail client/produits/montants, tentatives de paiement, suivi logistique et journal d’audit.\n- Cycle logistique étendu : expéditions multiples par commande, affectation des quantités aux colis, transitions de suivi distinctes et historique des événements.\n- Suivi client via lien signé à durée limitée, sans exposition d’une commande par simple connaissance de son identifiant.\n- Demandes de retour partielles, décisions administratives, dossiers d’incident et historique rattaché à la commande.\n- Demandes de remboursement Stripe liées au paiement d’origine, clé d’idempotence, contrôles du montant remboursable et traitement des événements de remboursement.\n- Notifications transactionnelles persistées pour les principaux événements de paiement, expédition et retour, avec état, nombre de tentatives et relance administrative.
 - États logistiques distincts du paiement : à préparer, en préparation, expédiée, livrée et en attente logistique.
-- Migrations checkout dédiées aux informations de suivi logistique et au schéma des codes promotionnels.
+- Migrations checkout dédiées au suivi logistique, aux codes promotionnels et aux entités de cycle de vie (expéditions, retours, remboursements, notifications et audit).
 
-### Fonctionnalités qui ne doivent pas être considérées comme un système métier terminé
+### Limites restantes avant l'ouverture commerciale
 
-Les éléments suivants nécessitent encore une implémentation dédiée ou une recette opérationnelle avant l'ouverture commerciale :
+Les fondations du cycle de vie sont présentes, mais elles ne suffisent pas à déclarer le système complet ou prêt pour la production. Les points suivants nécessitent encore une recette et/ou une implémentation :
 
-- remboursement Stripe et gestion complète des retours ;
-- notifications client transactionnelles (confirmation, expédition, livraison) ;
-- automatisation de l'expédition et intégration transporteur ;
+- aucune API transporteur n'est intégrée : la création de colis et les événements de suivi sont saisis manuellement ;
+- aucun worker en arrière-plan n'est configuré : les notifications sont persistées et peuvent être relancées depuis le dashboard, mais la reprise automatique planifiée reste à mettre en place selon l'hébergement ;
+- le contrôle de stock lors de la réception/inspection d'un retour et la remise en stock explicite doivent encore être reliés à la logique de stock du catalogue ;
+- les demandes de retour sont disponibles depuis le lien client signé, mais les règles légales/commerciales, les justificatifs et les délais doivent faire l'objet d'une validation métier et juridique ;
+- l'intégration Stripe des remboursements et de leurs webhooks doit être validée avec un compte Stripe de test configuré ; aucune opération réelle n'a été exécutée dans le cadre de cette modification ;
+- les modèles d'e-mail sont fonctionnels mais restent simples et doivent être alignés sur le design e-mail de la marque ;
 - calcul et affichage des taxes selon les obligations applicables ;
-- authentification et espace client complets ;
+- espace client authentifié complet et historique de commandes intégré au compte ;
 - traitement réel des abonnements newsletter ;
 - collecte et vérification des avis par de vrais clients.
+
+Ne considère pas la création d'un colis comme une preuve d'expédition : seule une transition enregistrée après prise en charge du transporteur met à jour l'état logistique. De même, un remboursement n'est confirmé que si Stripe fournit un état de succès.
 
 **Règle essentielle :** le navigateur est contrôlé par l'utilisateur. Les prix, quantités, remises et totaux envoyés par JavaScript ne sont jamais fiables. Le serveur recharge les offres et variantes, recalcule les montants, vérifie et réserve le stock ; la confirmation du paiement dépend du webhook Stripe signé. Les changements logistiques ne peuvent être enregistrés depuis le dashboard que pour une commande dont le paiement est confirmé.
 
