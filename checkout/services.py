@@ -291,14 +291,18 @@ def process_stripe_event(event):
                         raise RetryableWebhookError(f"Unknown local refund for Stripe refund {obj.get('id', '')}")
                     return "ignored"
             if obj.get("currency") and obj.get("currency").lower() != refund.currency.lower():
-                refund.status = Refund.FAILED
-                refund.failure_reason = "La devise du remboursement Stripe ne correspond pas à la demande locale."
-                refund.save(update_fields=["status", "failure_reason"])
+                if refund.status != Refund.SUCCEEDED:
+                    refund.status = Refund.FAILED
+                    refund.failure_reason = "La devise du remboursement Stripe ne correspond pas à la demande locale."
+                    refund.save(update_fields=["status", "failure_reason"])
+                logger.error("Stripe refund currency mismatch for local refund %s", refund.pk)
                 return "mismatch"
             if obj.get("amount") is not None and int(obj["amount"]) != int(refund.amount * 100):
-                refund.status = Refund.FAILED
-                refund.failure_reason = "Le montant du remboursement Stripe ne correspond pas à la demande locale."
-                refund.save(update_fields=["status", "failure_reason"])
+                if refund.status != Refund.SUCCEEDED:
+                    refund.status = Refund.FAILED
+                    refund.failure_reason = "Le montant du remboursement Stripe ne correspond pas à la demande locale."
+                    refund.save(update_fields=["status", "failure_reason"])
+                logger.error("Stripe refund amount mismatch for local refund %s", refund.pk)
                 return "mismatch"
             previous_status = refund.status
             if previous_status != Refund.SUCCEEDED:
