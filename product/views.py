@@ -236,7 +236,6 @@ def detail(request, slug):
         "@type": "Product",
         "name": context_product["name"],
         "description": context_product["seo_description"],
-        "sku": str(product.pk),
         "brand": {"@type": "Brand", "name": "My Line Collection"},
         "category": context_product["category"],
         "url": request.build_absolute_uri(reverse("product:detail", kwargs={"slug": product.slug})),
