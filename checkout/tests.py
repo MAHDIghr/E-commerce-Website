@@ -133,6 +133,7 @@ class CheckoutIntegrationTests(TestCase):
         order.refresh_from_db()
         payment.refresh_from_db()
         self.assertEqual(order.status, Order.PAID)
+        self.assertEqual(order.commercial_status, Order.COMMERCIAL_CONFIRMED)
         self.assertFalse(order.stock_reserved)
         self.assertTrue(order.stock_committed)
         self.assertEqual(payment.status, PaymentAttempt.SUCCEEDED)
