@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | My Line Collection{% endblock %}
+{% block meta_description %}{{ page.description }}{% endblock %}
+{% block body_class %}page-information{% endblock %}
+{% block extra_css %}
+<style>
+.information-page{max-width:860px;margin:clamp(2rem,6vw,5rem) auto;padding:0 1rem 4rem;color:#292721}
+.information-page__panel{border:1px solid #e9e4dc;border-radius:18px;background:#fff;padding:clamp(1.25rem,4vw,2.5rem)}
+.information-page h1{font-size:clamp(2rem,5vw,3.25rem);line-height:1.12;margin:.5rem 0 1rem}
+.information-page h2{font-size:1.2rem;margin:2rem 0 .5rem}
+.information-page p{line-height:1.75;color:#625d56}
+.information-page__notice{padding:1rem;border:1px solid #d9a441;background:#fff8e8;border-radius:10px}
+.information-page__back{display:inline-block;margin-top:1.5rem}
+</style>
+{% endblock %}
+{% block content %}
+<main class="information-page">
+  <article class="information-page__panel">
+    <p class="checkout-eyebrow">MY LINE COLLECTION</p>
+    <h1>{{ page.title }}</h1>
+    {% if page.draft_notice %}<p class="information-page__notice" role="status"><strong>Page à finaliser.</strong> Les informations signalées comme « À compléter » ne sont pas encore renseignées. Cette page ne doit pas être considérée comme un document juridique final.</p>{% endif %}
+    <p>{{ page.intro }}</p>
+    {% for section in page.sections %}
+      <section aria-labelledby="information-section-{{ forloop.counter }}">
+        <h2 id="information-section-{{ forloop.counter }}">{{ section.title }}</h2>
+        {% for paragraph in section.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+      </section>
+    {% endfor %}
+    <a class="information-page__back" href="{% url 'home:home' %}">Retour à l’accueil</a>
+  </article>
+</main>
+{% endblock %}
