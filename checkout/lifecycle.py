@@ -4,6 +4,8 @@ Les appels externes Stripe/e-mail sont séparés des transactions de base de don
 Les transporteurs restent manuels tant qu'aucune intégration réelle n'est configurée.
 """
 import logging
+import os
+import uuid
 from decimal import Decimal
 from urllib.parse import urlparse
 
@@ -246,7 +248,7 @@ def decide_return(return_id, *, new_status, actor, note=""):
     return request
 
 
-def request_refund(order_id, *, amount, reason, actor=None, return_request=None):
+def request_refund(order_id, *, amount, reason, actor=None, return_request=None, idempotency_key=None):
     """Demande un remboursement Stripe idempotent; jamais de succès local sans preuve Stripe."""
     try:
         amount = Decimal(str(amount)).quantize(Decimal("0.01"))
@@ -256,8 +258,18 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None)
         raise LifecycleProblem("Le montant du remboursement doit être positif.")
     if not reason or not reason.strip():
         raise LifecycleProblem("Le motif du remboursement est obligatoire.")
+    try:
+        request_key = uuid.UUID(str(idempotency_key)) if idempotency_key else None
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise LifecycleProblem("Clé d'idempotence invalide.") from exc
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
+        if request_key:
+            existing_request = Refund.objects.select_for_update().filter(idempotency_key=request_key).first()
+            if existing_request:
+                if existing_request.order_id != order.pk or existing_request.amount != amount:
+                    raise LifecycleProblem("Cette clé d'idempotence est déjà utilisée pour une autre opération.")
+                return existing_request
         if order.status != Order.PAID or not order.stripe_payment_intent_id:
             raise LifecycleProblem("Aucun paiement Stripe confirmé n'est disponible pour cette commande.")
         existing = Refund.objects.filter(order=order, status__in=[Refund.PENDING, Refund.PROCESSING, Refund.SUCCEEDED]).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
@@ -267,16 +279,22 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None)
             order=order, return_request=return_request, amount=amount,
             currency=order.currency, reason=reason.strip(), initiated_by=actor,
             external_payment_reference=order.stripe_payment_intent_id,
-            status=Refund.PROCESSING,
+            idempotency_key=request_key or uuid.uuid4(), status=Refund.PROCESSING,
         )
         record_order_event(order, "refund_requested", source="admin", actor=actor,
                            reason=reason, metadata={"refund_id": refund.pk, "amount": str(amount)})
     secret = getattr(settings, "STRIPE_SECRET_KEY", "") or __import__("os").environ.get("STRIPE_SECRET_KEY", "")
-    if not secret:
+    live_mode = os.environ.get("STRIPE_LIVE_MODE", "False").strip().lower() in {"1", "true", "yes", "on"}
+    if not secret or (live_mode and not secret.startswith("sk_live_")) or (not live_mode and not secret.startswith("sk_test_")):
         refund.status = Refund.FAILED
-        refund.failure_reason = "STRIPE_SECRET_KEY n'est pas configurée."
+        refund.failure_reason = "Configuration Stripe absente ou incohérente avec STRIPE_LIVE_MODE."
         refund.save(update_fields=["status", "failure_reason"])
-        raise LifecycleProblem("Stripe n'est pas configuré. Aucun remboursement n'a été envoyé.")
+        raise LifecycleProblem("La configuration Stripe est absente ou incohérente. Aucun remboursement n'a été envoyé.")
+    if live_mode and settings.DEBUG:
+        refund.status = Refund.FAILED
+        refund.failure_reason = "Les remboursements en mode live sont interdits lorsque DEBUG est actif."
+        refund.save(update_fields=["status", "failure_reason"])
+        raise LifecycleProblem("Le mode Stripe live est interdit avec DEBUG actif.")
     try:
         stripe.api_key = secret
         result = stripe.Refund.create(
