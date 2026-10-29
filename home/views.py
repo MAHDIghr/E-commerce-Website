@@ -215,26 +215,26 @@ def newsletter_subscribe(request):
     attempts = _increment_rate_limit(rate_key, 900)
     if attempts > 5:
         request.session["newsletter_error"] = "Trop de tentatives. Réessayez dans quelques minutes."
-        return redirect("home:home")
+        return redirect(f"{reverse('home:home')}#newsletter")
 
     # Champ piège pour limiter les inscriptions automatisées sans révéler le contrôle.
     if request.POST.get("website", "").strip():
         request.session["newsletter_notice"] = "Si une confirmation est nécessaire, un e-mail sera envoyé."
-        return redirect("home:home")
+        return redirect(f"{reverse('home:home')}#newsletter")
 
     email = request.POST.get("email", "").strip().lower()
     if len(email) > 254:
         request.session["newsletter_error"] = "Saisissez une adresse e-mail valide."
-        return redirect("home:home")
+        return redirect(f"{reverse('home:home')}#newsletter")
     try:
         validate_email(email)
     except ValidationError:
         request.session["newsletter_error"] = "Saisissez une adresse e-mail valide."
-        return redirect("home:home")
+        return redirect(f"{reverse('home:home')}#newsletter")
 
     if request.POST.get("consent") != "yes":
         request.session["newsletter_error"] = "Votre consentement est nécessaire pour recevoir la newsletter."
-        return redirect("home:home")
+        return redirect(f"{reverse('home:home')}#newsletter")
 
     token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -298,7 +298,7 @@ def newsletter_subscribe(request):
         "Si cette adresse nécessite une confirmation, un e-mail vous sera envoyé. "
         "Vérifiez votre boîte de réception et vos courriers indésirables."
     )
-    return redirect("home:home")
+    return redirect(f"{reverse('home:home')}#newsletter")
 
 
 @require_GET
