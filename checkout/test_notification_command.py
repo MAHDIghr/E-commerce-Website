@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -55,7 +56,7 @@ class ProcessOrderNotificationsCommandTests(TestCase):
     def test_recovers_stale_sending_notification(self):
         notification = self.make_notification(status=OrderNotification.SENDING, attempts=1)
         OrderNotification.objects.filter(pk=notification.pk).update(
-            updated_at=timezone.now() - timezone.timedelta(minutes=30)
+            updated_at=timezone.now() - timedelta(minutes=30)
         )
         with patch("checkout.management.commands.process_order_notifications.deliver_notification") as deliver:
             deliver.return_value = notification
