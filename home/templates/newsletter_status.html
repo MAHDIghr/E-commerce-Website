@@ -21,6 +21,12 @@
     <p class="checkout-eyebrow">MY LINE COLLECTION · NEWSLETTER</p>
     <h1 id="newsletter-status-title">{{ title }}</h1>
     <p>{{ message }}</p>
+    {% if confirm_subscription %}
+    <form method="post" action="{% url 'home:newsletter_confirm' confirmation_token %}">
+      {% csrf_token %}
+      <button class="button button-primary" type="submit">Confirmer mon inscription</button>
+    </form>
+    {% endif %}
     {% if confirm_unsubscribe %}
     <form method="post" action="{% url 'home:newsletter_unsubscribe' unsubscribe_token %}">
       {% csrf_token %}
