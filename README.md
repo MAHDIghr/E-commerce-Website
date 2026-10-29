@@ -1,6 +1,6 @@
 # My Line Collection — Site e-commerce Django
 
-> Boutique en ligne de sacs à main et d'accessoires féminins. Cette branche connecte le catalogue à la base de données Django et permet de téléverser les images depuis l'administration. Le checkout, les commandes et les paiements réels restent hors périmètre.
+> Boutique en ligne de sacs à main et d'accessoires féminins. Cette branche connecte le catalogue, le checkout Stripe et un espace privé de suivi des commandes à la base de données Django.
 
 - **Dépôt :** https://github.com/MAHDIghr/E-commerce-Website
 - **Branche documentée :** `developpement-backend`
@@ -46,7 +46,8 @@ La branche `developpement-backend` introduit une source de données persistante 
 - **Médias organisés :** les fichiers envoyés par l'administration sont rangés automatiquement dans des sous-dossiers de `MEDIA_ROOT`.
 - **Prix explicites :** le prix est porté exclusivement par une offre commerciale ; les variantes décrivent la couleur et le stock.
 - **Publication contrôlée :** seuls les produits actifs et associés à une catégorie active sont éligibles à l'affichage public, selon les sélecteurs utilisés.
-- **Pas de fausse promesse métier :** une interface de panier ou de checkout ne signifie pas qu'une commande ou un paiement réel est implémenté.
+- **Commandes traçables :** les états de paiement sont séparés du suivi logistique ; les transitions de préparation sont contrôlées côté serveur.
+- **Paiement fiable :** seul un webhook Stripe vérifié peut confirmer le paiement ; les montants et le stock sont recalculés côté serveur.
 
 Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale présents à des fins de démonstration doivent être vérifiés et remplacés par des données réelles avant toute ouverture commerciale.
 
@@ -65,23 +66,24 @@ Les contenus, avis, prix, promotions, compteurs ou éléments de preuve sociale 
 - Avis stockés dans la base ; seuls les avis approuvés sont récupérés par la vue de fiche produit.
 - Téléversement local d'images via `ImageField`, avec une organisation automatique des fichiers.
 - Compatibilité conservée avec certaines URL externes de médias.
-- Migration de base de données ajoutant les champs d'images téléversées.
+- Checkout serveur avec création idempotente de commande, réservation du stock, codes promotionnels persistants et confirmation Stripe par webhook signé.
+- Dashboard privé de commandes : recherche, filtres par état de paiement et de préparation, détail client/produits/montants, historique des tentatives de paiement, transporteur, numéro de suivi et note interne.
+- États logistiques distincts du paiement : à préparer, en préparation, expédiée, livrée et en attente logistique.
+- Migrations checkout dédiées aux informations de suivi logistique et au schéma des codes promotionnels.
 
 ### Fonctionnalités qui ne doivent pas être considérées comme un système métier terminé
 
-Dans cette branche, les éléments suivants ne sont pas un système e-commerce complet tant qu'une implémentation serveur dédiée n'a pas été développée et vérifiée :
+Les éléments suivants nécessitent encore une implémentation dédiée ou une recette opérationnelle avant l'ouverture commerciale :
 
-- réservation ou décrémentation transactionnelle du stock au moment de la commande ;
-- création et gestion des commandes ;
-- calcul serveur des taxes, frais de livraison, réductions et totaux ;
-- application sécurisée de codes promotionnels ;
-- intégration et confirmation de paiement ;
-- remboursements, annulations et notifications de commande ;
+- remboursement Stripe et gestion complète des retours ;
+- notifications client transactionnelles (confirmation, expédition, livraison) ;
+- automatisation de l'expédition et intégration transporteur ;
+- calcul et affichage des taxes selon les obligations applicables ;
 - authentification et espace client complets ;
 - traitement réel des abonnements newsletter ;
 - collecte et vérification des avis par de vrais clients.
 
-**Règle essentielle :** le navigateur est contrôlé par l'utilisateur. Les prix, quantités, remises et totaux envoyés par JavaScript ne doivent jamais être considérés comme fiables. Lorsqu'un vrai checkout sera développé, le serveur devra recharger les produits et variantes depuis la base, recalculer les montants, vérifier les stocks, créer les commandes et vérifier les notifications du prestataire de paiement.
+**Règle essentielle :** le navigateur est contrôlé par l'utilisateur. Les prix, quantités, remises et totaux envoyés par JavaScript ne sont jamais fiables. Le serveur recharge les offres et variantes, recalcule les montants, vérifie et réserve le stock ; la confirmation du paiement dépend du webhook Stripe signé. Les changements logistiques ne peuvent être enregistrés depuis le dashboard que pour une commande dont le paiement est confirmé.
 
 ## 3. Architecture du dépôt
 
@@ -145,7 +147,8 @@ L'arborescence ci-dessous présente les principaux éléments utiles pour travai
 | `home/` | Page d'accueil et sections éditoriales. |
 | `shop/` | Vue de catalogue et préparation des catégories/produits à afficher. |
 | `product/` | Modèles du catalogue, administration, sélection des produits et fiche produit. |
-| `checkout/` | Interface de checkout de démonstration ; ne pas la confondre avec un système de commande opérationnel. |
+| `checkout/` | Checkout serveur, commandes, codes promotionnels, réservations de stock, tentatives de paiement et webhook Stripe. |
+| `dashboard/order_views.py` | Liste filtrable, fiche détaillée et transitions logistiques réservées aux administrateurs. |
 | `templates/` | Layout partagé et composants communs. |
 | `static/` et `<app>/static/` | Ressources statiques versionnées : CSS, JavaScript, icônes et images intégrées au code. |
 | `media/` | Fichiers téléversés par les utilisateurs autorisés ; ils ne sont pas versionnés dans Git. |
