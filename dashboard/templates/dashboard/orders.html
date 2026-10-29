@@ -16,6 +16,7 @@
 <form class="order-filters" method="get" role="search">
   <label class="order-search"><span>Recherche</span><input type="search" name="q" value="{{ query }}" maxlength="160" placeholder="Nom, e-mail, ville ou UUID exact"></label>
   <label><span>Paiement</span><select name="payment"><option value="">Tous les états</option>{% for value,label in payment_choices %}<option value="{{ value }}" {% if selected_payment == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label><span>État de commande</span><select name="commercial"><option value="">Tous les états</option>{% for value,label in commercial_choices %}<option value="{{ value }}" {% if selected_commercial == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <label><span>Préparation</span><select name="fulfillment"><option value="">Tous les états</option>{% for value,label in fulfillment_choices %}<option value="{{ value }}" {% if selected_fulfillment == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <label><span>Transporteur</span><input type="search" name="carrier" value="{{ carrier }}" maxlength="80" placeholder="Nom du transporteur"></label>
   <label><span>Du</span><input type="date" name="date_from" value="{{ date_from }}"></label>
@@ -40,9 +41,9 @@
   {% empty %}<tr><td colspan="9" class="empty-state">Aucune commande ne correspond à ces filtres.</td></tr>{% endfor %}
   </tbody></table></div>
   {% if page_obj.paginator.num_pages > 1 %}<nav class="order-pagination" aria-label="Pagination des commandes">
-    {% if page_obj.has_previous %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&carrier={{ carrier|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&page={{ page_obj.previous_page_number }}">← Précédent</a>{% endif %}
+    {% if page_obj.has_previous %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&commercial={{ selected_commercial|urlencode }}&carrier={{ carrier|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&page={{ page_obj.previous_page_number }}">← Précédent</a>{% endif %}
     <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&carrier={{ carrier|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&page={{ page_obj.next_page_number }}">Suivant →</a>{% endif %}
+    {% if page_obj.has_next %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&commercial={{ selected_commercial|urlencode }}&carrier={{ carrier|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&page={{ page_obj.next_page_number }}">Suivant →</a>{% endif %}
   </nav>{% endif %}
 </div>
 <p class="helper-note">Le statut de paiement est confirmé uniquement par le webhook Stripe. Une commande non payée ne peut pas passer en préparation ni être expédiée.</p>
