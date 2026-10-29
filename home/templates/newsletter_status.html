@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} | My Line Collection{% endblock %}
+{% block meta_description %}Gestion de votre inscription à la newsletter My Line Collection.{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">{% endblock %}
+{% block body_class %}page-newsletter-status{% endblock %}
+{% block extra_css %}
+<style>
+.newsletter-status{max-width:720px;margin:clamp(2rem,7vw,5rem) auto;padding:0 1rem 4rem;color:#292721}
+.newsletter-status__panel{border:1px solid #e9e4dc;border-radius:18px;background:#fff;padding:clamp(1.25rem,4vw,2.5rem)}
+.newsletter-status h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1.15}
+.newsletter-status p{line-height:1.75;color:#625d56}
+.newsletter-status__actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.5rem}
+.newsletter-honeypot{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
+.newsletter-consent{display:block;font-size:.9rem;line-height:1.5;margin:1rem 0}
+.newsletter-consent input{margin-right:.5rem}
+</style>
+{% endblock %}
+{% block content %}
+<main class="newsletter-status">
+  <section class="newsletter-status__panel" aria-labelledby="newsletter-status-title">
+    <p class="checkout-eyebrow">MY LINE COLLECTION · NEWSLETTER</p>
+    <h1 id="newsletter-status-title">{{ title }}</h1>
+    <p>{{ message }}</p>
+    {% if confirm_unsubscribe %}
+    <form method="post" action="{% url 'home:newsletter_unsubscribe' unsubscribe_token %}">
+      {% csrf_token %}
+      <button class="button button-primary" type="submit">Confirmer ma désinscription</button>
+    </form>
+    {% endif %}
+    <div class="newsletter-status__actions"><a class="button button-outline" href="{% url 'home:home' %}">Retour à l’accueil</a></div>
+  </section>
+</main>
+{% endblock %}
