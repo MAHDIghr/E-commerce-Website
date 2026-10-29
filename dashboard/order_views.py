@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from checkout.models import (Order, OrderLine, PaymentAttempt, OrderEvent, Shipment, ShipmentEvent, ReturnRequest, Refund, OrderIncident, OrderNotification)
 from checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification
+from checkout.services import release_reserved_stock
 from .views import is_dashboard_admin
 
 
@@ -92,7 +93,7 @@ def order_detail(request, pk):
     )
     return render(request, "dashboard/order_detail.html", {
         "order": order,
-        "can_manage_fulfillment": order.status == Order.PAID,
+        "can_manage_fulfillment": order.status == Order.PAID,\n        "can_cancel_order": order.status in {Order.PENDING, Order.AWAITING},
         "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),
         "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),
         "refunds": order.refunds.all(),
@@ -316,4 +317,41 @@ def order_update_incident(request, pk, incident_pk):
         metadata={"incident_id": incident.pk, "category": incident.category},
     )
     messages.success(request, "Incident mis à jour.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_cancel(request, pk):
+    with transaction.atomic():
+        order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
+        if order.status not in {Order.PENDING, Order.AWAITING}:
+            messages.error(request, "Seules les commandes en attente de paiement peuvent être annulées ici. Une commande payée exige un traitement financier séparé.")
+            return redirect("dashboard:order_detail", pk=pk)
+        if order.shipments.filter(status__in=[
+            Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY,
+            Shipment.PICKUP_POINT, Shipment.DELIVERED,
+        ]).exists():
+            messages.error(request, "Une commande déjà prise en charge par le transporteur ne peut pas être annulée via cette action.")
+            return redirect("dashboard:order_detail", pk=pk)
+        previous = order.status
+        if order.stock_reserved:
+            release_reserved_stock(order)
+        order.status = Order.CANCELLED
+        order.save(update_fields=["status", "stock_reserved", "updated_at"])
+        order.payment_attempts.filter(status__in=[
+            PaymentAttempt.CREATED, PaymentAttempt.OPEN, PaymentAttempt.PROCESSING,
+        ]).update(status=PaymentAttempt.FAILED)
+        OrderEvent.objects.create(
+            order=order, event_type="order_cancelled", from_value=previous,
+            to_value=Order.CANCELLED, source="admin", actor=request.user,
+            reason=request.POST.get("reason", "").strip()[:2000],
+        )
+        from checkout.services import _queue_order_email
+        _queue_order_email(
+            order, "order_cancelled",
+            f"Commande {str(order.public_id)[:8]} annulée",
+            f"Bonjour {order.full_name},\n\nVotre commande en attente de paiement a été annulée.\nRéférence : {order.public_id}\n\nMy Line Collection",
+        )
+    messages.success(request, "Commande annulée et réservation de stock libérée si elle était active.")
     return redirect("dashboard:order_detail", pk=pk)
