@@ -301,10 +301,36 @@ def newsletter_subscribe(request):
     return redirect(f"{reverse('home:home')}#newsletter")
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def newsletter_confirm(request, token):
+    """GET affiche une confirmation explicite ; seul le POST active l'inscription."""
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     now = timezone.now()
+
+    if request.method == "GET":
+        valid_token = NewsletterSubscription.objects.filter(
+            confirmation_token_hash=token_hash,
+            confirmation_expires_at__gt=now,
+            is_confirmed=False,
+        ).exists()
+        if not valid_token:
+            response = render(request, "newsletter_status.html", {
+                "title": "Lien de confirmation invalide",
+                "message": "Ce lien est invalide, a déjà été utilisé ou a expiré. Vous pouvez demander une nouvelle confirmation depuis la page d’accueil.",
+                "success": False,
+            }, status=400)
+        else:
+            response = render(request, "newsletter_status.html", {
+                "title": "Confirmer votre inscription",
+                "message": "Pour activer votre inscription, confirmez votre choix ci-dessous. Aucune inscription ne sera activée par la simple ouverture du lien.",
+                "confirm_subscription": True,
+                "confirmation_token": token,
+                "success": True,
+            })
+        response["Cache-Control"] = "no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
+
     with transaction.atomic():
         subscription = NewsletterSubscription.objects.select_for_update().filter(
             confirmation_token_hash=token_hash,
@@ -321,6 +347,7 @@ def newsletter_confirm(request, token):
                 "is_confirmed", "is_active", "confirmed_at",
                 "confirmation_token_hash", "confirmation_expires_at", "updated_at",
             ])
+
     if not subscription:
         response = render(request, "newsletter_status.html", {
             "title": "Lien de confirmation invalide",
@@ -330,6 +357,7 @@ def newsletter_confirm(request, token):
         response["Cache-Control"] = "no-store"
         response["Referrer-Policy"] = "no-referrer"
         return response
+
     response = render(request, "newsletter_status.html", {
         "title": "Inscription confirmée",
         "message": "Votre adresse est confirmée. Vous recevrez les communications de la newsletter conformément à votre consentement.",
