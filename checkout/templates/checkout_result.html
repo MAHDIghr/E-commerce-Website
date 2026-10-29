@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}État de la commande | My Line Collection{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">{% endblock %}
 {% block body_class %}page-checkout page-checkout-result{% endblock %}
 {% block extra_css %}<style>.checkout-result{max-width:760px;margin:5rem auto;padding:2.5rem 1.25rem;text-align:center}.checkout-result__mark{display:grid;place-items:center;width:4rem;height:4rem;margin:0 auto 1.5rem;border-radius:50%;background:#f3eee7;color:#7b6249;font-size:2rem}.checkout-result h1{font-size:clamp(2rem,5vw,3.4rem);margin:.5rem 0 1rem}.checkout-result p{line-height:1.7;color:#665e57}.checkout-result__status{margin:1.5rem 0;padding:1rem;border:1px solid #e7ded4;border-radius:12px}.checkout-result__items{margin:1.5rem 0;text-align:left}.checkout-result__items li{padding:.5rem 0}.checkout-result .button{display:inline-flex;margin-top:1rem}</style>{% endblock %}
 {% block content %}
