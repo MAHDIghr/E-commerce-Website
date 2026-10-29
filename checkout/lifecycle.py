@@ -422,8 +422,10 @@ def queue_notification(*, order=None, event_key, recipient, payload=None, channe
 def deliver_notification(notification_id):
     """Envoi avec réservation atomique pour limiter les doubles envois concurrents.
 
-    L'appel réseau reste hors transaction. Une notification bloquée en « sending »
-    après un arrêt brutal doit être contrôlée avant d'être relancée manuellement.
+    L'appel réseau reste hors transaction. La commande
+    process_order_notifications récupère les états « sending » devenus obsolètes.
+    Une reprise après arrêt brutal peut occasionner un doublon si le prestataire
+    a accepté l'e-mail sans que l'application ait pu enregistrer le résultat.
     """
     with transaction.atomic():
         notification = OrderNotification.objects.select_for_update().get(pk=notification_id)
