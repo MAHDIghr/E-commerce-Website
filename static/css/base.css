@@ -628,6 +628,17 @@ h3 { font-size: 1.05rem; font-weight: 500; }
 }
 .footer-news__form input::placeholder { color: var(--color-ink-muted); }
 .footer-news__form:focus-within { box-shadow: 0 0 0 2px var(--color-gold); }
+.footer-news__signup { margin: .8rem 0 1rem; }
+.footer-news__consent {
+    display: block; margin-top: .65rem; color: rgb(255 255 255 / 78%);
+    font-size: .72rem; line-height: 1.5;
+}
+.footer-news__consent input { margin-right: .35rem; accent-color: var(--color-gold); }
+.footer-news__consent a { color: var(--color-gold); text-decoration: underline; text-underline-offset: 2px; }
+.footer-news__honeypot {
+    position: absolute !important; width: 1px !important; height: 1px !important;
+    overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important;
+}
 .footer-news__btn {
     flex-shrink: 0; min-height: 50px; padding-inline: 1.25rem;
     background-color: var(--color-accent); color: #fff;
