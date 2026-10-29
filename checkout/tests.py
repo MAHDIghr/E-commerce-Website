@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
-from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent
+from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent, Refund, OrderEvent
 from .forms import CheckoutForm
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
@@ -297,3 +297,48 @@ class PromoCodeTests(TestCase):
         self.assertEqual(self.client.session.get("checkout_promo_code"), "TESTPROMO")
         self.assertNotIn("checkout_discount_amount", self.client.session)
 
+
+    def test_refund_webhook_reconciles_early_event_and_never_downgrades_success(self):
+        order = Order.objects.create(
+            checkout_key=uuid.uuid4(), email="client@example.test", full_name="Client Test",
+            address_line1="1 rue Test", postal_code="75001", city="Paris", country="FR",
+            shipping_method="standard", subtotal=Decimal("40.00"), shipping_amount=Decimal("4.90"),
+            total=Decimal("44.90"), status=Order.PAID, stripe_payment_intent_id="pi_refund_test",
+        )
+        refund = Refund.objects.create(
+            order=order, amount=Decimal("10.00"), currency="eur", reason="Test refund",
+            status=Refund.PROCESSING, external_payment_reference="pi_refund_test",
+        )
+        succeeded = {"id": "evt_refund_succeeded", "type": "refund.updated", "data": {"object": {
+            "object": "refund", "id": "re_test_123", "status": "succeeded",
+            "amount": 1000, "currency": "eur", "metadata": {"local_refund_id": str(refund.pk)},
+        }}}
+        self.assertEqual(process_stripe_event(succeeded), "processed")
+        refund.refresh_from_db()
+        self.assertEqual(refund.status, Refund.SUCCEEDED)
+        self.assertEqual(refund.stripe_refund_id, "re_test_123")
+        self.assertTrue(OrderEvent.objects.filter(order=order, event_type="refund_confirmed").exists())
+
+        delayed_pending = {"id": "evt_refund_pending_late", "type": "refund.updated", "data": {"object": {
+            "object": "refund", "id": "re_test_123", "status": "pending",
+            "amount": 1000, "currency": "eur", "metadata": {"local_refund_id": str(refund.pk)},
+        }}}
+        self.assertEqual(process_stripe_event(delayed_pending), "processed")
+        refund.refresh_from_db()
+        self.assertEqual(refund.status, Refund.SUCCEEDED)
+
+    def test_distinct_success_events_do_not_turn_an_already_paid_order_into_review(self):
+        order = Order.objects.create(
+            checkout_key=uuid.uuid4(), email="client@example.test", full_name="Client Test",
+            address_line1="1 rue Test", postal_code="75001", city="Paris", country="FR",
+            shipping_method="standard", subtotal=Decimal("89.90"), shipping_amount=Decimal("4.90"),
+            total=Decimal("94.80"), status=Order.PAID, stock_reserved=False,
+            stripe_session_id="cs_paid_already", stripe_payment_intent_id="pi_paid_already",
+        )
+        event = {"id": "evt_distinct_success", "type": "checkout.session.async_payment_succeeded", "data": {"object": {
+            "object": "checkout.session", "id": "cs_paid_already", "currency": "eur",
+            "amount_total": 9480, "payment_status": "paid", "payment_intent": "pi_paid_already",
+        }}}
+        self.assertEqual(process_stripe_event(event), "already_paid")
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.PAID)
