@@ -15,7 +15,7 @@
 </style>
 {% endblock %}
 {% block content %}
-<main class="information-page">
+<div class="information-page">
   <article class="information-page__panel">
     <p class="checkout-eyebrow">MY LINE COLLECTION</p>
     <h1>{{ page.title }}</h1>
@@ -29,5 +29,5 @@
     {% endfor %}
     <a class="information-page__back" href="{% url 'home:home' %}">Retour à l’accueil</a>
   </article>
-</main>
+</div>
 {% endblock %}
