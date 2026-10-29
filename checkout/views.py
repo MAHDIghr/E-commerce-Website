@@ -187,7 +187,6 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
-@require_GET
 @require_http_methods(["GET", "POST"])
 def order_tracking_lookup(request):
     """Recherche publique par référence de commande, sans compte client."""
