@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Suivi de commande | My Line Collection{% endblock %}
-{% block meta_description %}Consultez le suivi sécurisé de votre commande My Line Collection.{% endblock %}
+{% block meta_description %}Consultez le suivi de votre commande My Line Collection à partir de sa référence.{% endblock %}
 {% block body_class %}page-checkout page-order-tracking{% endblock %}
 {% block extra_css %}
 <meta name="referrer" content="no-referrer">
@@ -27,7 +27,7 @@
 {% block content %}
 <main class="order-tracking">
   <header class="order-tracking__header">
-    <p class="checkout-eyebrow">MY LINE COLLECTION · ESPACE CLIENT</p>
+    <p class="checkout-eyebrow">MY LINE COLLECTION · SUIVI DE COMMANDE</p>
     <h1>Suivi de commande</h1>
     <p class="order-tracking__muted">Référence {{ order.public_id }} · Commandée le {{ order.created_at|date:"d/m/Y à H:i" }}</p>
     <p><span class="tracking-status">{{ order.get_status_display }}</span> <span class="tracking-status">{{ order.get_fulfillment_status_display }}</span></p>
@@ -67,7 +67,6 @@
     <p class="order-tracking__muted">Sélectionnez les articles concernés et décrivez la situation. L'éligibilité sera examinée selon le motif et les règles applicables ; cette demande ne constitue pas une confirmation automatique de remboursement.</p>
     <form method="post" action="{% url 'checkout:return_request' order.public_id %}" class="tracking-form">
       {% csrf_token %}
-      <input type="hidden" name="token" value="{{ tracking_token }}">
       {% for line in order.lines.all %}
       <label>{{ line.product_name }}{% if line.variant_name %} — {{ line.variant_name }}{% endif %} (commandé : {{ line.quantity }})
         <input type="number" name="line_{{ line.pk }}" min="1" max="{{ line.quantity }}" step="1" inputmode="numeric" placeholder="Quantité concernée">
