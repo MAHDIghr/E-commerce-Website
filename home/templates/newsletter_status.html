@@ -16,7 +16,7 @@
 </style>
 {% endblock %}
 {% block content %}
-<main class="newsletter-status">
+<div class="newsletter-status">
   <section class="newsletter-status__panel" aria-labelledby="newsletter-status-title">
     <p class="checkout-eyebrow">MY LINE COLLECTION · NEWSLETTER</p>
     <h1 id="newsletter-status-title">{{ title }}</h1>
@@ -29,5 +29,5 @@
     {% endif %}
     <div class="newsletter-status__actions"><a class="button button-outline" href="{% url 'home:home' %}">Retour à l’accueil</a></div>
   </section>
-</main>
+</div>
 {% endblock %}
