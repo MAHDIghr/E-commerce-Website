@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Mes commandes | My Line Collection{% endblock %}
+{% block extra_css %}<style>
+.customer-orders{max-width:1120px;margin:2rem auto;padding:0 1rem 3rem}.customer-orders h1{font-family:inherit;font-size:clamp(1.7rem,4vw,2.4rem)}.customer-order-list{display:grid;gap:1rem}.customer-order-card{border:1px solid #e8e2dc;border-radius:16px;padding:1.1rem;background:#fff}.customer-order-card header{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}.customer-order-card p{margin:.45rem 0}.customer-order-items{color:#625b55;font-size:.94rem}.customer-order-link{display:inline-flex;margin-top:.7rem;padding:.65rem .9rem;border-radius:8px;background:#29231f;color:#fff;text-decoration:none}.customer-order-empty{padding:2rem;border:1px dashed #d5ccc3;border-radius:12px}
+</style>{% endblock %}
+{% block content %}
+<main class="customer-orders">
+  <p>MY LINE COLLECTION · ESPACE CLIENT</p>
+  <h1>Mes commandes</h1>
+  <p>Retrouvez vos achats, le paiement, les colis et les éventuelles demandes de retour.</p>
+  <section class="customer-order-list" aria-label="Historique de vos commandes">
+    {% for order in orders %}
+      <article class="customer-order-card">
+        <header><strong>Commande {{ order.public_id|truncatechars:18 }}</strong><span>{{ order.created_at|date:"d/m/Y à H:i" }}</span></header>
+        <p><strong>{{ order.total|floatformat:2 }} {{ order.currency|upper }}</strong> · {{ order.get_status_display }} · {{ order.get_fulfillment_status_display }}</p>
+        <p class="customer-order-items">{% for line in order.lines.all %}{{ line.product_name }}{% if line.variant_name %} — {{ line.variant_name }}{% endif %} × {{ line.quantity }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        <a class="customer-order-link" href="{% url 'checkout:customer_order_detail' order.public_id %}">Voir le détail et le suivi</a>
+      </article>
+    {% empty %}
+      <div class="customer-order-empty"><h2>Aucune commande associée à ce compte</h2><p>Les commandes invitées ou passées avec une autre adresse de compte ne figurent pas dans cette liste.</p><a href="{% url 'shop:catalog' %}">Découvrir la boutique</a></div>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}
