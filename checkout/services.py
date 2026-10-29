@@ -374,14 +374,10 @@ def process_stripe_event(event):
                         external_reference=event_id,
                         metadata={"payment_intent": order.stripe_payment_intent_id},
                     )
-                    tracking_token = signing.dumps(
-                        {"public_id": str(order.public_id), "email": order.email},
-                        salt="checkout.order-tracking",
-                    )
                     base_url = os.environ.get("SITE_BASE_URL", "").rstrip("/")
                     tracking_url = (
-                        f"{base_url}{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={tracking_token}"
-                        if base_url else "Ouvrez la page « Suivre ma commande » du site et demandez un lien sécurisé avec votre référence et votre e-mail."
+                        f"{base_url}{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}"
+                        if base_url else "Ouvrez la page « Suivre ma commande » du site et saisissez la référence indiquée ci-dessus."
                     )
                     _queue_order_email(
                         order, "payment_confirmed",
