@@ -189,6 +189,7 @@ def stripe_webhook(request):
 
 
 @require_http_methods(["GET", "POST"])
+@require_http_methods(["GET", "POST"])
 def order_tracking_lookup(request):
     """Envoie un lien signé à l'adresse e-mail de la commande sans révéler son existence."""
     notice = ""
