@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
-from .models import Order, PaymentAttempt, ReturnRequest
+from .models import Order, PaymentAttempt
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
 from .lifecycle import LifecycleProblem, create_return_request
 
