@@ -13,8 +13,8 @@
   <article class="stat-card"><span class="stat-icon">☆</span><p>Avis à modérer</p><strong>{{ pending_reviews_count }}</strong><small>En attente de validation</small></article>
 </section>
 <section class="section-heading"><div><h2>Accès rapides</h2><p class="muted">Les actions les plus fréquentes, regroupées par usage.</p></div></section>
-<section class="quick-grid quick-grid-orders"><a class="quick-card" href="{% url 'dashboard:orders' %}"><span class="quick-icon">▤</span><strong>Commandes clients</strong><p>Consulter les paiements, les adresses, les articles et suivre la préparation jusqu’à la livraison.</p><span class="quick-link">Gérer les commandes ↗</span></a></section>
 <section class="quick-grid">
+  <a class="quick-card" href="{% url 'dashboard:orders' %}"><span class="quick-icon">▤</span><strong>Commandes clients</strong><p>Consulter les paiements, les adresses, les articles et suivre la préparation jusqu’à la livraison.</p><span class="quick-link">Gérer les commandes ↗</span></a>
   <a class="quick-card" href="{% url 'dashboard:products' %}"><span class="quick-icon">◇</span><strong>Produits</strong><p>Créer un produit, gérer ses variantes et ses images.</p><span class="quick-link">Gérer les produits ↗</span></a>
   <a class="quick-card" href="{% url 'dashboard:categories' %}"><span class="quick-icon">▦</span><strong>Catégories</strong><p>Organiser les rayons, les visuels et l’ordre d’affichage.</p><span class="quick-link">Gérer les catégories ↗</span></a>
   <a class="quick-card" href="{% url 'dashboard:offers' %}"><span class="quick-icon">✳</span><strong>Offres commerciales</strong><p>Consulter les offres et ajuster leur composition.</p><span class="quick-link">Gérer les offres ↗</span></a>
