@@ -75,6 +75,7 @@ def order_detail(request, pk):
     )
     return render(request, "dashboard/order_detail.html", {
         "order": order,
+        "can_manage_fulfillment": order.status == Order.PAID,
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
