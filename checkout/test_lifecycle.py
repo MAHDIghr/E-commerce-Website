@@ -1,3 +1,4 @@
+import stripe
 import uuid
 from decimal import Decimal
 from types import SimpleNamespace
@@ -97,6 +98,22 @@ class OrderLifecycleServiceTests(TestCase):
 
     @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
     @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
+    @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
+    @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
+    def test_ambiguous_stripe_refund_failure_remains_processing(self):
+        with patch(
+            "checkout.lifecycle.stripe.Refund.create",
+            side_effect=stripe.error.APIConnectionError("network timeout"),
+        ):
+            with self.assertRaises(LifecycleProblem):
+                request_refund(
+                    self.order.pk, amount="10.00", reason="Retour validé",
+                    actor=self.admin, idempotency_key=uuid.uuid4(),
+                )
+        refund = Refund.objects.get(order=self.order)
+        self.assertEqual(refund.status, Refund.PROCESSING)
+        self.assertIn("incertain", refund.failure_reason.lower())
+
     def test_failed_refund_does_not_reduce_remaining_refundable_balance(self):
         Refund.objects.create(
             order=self.order, amount=Decimal("30.00"), currency="eur",
