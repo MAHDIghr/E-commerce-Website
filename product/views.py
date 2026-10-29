@@ -179,7 +179,7 @@ def detail(request, slug):
     selected = next((item for item in offers if item["featured"]), offers[0])
     for offer_data in offers:
         offer_data["featured"] = offer_data is selected
-    reviews = list(product.reviews.all())
+    reviews = list(product.reviews.filter(is_approved=True))
     reviews_count = len(reviews)
     rating = round(sum(review.rating for review in reviews) / reviews_count, 1) if reviews_count else 0
     distribution = []
