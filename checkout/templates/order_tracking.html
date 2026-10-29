@@ -2,10 +2,9 @@
 {% load static %}
 {% block title %}Suivi de commande | My Line Collection{% endblock %}
 {% block meta_description %}Consultez le suivi de votre commande My Line Collection à partir de sa référence.{% endblock %}
-{% block extra_head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">{% endblock %}
 {% block body_class %}page-checkout page-order-tracking{% endblock %}
 {% block extra_css %}
-<meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="{% static 'css/checkout.css' %}">
 <style>
 .order-tracking{max-width:980px;margin:3rem auto;padding:0 1rem 4rem;color:#292721}
