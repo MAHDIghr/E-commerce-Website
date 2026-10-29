@@ -13,7 +13,12 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_POST
 
 from checkout.models import (Order, OrderLine, PaymentAttempt, OrderEvent, Shipment, ShipmentEvent, ReturnRequest, Refund, OrderIncident, OrderNotification)
-from checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification, restock_unshipped_cancelled_order, COMMERCIAL_TRANSITIONS, transition_order_commercial_status
+from checkout.lifecycle import (
+    LifecycleProblem, create_shipment, transition_shipment, decide_return,
+    request_refund, deliver_notification, restock_unshipped_cancelled_order,
+    COMMERCIAL_TRANSITIONS, transition_order_commercial_status,
+    all_order_quantities_covered, SHIPMENT_HANDED_OVER_STATUSES,
+)
 from checkout.services import release_reserved_stock
 from .views import is_dashboard_admin
 
@@ -156,15 +161,42 @@ def order_update_fulfillment(request, pk):
         if new_status != order.fulfillment_status and new_status not in FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()):
             messages.error(request, "Cette transition logistique n’est pas autorisée.")
             return redirect("dashboard:order_detail", pk=order.pk)
-        if new_status == Order.FULFILLMENT_SHIPPED and not order.shipments.filter(status__in=[Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY, Shipment.PICKUP_POINT, Shipment.DELIVERED]).exists():
-            messages.error(request, "Enregistrez d'abord un colis puis sa prise en charge effective par le transporteur.")
+        if new_status == Order.FULFILLMENT_SHIPPED and not all_order_quantities_covered(
+            order, SHIPMENT_HANDED_OVER_STATUSES
+        ):
+            messages.error(request, "Toutes les quantités commandées doivent être prises en charge avant de marquer la commande expédiée.")
             return redirect("dashboard:order_detail", pk=order.pk)
-        if new_status == Order.FULFILLMENT_DELIVERED and (not order.shipments.exists() or order.shipments.exclude(status=Shipment.DELIVERED).exists()):
-            messages.error(request, "La livraison doit être attestée pour tous les colis avant de clôturer le suivi.")
+        if new_status == Order.FULFILLMENT_DELIVERED and (
+            not order.shipments.exists()
+            or order.shipments.exclude(status=Shipment.DELIVERED).exists()
+            or not all_order_quantities_covered(order, {Shipment.DELIVERED})
+        ):
+            messages.error(request, "Tous les colis et toutes les quantités commandées doivent être attestés livrés.")
             return redirect("dashboard:order_detail", pk=order.pk)
         if len(carrier) > 80 or len(tracking_number) > 120 or len(internal_note) > 4000:
             messages.error(request, "Un des champs dépasse la longueur maximale autorisée.")
             return redirect("dashboard:order_detail", pk=order.pk)
+
+        if new_status == Order.FULFILLMENT_SHIPPED and order.commercial_status != Order.COMMERCIAL_SHIPPED:
+            try:
+                transition_order_commercial_status(
+                    order.pk, Order.COMMERCIAL_SHIPPED, actor=request.user,
+                    reason="Mise à jour logistique après prise en charge de toutes les quantités.",
+                )
+            except LifecycleProblem as exc:
+                messages.error(request, str(exc))
+                return redirect("dashboard:order_detail", pk=order.pk)
+            order.refresh_from_db(fields=["commercial_status"])
+        elif new_status == Order.FULFILLMENT_DELIVERED and order.commercial_status != Order.COMMERCIAL_DELIVERED:
+            try:
+                transition_order_commercial_status(
+                    order.pk, Order.COMMERCIAL_DELIVERED, actor=request.user,
+                    reason="Mise à jour logistique après confirmation de tous les colis.",
+                )
+            except LifecycleProblem as exc:
+                messages.error(request, str(exc))
+                return redirect("dashboard:order_detail", pk=order.pk)
+            order.refresh_from_db(fields=["commercial_status"])
 
         now = timezone.now()
         previous_status = order.fulfillment_status
