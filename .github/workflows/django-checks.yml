@@ -36,5 +36,8 @@ jobs:
       - name: Check Django configuration
         run: python manage.py check --settings=config.settings.development
 
+      - name: Check migration consistency
+        run: python manage.py makemigrations --check --dry-run --settings=config.settings.development
+
       - name: Run test suite
         run: python manage.py test --settings=config.settings.development
