@@ -128,3 +128,50 @@ def information_page(request, page):
     if content is None:
         raise Http404
     return render(request, "info_page.html", {"page": content})
+
+
+def sitemap_xml(request):
+    """Expose uniquement les URL publiques canoniques et les produits publiés."""
+    from xml.sax.saxutils import escape
+    from django.http import HttpResponse
+    from django.urls import reverse
+
+    paths = [
+        reverse("home:home"),
+        reverse("shop:catalog"),
+        reverse("home:delivery"),
+        reverse("home:returns"),
+        reverse("home:faq"),
+        reverse("home:contact"),
+    ]
+    paths.extend(
+        reverse("product:detail", kwargs={"slug": product.slug})
+        for product in published_products().only("slug").order_by("slug")
+    )
+    urls = "".join(
+        f"<url><loc>{escape(request.build_absolute_uri(path))}</loc></url>"
+        for path in paths
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{urls}</urlset>"
+    )
+    return HttpResponse(xml, content_type="application/xml; charset=utf-8")
+
+
+def robots_txt(request):
+    """Robots.txt public ; ces règles ne remplacent jamais le contrôle d'accès."""
+    from django.http import HttpResponse
+
+    sitemap = request.build_absolute_uri("/sitemap.xml")
+    body = (
+        "User-agent: *\\n"
+        "Disallow: /admin/\\n"
+        "Disallow: /gestion/\\n"
+        "Disallow: /boutique/mon-panier/\\n"
+        "Disallow: /boutique/panier/\\n"
+        "Disallow: /boutique/recherche/\\n"
+        f"Sitemap: {sitemap}\\n"
+    )
+    return HttpResponse(body, content_type="text/plain; charset=utf-8")
