@@ -228,7 +228,7 @@ def order_return_request(request, public_id):
     return redirect(f"{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}")
 
 
-@login_required
+@login_required(login_url="checkout:customer_login")
 @require_GET
 def customer_orders(request):
     """Liste privée : une session authentifiée ne voit que ses propres commandes."""
@@ -236,7 +236,7 @@ def customer_orders(request):
     return render(request, "checkout/my_orders.html", {"orders": orders})
 
 
-@login_required
+@login_required(login_url="checkout:customer_login")
 @require_GET
 def customer_order_detail(request, public_id):
     """Détail et suivi accessibles uniquement au propriétaire authentifié."""
@@ -253,7 +253,7 @@ def customer_order_detail(request, public_id):
     })
 
 
-@login_required
+@login_required(login_url="checkout:customer_login")
 @require_POST
 def customer_return_request(request, public_id):
     """Crée une demande de retour sans jamais accepter un order_id fourni comme autorité."""
