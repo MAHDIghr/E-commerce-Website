@@ -34,8 +34,7 @@ class NewsletterSubscriptionAdmin(admin.ModelAdmin):
     list_filter = ("is_confirmed", "is_active", "consent_version")
     search_fields = ("email",)
     readonly_fields = (
-        "email", "consent_at", "consent_version", "confirmation_token_hash",
-        "confirmation_expires_at", "unsubscribe_token", "confirmed_at",
+        "email", "consent_at", "consent_version", "confirmed_at",
         "unsubscribed_at", "created_at", "updated_at",
     )
     ordering = ("-created_at",)
