@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Finaliser ma commande | My Line Collection{% endblock %}
 {% block meta_description %}Vérifiez votre panier et renseignez vos coordonnées de livraison.{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">{% endblock %}
 {% block body_class %}page-checkout{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/checkout.css' %}">{% endblock %}
 {% block content %}
