@@ -5,7 +5,7 @@
    prefersReducedMotion, isTouchDevice, isFinePointer). */
 
 /* ==========================================================================
-   Favoris (visuel uniquement pour le moment)
+   Favoris locaux persistés dans le navigateur
    ========================================================================== */
 
 const HOME_WISHLIST_KEY = "wishlist_v1";
