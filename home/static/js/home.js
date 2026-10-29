@@ -73,20 +73,38 @@ function renderRecentlyViewed() {
 
     grid.replaceChildren();
 
-    recent.filter((product) => product && typeof product.slug === "string" && /^[a-z0-9-]{1,180}$/i.test(product.slug)).forEach((product) => {
+    recent.filter((product) => (
+        product
+        && typeof product.slug === "string"
+        && /^[a-z0-9-]{1,180}$/i.test(product.slug)
+        && typeof product.name === "string"
+        && typeof product.image === "string"
+        && Number.isFinite(Number(product.price))
+        && Number(product.price) >= 0
+    )).forEach((product) => {
+        const slug = product.slug;
+        let imageUrl;
+        try {
+            const parsedImageUrl = new URL(product.image, window.location.origin);
+            if (parsedImageUrl.protocol !== "https:" && parsedImageUrl.origin !== window.location.origin) return;
+            if (parsedImageUrl.protocol !== "https:" && parsedImageUrl.protocol !== "http:") return;
+            imageUrl = parsedImageUrl.href;
+        } catch (_error) {
+            return;
+        }
+
         const article = document.createElement("article");
         article.className = "product-card";
 
         const link = document.createElement("a");
         link.className = "product-image";
-        const slug = typeof product.slug === "string" && /^[a-z0-9-]{1,180}$/i.test(product.slug) ? product.slug : "";
-        if (!slug) return;
         link.href = `/produit/${encodeURIComponent(slug)}/`;
 
         const img = document.createElement("img");
-        img.src = product.image;
-        img.alt = product.name;
+        img.src = imageUrl;
+        img.alt = product.name.slice(0, 240);
         img.loading = "lazy";
+        img.decoding = "async";
 
         link.appendChild(img);
 
@@ -94,11 +112,11 @@ function renderRecentlyViewed() {
         info.className = "product-info";
 
         const name = document.createElement("h3");
-        name.textContent = product.name;
+        name.textContent = product.name.slice(0, 180);
 
         const price = document.createElement("p");
         price.className = "product-price";
-        price.textContent = formatPrice(product.price);
+        price.textContent = formatPrice(Number(product.price));
 
         info.append(name, price);
         article.append(link, info);
