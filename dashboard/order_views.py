@@ -41,12 +41,12 @@ def orders(request):
     date_from, date_to = parse_date(date_from_raw), parse_date(date_to_raw)
     queryset = Order.objects.annotate(line_count=Count("lines")).order_by("-created_at")
     if query:
-        search = (Q(full_name__icontains=query) | Q(email__icontains=query) | Q(city__icontains=query) | Q(tracking_number__icontains=query) | Q(shipping_carrier__icontains=query))
+        search = (Q(full_name__icontains=query) | Q(email__icontains=query) | Q(city__icontains=query) | Q(tracking_number__icontains=query) | Q(shipping_carrier__icontains=query) | Q(shipments__tracking_number__icontains=query) | Q(shipments__carrier__icontains=query))
         try:
             search |= Q(public_id=uuid.UUID(query))
         except (ValueError, TypeError, AttributeError):
             pass
-        queryset = queryset.filter(search)
+        queryset = queryset.filter(search).distinct()
     if payment_status in dict(Order.STATUS_CHOICES):
         queryset = queryset.filter(status=payment_status)
     else:
@@ -57,7 +57,7 @@ def orders(request):
         fulfillment_status = ""
 
     if carrier:
-        queryset = queryset.filter(shipping_carrier__icontains=carrier)
+        queryset = queryset.filter(Q(shipping_carrier__icontains=carrier) | Q(shipments__carrier__icontains=carrier)).distinct()
     if date_from:
         queryset = queryset.filter(created_at__date__gte=date_from)
     if date_to:
