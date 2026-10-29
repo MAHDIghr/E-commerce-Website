@@ -116,13 +116,27 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
     shipment.save(update_fields=["status", "handed_over_at", "delivered_at", "updated_at"])
     ShipmentEvent.objects.create(
         shipment=shipment, status=new_status, source=source,
-        external_event_id=external_event_id, description=reason,
+        external_event_id=external_event_id or None, description=reason,
         occurred_at=occurred_at, payload=payload or {}, created_by=actor,
     )
     record_order_event(shipment.order, "shipment_status", from_value=previous,
                        to_value=new_status, source=source, reason=reason, actor=actor,
                        external_reference=external_event_id,
                        metadata={"shipment_id": str(shipment.public_id)})
+    if new_status in {Shipment.ACCEPTED, Shipment.DELIVERED}:
+        from .services import _queue_order_email
+        if new_status == Shipment.ACCEPTED:
+            _queue_order_email(
+                shipment.order, f"shipment_handed_over_{shipment.pk}",
+                f"Votre commande {str(shipment.order.public_id)[:8]} a été expédiée",
+                f"Bonjour {shipment.order.full_name},\n\nVotre colis a été pris en charge par le transporteur.\nRéférence de commande : {shipment.order.public_id}\nNuméro de suivi : {shipment.tracking_number or 'en cours de saisie'}\n\nMy Line Collection",
+            )
+        else:
+            _queue_order_email(
+                shipment.order, f"shipment_delivered_{shipment.pk}",
+                f"Votre commande {str(shipment.order.public_id)[:8]} a été livrée",
+                f"Bonjour {shipment.order.full_name},\n\nLe suivi indique que votre colis a été livré. Si vous constatez un problème, vous pouvez le signaler via votre lien de suivi sécurisé.\nRéférence de commande : {shipment.order.public_id}\n\nMy Line Collection",
+            )
     if new_status == Shipment.ACCEPTED:
         order = shipment.order
         old = order.fulfillment_status
@@ -186,6 +200,12 @@ def create_return_request(order_id, *, reason_category, reason, lines, customer=
         raise LifecycleProblem("Sélectionnez au moins un article à retourner.")
     record_order_event(order, "return_requested", source="customer" if customer else "admin",
                        actor=customer, metadata={"return_id": str(request.public_id)})
+    from .services import _queue_order_email
+    _queue_order_email(
+        order, f"return_requested_{request.public_id}",
+        f"Demande de retour reçue pour la commande {str(order.public_id)[:8]}",
+        f"Bonjour {order.full_name},\n\nNous avons reçu votre demande de retour. Elle sera examinée séparément de l'état de votre commande.\nRéférence de commande : {order.public_id}\nRéférence de demande : {request.public_id}\n\nMy Line Collection",
+    )
     return request
 
 
