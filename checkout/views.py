@@ -173,7 +173,10 @@ def order_result(request, public_id):
         else:
             request.session.pop("checkout_attempt_key", None)
 
-    return render(request, "checkout_result.html", {"order": order, "cancelled_return": cancelled_return})
+    response = render(request, "checkout_result.html", {"order": order, "cancelled_return": cancelled_return})
+    response["Cache-Control"] = "private, no-store"
+    response["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @csrf_exempt
