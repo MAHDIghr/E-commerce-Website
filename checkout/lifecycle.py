@@ -13,10 +13,10 @@ import stripe
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 
-from .models import (
+from product.models import ProductVariant\n\nfrom .models import (
     Order, OrderEvent, OrderIncident, OrderNotification, Refund, ReturnLine,
     ReturnRequest, Shipment, ShipmentEvent, ShipmentLine,
 )
@@ -395,3 +395,34 @@ def deliver_notification(notification_id):
         status=status, sent_at=sent_at, error_message=error_message, updated_at=timezone.now()
     )
     return OrderNotification.objects.get(pk=notification_id)
+
+
+@transaction.atomic
+def restock_unshipped_cancelled_order(order_id, *, actor=None):
+    """Restores stock only after a fully refunded, paid order is cancelled before handover."""
+    order = Order.objects.select_for_update().get(pk=order_id)
+    if not order.stock_committed:
+        return order
+    if order.shipments.exists():
+        raise LifecycleProblem("Le stock ne peut pas être remis en vente tant qu'une expédition existe.")
+    requirements = order.stock_requirements_snapshot or {}
+    variants = []
+    for variant_id, raw_quantity in requirements.items():
+        try:
+            quantity = int(raw_quantity)
+            variant = ProductVariant.objects.select_for_update().filter(pk=int(variant_id)).first()
+        except (TypeError, ValueError):
+            raise LifecycleProblem("L'instantané de stock de cette commande est invalide.")
+        if quantity < 1 or not variant:
+            raise LifecycleProblem("Une variante de cette commande n'est plus disponible pour la remise en stock.")
+        variants.append((variant, quantity))
+    for variant, quantity in variants:
+        ProductVariant.objects.filter(pk=variant.pk).update(stock_quantity=F("stock_quantity") + quantity)
+    order.stock_committed = False
+    order.save(update_fields=["stock_committed", "updated_at"])
+    record_order_event(
+        order, "stock_restored_after_cancellation", source="admin", actor=actor,
+        reason="Remboursement total confirmé et commande annulée avant expédition.",
+        metadata={"variants": [{"variant_id": variant.pk, "quantity": quantity} for variant, quantity in variants]},
+    )
+    return order
