@@ -4,7 +4,8 @@ from decimal import Decimal
 from django.core import signing
 from django.core.cache import cache
 from django.test import TestCase
-from django.urls import reverse\nfrom unittest.mock import patch
+from django.urls import reverse
+from unittest.mock import patch
 
 from checkout.models import Order, OrderLine, ReturnRequest, OrderNotification
 
