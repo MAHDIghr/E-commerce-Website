@@ -410,10 +410,13 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None,
         amount = Decimal(str(amount)).quantize(Decimal("0.01"))
     except Exception as exc:
         raise LifecycleProblem("Montant de remboursement invalide.") from exc
-    if amount <= 0:
-        raise LifecycleProblem("Le montant du remboursement doit être positif.")
-    if not reason or not reason.strip():
+    if not amount.is_finite() or amount <= 0:
+        raise LifecycleProblem("Le montant du remboursement doit être un nombre fini et positif.")
+    reason = (reason or "").strip()
+    if not reason:
         raise LifecycleProblem("Le motif du remboursement est obligatoire.")
+    if len(reason) > 2000:
+        raise LifecycleProblem("Le motif du remboursement ne peut pas dépasser 2 000 caractères.")
     try:
         request_key = uuid.UUID(str(idempotency_key)) if idempotency_key else None
     except (ValueError, TypeError, AttributeError) as exc:
@@ -435,7 +438,7 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None,
             raise LifecycleProblem("Le montant demandé dépasse le solde remboursable.")
         refund = Refund.objects.create(
             order=order, return_request=return_request, amount=amount,
-            currency=order.currency, reason=reason.strip(), initiated_by=actor,
+            currency=order.currency, reason=reason, initiated_by=actor,
             external_payment_reference=order.stripe_payment_intent_id,
             idempotency_key=request_key or uuid.uuid4(), status=Refund.PROCESSING,
         )
