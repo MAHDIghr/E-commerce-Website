@@ -101,7 +101,9 @@ def order_detail(request, pk):
         "notifications": order.notifications.all()[:30],
         "shipment_choices": Shipment.STATUS_CHOICES,
         "return_choices": ReturnRequest.STATUS_CHOICES,
-        "incident_categories": OrderIncident.CATEGORIES,\n        "incident_status_choices": OrderIncident.STATUS_CHOICES,\n        "refund_request_key": uuid.uuid4(),
+        "incident_categories": OrderIncident.CATEGORIES,
+        "incident_status_choices": OrderIncident.STATUS_CHOICES,
+        "refund_request_key": uuid.uuid4(),
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
@@ -225,13 +227,16 @@ def return_update_status(request, pk, return_pk):
 @require_POST
 def order_create_refund(request, pk):
     order = get_object_or_404(Order, pk=pk)
+    return_request = None
+    return_id = request.POST.get("return_request", "").strip()
+    if return_id:
+        return_request = get_object_or_404(ReturnRequest, pk=return_id, order=order)
     try:
         refund = request_refund(
             order.pk, amount=request.POST.get("amount", ""),
-            reason=request.POST.get("reason", ""), actor=request.user,\n            idempotency_key=request.POST.get("idempotency_key", ""),
-            return_request=ReturnRequest.objects.filter(
-                pk=request.POST.get("return_request", ""), order=order,
-            ).first() if request.POST.get("return_request") else None,
+            reason=request.POST.get("reason", ""), actor=request.user,
+            idempotency_key=request.POST.get("idempotency_key", ""),
+            return_request=return_request,
         )
     except (LifecycleProblem, ValueError) as exc:
         messages.error(request, str(exc))
