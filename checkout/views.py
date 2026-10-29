@@ -6,7 +6,8 @@ from decimal import Decimal
 import stripe
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
-from django.shortcuts import get_object_or_404, redirect, render\nfrom django.core import signing\nfrom django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.core import signing\nfrom django.http import Http404
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -14,7 +15,8 @@ from django.views.decorators.http import require_GET, require_POST
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
 from .models import Order, PaymentAttempt
-from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart\nfrom .lifecycle import LifecycleProblem, create_return_request
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
+from .lifecycle import LifecycleProblem, create_return_request
 
 logger = logging.getLogger(__name__)
 
