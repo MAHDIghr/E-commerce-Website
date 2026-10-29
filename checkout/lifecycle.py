@@ -113,7 +113,9 @@ def transition_order_commercial_status(order_id, new_status, *, actor=None, reas
         )
     if new_status == Order.COMMERCIAL_DELIVERED and (
         not order.shipments.exists()
-        or order.shipments.exclude(status=Shipment.DELIVERED).exists()
+        or order.shipments.exclude(
+            status__in=[Shipment.DELIVERED, Shipment.LOST, Shipment.RETURNED]
+        ).exists()
         or not all_order_quantities_covered(order, {Shipment.DELIVERED})
     ):
         raise LifecycleProblem(
