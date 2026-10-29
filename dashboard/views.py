@@ -10,7 +10,7 @@ from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, Review
 from .forms import CategoryForm, MediaFormSet, OfferFormSet, ProductForm, VariantFormSet
