@@ -110,7 +110,7 @@ def order_detail(request, pk):
         "can_cancel_order": order.status in {Order.PENDING, Order.AWAITING} or can_cancel_paid_order,
         "can_cancel_paid_order": can_cancel_paid_order,
         "commercial_status_choices": Order.COMMERCIAL_STATUS_CHOICES,
-        "allowed_commercial_transitions": COMMERCIAL_TRANSITIONS.get(order.commercial_status, set()),
+        "allowed_commercial_transitions": allowed_commercial_transitions,
         "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),
         "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),
         "refunds": order.refunds.all(),
