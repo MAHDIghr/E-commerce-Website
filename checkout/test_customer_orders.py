@@ -1,23 +1,19 @@
 import uuid
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Order, OrderLine, ReturnRequest
+from .models import Order
 
 
-class CustomerOrderAccessTests(TestCase):
+class PublicOrderTrackingTests(TestCase):
     def setUp(self):
-        user_model = get_user_model()
-        self.owner = user_model.objects.create_user(username="order-owner", password="test-password-123")
-        self.other = user_model.objects.create_user(username="other-customer", password="test-password-123")
         self.order = Order.objects.create(
             checkout_key=uuid.uuid4(),
-            customer=self.owner,
-            email="owner@example.test",
-            full_name="Client Test",
+            customer=None,
+            email="guest@example.test",
+            full_name="Client invité",
             address_line1="1 rue du Test",
             postal_code="75001",
             city="Paris",
@@ -27,66 +23,47 @@ class CustomerOrderAccessTests(TestCase):
             status=Order.PAID,
         )
 
-    def test_customer_order_list_contains_only_the_authenticated_customers_orders(self):
-        self.client.force_login(self.owner)
-        response = self.client.get(reverse("checkout:customer_orders"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, str(self.order.public_id)[:8])
-
-        self.client.force_login(self.other)
-        response = self.client.get(reverse("checkout:customer_orders"))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, str(self.order.public_id)[:8])
-
-    def test_customer_cannot_open_another_customers_order(self):
-        self.client.force_login(self.other)
+    def test_tracking_page_is_accessible_without_customer_login_or_token(self):
         response = self.client.get(
-            reverse("checkout:customer_order_detail", kwargs={"public_id": self.order.public_id})
+            reverse("checkout:tracking", kwargs={"public_id": self.order.public_id})
         )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, str(self.order.public_id))
+        self.assertContains(response, "Suivi de commande")
 
-    def test_guest_order_result_requires_the_checkout_session_capability(self):
-        guest_order = Order.objects.create(
-            checkout_key=uuid.uuid4(),
-            email="guest@example.test",
-            full_name="Client invité",
-            address_line1="2 rue du Test",
-            postal_code="75002",
-            city="Paris",
-            shipping_method="standard",
-            subtotal=Decimal("20.00"),
-            total=Decimal("20.00"),
-        )
-        url = reverse("checkout:result", kwargs={"public_id": guest_order.public_id})
-        self.assertEqual(self.client.get(url).status_code, 404)
-        session = self.client.session
-        session["checkout_attempt_key"] = str(guest_order.checkout_key)
-        session.save()
-        self.assertEqual(self.client.get(url).status_code, 200)
-    def test_customer_can_submit_a_return_for_an_owned_paid_order(self):
-        self.order.fulfillment_status = Order.FULFILLMENT_DELIVERED
-        self.order.save(update_fields=["fulfillment_status"])
-        line = OrderLine.objects.create(
-            order=self.order,
-            offer_id_snapshot=1,
-            product_name="Sac de test",
-            quantity=2,
-            unit_price=Decimal("15.00"),
-            line_total=Decimal("30.00"),
-        )
-        self.client.force_login(self.owner)
+    def test_reference_form_redirects_to_matching_order_tracking(self):
         response = self.client.post(
-            reverse("checkout:customer_return_request", kwargs={"public_id": self.order.public_id}),
-            {
-                "reason_category": "defective",
-                "reason": "Article endommagé",
-                f"line_{line.pk}": "1",
-            },
+            reverse("checkout:tracking_lookup"),
+            {"reference": str(self.order.public_id)},
         )
         self.assertRedirects(
             response,
-            reverse("checkout:customer_order_detail", kwargs={"public_id": self.order.public_id}),
+            reverse("checkout:tracking", kwargs={"public_id": self.order.public_id}),
         )
-        return_request = ReturnRequest.objects.get(order=self.order)
-        self.assertEqual(return_request.customer, self.owner)
-        self.assertEqual(return_request.lines.get(order_line=line).quantity, 1)
+
+    def test_reference_lookup_accepts_optional_hash_prefix(self):
+        response = self.client.post(
+            reverse("checkout:tracking_lookup"),
+            {"reference": f"#{self.order.public_id}"},
+        )
+        self.assertRedirects(
+            response,
+            reverse("checkout:tracking", kwargs={"public_id": self.order.public_id}),
+        )
+
+    def test_unknown_reference_shows_generic_error_without_leaking_order_data(self):
+        response = self.client.post(
+            reverse("checkout:tracking_lookup"),
+            {"reference": str(uuid.uuid4())},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Référence introuvable")
+        self.assertNotContains(response, self.order.email)
+
+    def test_invalid_reference_does_not_raise_an_exception(self):
+        response = self.client.post(
+            reverse("checkout:tracking_lookup"),
+            {"reference": "not-a-valid-reference"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Référence introuvable")
