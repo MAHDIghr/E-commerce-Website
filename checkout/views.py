@@ -6,7 +6,8 @@ from decimal import Decimal
 import stripe
 from django.db import transaction
 from django.core.cache import cache
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.core import signing
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -14,9 +15,9 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
-from .models import Order, PaymentAttempt
+from .models import Order, PaymentAttempt, OrderNotification
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
-from .lifecycle import LifecycleProblem, create_return_request
+from .lifecycle import LifecycleProblem, create_return_request, queue_notification, deliver_notification
 
 logger = logging.getLogger(__name__)
 
@@ -189,50 +190,78 @@ def stripe_webhook(request):
 
 @require_http_methods(["GET", "POST"])
 def order_tracking_lookup(request):
-    """Recherche publique par référence de commande, sans compte client."""
-    error = ""
+    """Envoie un lien signé à l'adresse e-mail de la commande sans révéler son existence."""
+    notice = ""
     if request.method == "POST":
+        remote_addr = request.META.get("REMOTE_ADDR", "unknown")
+        rate_key = "order-tracking-request:" + __import__("hashlib").sha256(remote_addr.encode("utf-8")).hexdigest()
+        attempts = cache.get(rate_key, 0) + 1
+        cache.set(rate_key, attempts, timeout=300)
+        if attempts > 10:
+            return render(request, "order_tracking_lookup.html", {
+                "notice": "Si les informations correspondent à une commande, un lien de suivi sera envoyé par e-mail. Réessayez plus tard si nécessaire.",
+            }, status=200)
         reference = request.POST.get("reference", "").strip().replace("#", "")
+        email = request.POST.get("email", "").strip()[:254]
         try:
             public_id = uuid.UUID(reference)
         except (ValueError, AttributeError, TypeError):
             public_id = None
-
-        if public_id is not None:
-            order = Order.objects.filter(public_id=public_id).only("public_id").first()
-            if order:
-                return redirect("checkout:tracking", public_id=order.public_id)
-
-        # Limite les tentatives de découverte de références inexistantes par IP.
-        # En production, configurez un cache partagé pour plusieurs processus web.
-        import hashlib
-        remote_addr = request.META.get("REMOTE_ADDR", "unknown")
-        key = "order-tracking-fail:" + hashlib.sha256(remote_addr.encode("utf-8")).hexdigest()
-        attempts = cache.get(key, 0) + 1
-        cache.set(key, attempts, timeout=300)
-        if attempts >= 10:
-            return render(request, "order_tracking_lookup.html", {
-                "error": "Trop de tentatives. Réessayez dans quelques minutes.",
-            }, status=429)
-        error = "Référence introuvable. Vérifiez le code indiqué dans votre e-mail de confirmation."
-
-    return render(request, "order_tracking_lookup.html", {"error": error})
+        order = None
+        if public_id is not None and email:
+            order = Order.objects.filter(public_id=public_id, email__iexact=email).first()
+        if order:
+            token = signing.dumps(
+                {"public_id": str(order.public_id), "email": order.email},
+                salt="checkout.order-tracking",
+            )
+            base_url = os.environ.get("SITE_BASE_URL", "").rstrip("/")
+            if not base_url:
+                base_url = request.build_absolute_uri("/").rstrip("/")
+            tracking_url = f"{base_url}{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}"
+            notification, _created = queue_notification(
+                order=order, event_key=f"tracking_link_{uuid.uuid4().hex}",
+                recipient=order.email,
+                payload={
+                    "subject": "Votre lien sécurisé de suivi — My Line Collection",
+                    "message": f"Bonjour {order.full_name},\\n\\nVoici votre lien privé de suivi de commande (valide pendant 90 jours) :\\n{tracking_url}\\n\\nNe partagez pas ce lien : il donne accès aux informations de cette commande.\\n\\nMy Line Collection",
+                },
+            )
+            deliver_notification(notification.pk)
+        notice = "Si les informations correspondent à une commande, un lien de suivi sécurisé sera envoyé à l'adresse e-mail associée."
+    return render(request, "order_tracking_lookup.html", {"notice": notice})
 
 
 @require_GET
 def order_tracking(request, public_id):
-    """Affiche le suivi associé à la référence difficile à deviner de la commande."""
+    """Accès au suivi uniquement par un lien signé à durée limitée."""
+    token = request.GET.get("token", "").strip()
+    if not token:
+        raise Http404
+    try:
+        claims = signing.loads(token, salt="checkout.order-tracking", max_age=90 * 24 * 60 * 60)
+    except signing.BadSignature:
+        raise Http404
+    if claims.get("public_id") != str(public_id) or not claims.get("email"):
+        raise Http404
     order = get_object_or_404(
         Order.objects.prefetch_related("lines", "shipments__events", "return_requests__lines__order_line"),
-        public_id=public_id,
+        public_id=public_id, email__iexact=claims["email"],
     )
-    return render(request, "order_tracking.html", {"order": order})
+    return render(request, "order_tracking.html", {"order": order, "tracking_token": token})
 
 
 @require_POST
 def order_return_request(request, public_id):
-    """Enregistre une demande de retour pour la commande identifiée par sa référence."""
-    order = get_object_or_404(Order, public_id=public_id)
+    """Enregistre une demande de retour uniquement depuis un lien de suivi signé."""
+    token = request.POST.get("token", "").strip()
+    try:
+        claims = signing.loads(token, salt="checkout.order-tracking", max_age=90 * 24 * 60 * 60)
+    except signing.BadSignature:
+        raise Http404
+    if claims.get("public_id") != str(public_id) or not claims.get("email"):
+        raise Http404
+    order = get_object_or_404(Order, public_id=public_id, email__iexact=claims["email"])
     lines = {}
     for line in order.lines.all():
         raw = request.POST.get(f"line_{line.pk}", "").strip()
@@ -249,6 +278,6 @@ def order_return_request(request, public_id):
             "lines", "shipments__events", "return_requests__lines__order_line"
         ).get(pk=order.pk)
         return render(request, "order_tracking.html", {
-            "order": order, "return_error": str(exc),
+            "order": order, "tracking_token": token, "return_error": str(exc),
         }, status=400)
-    return redirect("checkout:tracking", public_id=order.public_id)
+    return redirect(f"{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}")
