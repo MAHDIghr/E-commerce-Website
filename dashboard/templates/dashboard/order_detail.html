@@ -104,7 +104,12 @@
 {% block content %}
 <section class="page-heading order-detail-heading">
   <div><p class="eyebrow">COMMANDE CLIENT</p><h1>Commande #{{ order.public_id|truncatechars:13 }}</h1><p class="muted">Créée le {{ order.created_at|date:"d/m/Y à H:i" }} · Référence complète : {{ order.public_id }}</p></div>
-  <a class="button button-secondary" href="{% url 'dashboard:orders' %}">← Toutes les commandes</a>
+  <div class="order-heading-actions">
+    {% if can_cancel_order %}
+    <details class="lifecycle-create"><summary>Annuler la commande non payée</summary><form method="post" action="{% url 'dashboard:order_cancel' order.pk %}" class="fulfillment-form">{% csrf_token %}<label><span>Motif (facultatif)</span><textarea name="reason" rows="2" maxlength="2000"></textarea></label><button class="button button-secondary" type="submit">Confirmer l'annulation</button><p class="helper-note">La réservation de stock active sera libérée. Une commande payée nécessite un traitement distinct du remboursement.</p></form></details>
+    {% endif %}
+    <a class="button button-secondary" href="{% url 'dashboard:orders' %}">← Toutes les commandes</a>
+  </div>
 </section>
 <section class="order-detail-grid">
   <div class="order-main-column">
