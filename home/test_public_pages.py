@@ -10,6 +10,10 @@ class PublicInformationPagesTests(TestCase):
         self.assertContains(response, "footer-news-email")
         self.assertContains(response, 'name="consent"')
 
+    def test_public_read_pages_reject_post(self):
+        self.assertEqual(self.client.post(reverse("home:home")).status_code, 405)
+        self.assertEqual(self.client.post(reverse("home:faq")).status_code, 405)
+
     def test_help_pages_are_available(self):
         for name in ("delivery", "returns", "faq", "contact"):
             with self.subTest(page=name):
