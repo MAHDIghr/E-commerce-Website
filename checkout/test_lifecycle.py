@@ -82,6 +82,13 @@ class OrderLifecycleServiceTests(TestCase):
         with self.assertRaises(LifecycleProblem):
             create_shipment(self.order.pk, actor=self.admin, line_quantities={self.line.pk: 1})
 
+    def test_refund_rejects_non_finite_amount(self):
+        with self.assertRaises(LifecycleProblem):
+            request_refund(
+                self.order.pk, amount="NaN", reason="Motif valide",
+                actor=self.admin, idempotency_key=uuid.uuid4(),
+            )
+
     @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
     @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
     def test_refund_request_is_idempotent(self):
