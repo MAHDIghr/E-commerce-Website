@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_POST
 
 from checkout.models import (Order, OrderLine, PaymentAttempt, OrderEvent, Shipment, ShipmentEvent, ReturnRequest, Refund, OrderIncident, OrderNotification)
@@ -34,9 +35,13 @@ def orders(request):
     query = " ".join(request.GET.get("q", "").split())[:160]
     payment_status = request.GET.get("payment", "").strip()
     fulfillment_status = request.GET.get("fulfillment", "").strip()
+    carrier = " ".join(request.GET.get("carrier", "").split())[:80]
+    date_from_raw = request.GET.get("date_from", "").strip()
+    date_to_raw = request.GET.get("date_to", "").strip()
+    date_from, date_to = parse_date(date_from_raw), parse_date(date_to_raw)
     queryset = Order.objects.annotate(line_count=Count("lines")).order_by("-created_at")
     if query:
-        search = Q(full_name__icontains=query) | Q(email__icontains=query) | Q(city__icontains=query)
+        search = (Q(full_name__icontains=query) | Q(email__icontains=query) | Q(city__icontains=query) | Q(tracking_number__icontains=query) | Q(shipping_carrier__icontains=query))
         try:
             search |= Q(public_id=uuid.UUID(query))
         except (ValueError, TypeError, AttributeError):
@@ -51,6 +56,13 @@ def orders(request):
     else:
         fulfillment_status = ""
 
+    if carrier:
+        queryset = queryset.filter(shipping_carrier__icontains=carrier)
+    if date_from:
+        queryset = queryset.filter(created_at__date__gte=date_from)
+    if date_to:
+        queryset = queryset.filter(created_at__date__lte=date_to)
+
     paginator = Paginator(queryset, 25)
     page_obj = paginator.get_page(request.GET.get("page"))
     return render(request, "dashboard/orders.html", {
@@ -59,6 +71,9 @@ def orders(request):
         "query": query,
         "selected_payment": payment_status,
         "selected_fulfillment": fulfillment_status,
+        "carrier": carrier,
+        "date_from": date_from_raw if date_from else "",
+        "date_to": date_to_raw if date_to else "",
         "payment_choices": Order.STATUS_CHOICES,
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "total_orders": Order.objects.count(),
