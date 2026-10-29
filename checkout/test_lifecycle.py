@@ -1,5 +1,8 @@
 import uuid
-from decimal import Decimal\nfrom types import SimpleNamespace\nfrom unittest.mock import patch\n
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
