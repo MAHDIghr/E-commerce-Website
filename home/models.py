@@ -1,6 +1,9 @@
-"""Contenus éditoriaux administrables de la page d'accueil."""
+"""Contenus éditoriaux et inscriptions newsletter de la page d'accueil."""
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from product.models import Product
 
@@ -38,10 +41,6 @@ class SignatureSelection(models.Model):
 
     def __str__(self):
         return f"{self.position}. {self.product.name}"
-
-
-import uuid
-from django.utils import timezone
 
 
 class NewsletterSubscription(models.Model):
