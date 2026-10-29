@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#241f1c">
     <meta name="color-scheme" content="light">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    {% block extra_head %}{% endblock %}
 
     <title>{% block title %}My Line Collection — Sacs & Accessoires{% endblock %}</title>
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
