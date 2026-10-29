@@ -57,6 +57,20 @@ class Order(models.Model):
         (PAID, "Payée"), (CANCELLED, "Annulée"), (EXPIRED, "Expirée"),
         (REVIEW, "Paiement à vérifier"),
     ]
+
+    FULFILLMENT_UNFULFILLED = "unfulfilled"
+    FULFILLMENT_PREPARING = "preparing"
+    FULFILLMENT_SHIPPED = "shipped"
+    FULFILLMENT_DELIVERED = "delivered"
+    FULFILLMENT_ON_HOLD = "on_hold"
+    FULFILLMENT_CHOICES = [
+        (FULFILLMENT_UNFULFILLED, "À préparer"),
+        (FULFILLMENT_PREPARING, "En préparation"),
+        (FULFILLMENT_SHIPPED, "Expédiée"),
+        (FULFILLMENT_DELIVERED, "Livrée"),
+        (FULFILLMENT_ON_HOLD, "En attente logistique"),
+    ]
+
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     checkout_key = models.UUIDField(unique=True, editable=False)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="store_orders")
@@ -76,6 +90,15 @@ class Order(models.Model):
     shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=PENDING, db_index=True)
+    fulfillment_status = models.CharField(
+        max_length=20, choices=FULFILLMENT_CHOICES,
+        default=FULFILLMENT_UNFULFILLED, db_index=True,
+    )
+    shipping_carrier = models.CharField(max_length=80, blank=True)
+    tracking_number = models.CharField(max_length=120, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    internal_note = models.TextField(blank=True)
     stock_reserved = models.BooleanField(default=False, db_index=True)
     stock_committed = models.BooleanField(default=False)
     stock_requirements_snapshot = models.JSONField(default=dict, blank=True)
