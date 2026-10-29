@@ -54,7 +54,7 @@ SHIPMENT_HANDED_OVER_STATUSES = {
 }
 
 
-def _all_order_quantities_covered(order, shipment_statuses):
+def all_order_quantities_covered(order, shipment_statuses):
     """Return True only when shipments in the given states cover every ordered unit."""
     ordered_lines = list(order.lines.values_list("pk", "quantity"))
     if not ordered_lines:
