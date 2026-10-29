@@ -1,11 +1,10 @@
 import uuid
-from decimal import Decimal
-
+from decimal import Decimal\nfrom types import SimpleNamespace\nfrom unittest.mock import patch\n
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from checkout.lifecycle import (
-    LifecycleProblem, create_return_request, create_shipment, transition_shipment,
+    LifecycleProblem, create_return_request, create_shipment, transition_shipment, request_refund,
 )
 from checkout.models import Order, OrderLine, ReturnRequest, Shipment
 
@@ -74,3 +73,20 @@ class OrderLifecycleServiceTests(TestCase):
         self.order.save(update_fields=["status"])
         with self.assertRaises(LifecycleProblem):
             create_shipment(self.order.pk, actor=self.admin, line_quantities={self.line.pk: 1})
+
+    @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
+    def test_refund_request_is_idempotent(self):
+        request_key = uuid.uuid4()
+        provider_refund = SimpleNamespace(id="re_test_123", status="succeeded")
+        with patch("checkout.lifecycle.stripe.Refund.create", return_value=provider_refund) as create:
+            first = request_refund(
+                self.order.pk, amount="10.00", reason="Retour validé",
+                actor=self.admin, idempotency_key=request_key,
+            )
+            second = request_refund(
+                self.order.pk, amount="10.00", reason="Retour validé",
+                actor=self.admin, idempotency_key=request_key,
+            )
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(create.call_count, 1)
+        self.assertEqual(first.status, "succeeded")
