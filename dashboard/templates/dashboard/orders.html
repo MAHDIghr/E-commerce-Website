@@ -24,7 +24,7 @@
 </form>
 <div class="table-card">
   <div class="table-card-heading"><div><h2>Historique des commandes</h2><p class="muted">{{ page_obj.paginator.count }} résultat(s) · 25 par page maximum</p></div></div>
-  <div class="table-scroll"><table class="orders-table"><thead><tr><th>Commande</th><th>Client</th><th>Date</th><th>Articles</th><th>Total</th><th>Paiement</th><th>Préparation</th><th></th></tr></thead><tbody>
+  <div class="table-scroll"><table class="orders-table"><thead><tr><th>Commande</th><th>Client</th><th>Date</th><th>Articles</th><th>Total</th><th>Paiement</th><th>Commande</th><th>Logistique</th><th></th></tr></thead><tbody>
   {% for order in orders %}
     <tr>
       <td><a class="order-number" href="{% url 'dashboard:order_detail' order.pk %}">#{{ order.public_id|truncatechars:13 }}</a><small class="cell-sub">{{ order.public_id }}</small></td>
@@ -33,10 +33,11 @@
       <td>{{ order.line_count }}</td>
       <td><strong>{{ order.total|floatformat:2 }} €</strong><small class="cell-sub">{{ order.currency|upper }}</small></td>
       <td><span class="order-status payment-{{ order.status }}">{{ order.get_status_display }}</span></td>
+      <td><span class="order-status">{{ order.get_commercial_status_display }}</span></td>
       <td><span class="order-status fulfillment-{{ order.fulfillment_status }}">{{ order.get_fulfillment_status_display }}</span></td>
       <td><a class="button button-small button-secondary" href="{% url 'dashboard:order_detail' order.pk %}">Détails <span aria-hidden="true">↗</span></a></td>
     </tr>
-  {% empty %}<tr><td colspan="8" class="empty-state">Aucune commande ne correspond à ces filtres.</td></tr>{% endfor %}
+  {% empty %}<tr><td colspan="9" class="empty-state">Aucune commande ne correspond à ces filtres.</td></tr>{% endfor %}
   </tbody></table></div>
   {% if page_obj.paginator.num_pages > 1 %}<nav class="order-pagination" aria-label="Pagination des commandes">
     {% if page_obj.has_previous %}<a class="button button-secondary button-small" href="?q={{ query|urlencode }}&payment={{ selected_payment|urlencode }}&fulfillment={{ selected_fulfillment|urlencode }}&carrier={{ carrier|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&page={{ page_obj.previous_page_number }}">← Précédent</a>{% endif %}
