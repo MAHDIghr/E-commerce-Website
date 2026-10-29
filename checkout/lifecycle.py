@@ -296,7 +296,7 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
             _queue_order_email(
                 order, f"shipment_exception_{shipment.pk}_{new_status}",
                 f"Vérification nécessaire pour un colis de la commande {str(order.public_id)[:8]}",
-                f"Bonjour {order.full_name},\\n\\nLe suivi d'un colis nécessite une vérification. La commande est mise en attente afin que la situation soit examinée.\\nRéférence de commande : {order.public_id}\\nMy Line Collection",
+                f"Bonjour {order.full_name},\n\nLe suivi d'un colis nécessite une vérification. La commande est mise en attente afin que la situation soit examinée.\nRéférence de commande : {order.public_id}\nMy Line Collection",
             )
 
     if new_status == Shipment.DELIVERED:
