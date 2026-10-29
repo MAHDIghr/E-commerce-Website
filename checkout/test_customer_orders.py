@@ -5,7 +5,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Order
+from .models import Order, OrderLine, ReturnRequest
 
 
 class PublicOrderTrackingTests(TestCase):
@@ -73,6 +73,39 @@ class PublicOrderTrackingTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Référence introuvable")
+
+    def test_paid_guest_can_submit_return_request_using_reference_without_login(self):
+        line = OrderLine.objects.create(
+            order=self.order,
+            offer_id_snapshot=1,
+            product_name="Sac test",
+            quantity=1,
+            unit_price=Decimal("30.00"),
+            line_total=Decimal("30.00"),
+        )
+        response = self.client.post(
+            reverse("checkout:return_request", kwargs={"public_id": self.order.public_id}),
+            {
+                f"line_{line.pk}": "1",
+                "reason_category": "defective",
+                "reason": "Produit endommagé",
+                "customer_note": "",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("checkout:tracking", kwargs={"public_id": self.order.public_id}),
+        )
+        self.assertEqual(ReturnRequest.objects.filter(order=self.order).count(), 1)
+
+    def test_unpaid_order_cannot_accept_public_return_request(self):
+        self.order.status = Order.PENDING
+        self.order.save(update_fields=["status"])
+        response = self.client.post(
+            reverse("checkout:return_request", kwargs={"public_id": self.order.public_id}),
+            {"reason_category": "defective", "reason": "Produit endommagé"},
+        )
+        self.assertEqual(response.status_code, 404)
 
     def test_lookup_is_rate_limited(self):
         url = reverse("checkout:tracking_lookup")
