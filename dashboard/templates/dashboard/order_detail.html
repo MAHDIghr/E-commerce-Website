@@ -65,6 +65,7 @@
       {% csrf_token %}
       <input type="hidden" name="idempotency_key" value="{{ refund_request_key }}">
       <label><span>Montant ({{ order.currency|upper }})</span><input type="number" name="amount" min="0.01" max="{{ order.total }}" step="0.01" required></label>
+      <label><span>Dossier de retour lié (facultatif)</span><select name="return_request"><option value="">Aucun dossier associé</option>{% for return_request in return_requests %}<option value="{{ return_request.pk }}">#{{ return_request.public_id|truncatechars:13 }} — {{ return_request.get_status_display }}</option>{% endfor %}</select></label>
       <label><span>Motif obligatoire</span><textarea name="reason" rows="3" maxlength="2000" required></textarea></label>
       <p class="helper-note">Cette action appelle Stripe. Vérifie le paiement d'origine et les montants déjà remboursés avant de confirmer.</p>
       <button class="button button-primary" type="submit">Envoyer la demande de remboursement</button>
