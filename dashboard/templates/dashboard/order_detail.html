@@ -63,6 +63,7 @@
   <details class="lifecycle-create"><summary>Demander un remboursement Stripe</summary>
     <form method="post" action="{% url 'dashboard:order_create_refund' order.pk %}" class="fulfillment-form">
       {% csrf_token %}
+      <input type="hidden" name="idempotency_key" value="{{ refund_request_key }}">
       <label><span>Montant ({{ order.currency|upper }})</span><input type="number" name="amount" min="0.01" max="{{ order.total }}" step="0.01" required></label>
       <label><span>Motif obligatoire</span><textarea name="reason" rows="3" maxlength="2000" required></textarea></label>
       <p class="helper-note">Cette action appelle Stripe. Vérifie le paiement d'origine et les montants déjà remboursés avant de confirmer.</p>
