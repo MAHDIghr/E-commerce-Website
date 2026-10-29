@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Suivre ma commande | My Line Collection{% endblock %}
+{% block meta_description %}Retrouvez le suivi de votre commande My Line Collection avec la référence reçue par e-mail.{% endblock %}
+{% block body_class %}page-checkout page-order-tracking-lookup{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/checkout.css' %}">
+<style>
+.tracking-lookup{max-width:760px;margin:clamp(2rem,7vw,5rem) auto;padding:0 1rem 4rem;color:#292721}.tracking-lookup__card{border:1px solid #e9e4dc;border-radius:18px;padding:clamp(1.25rem,4vw,2.5rem);background:#fff}.tracking-lookup h1{font-size:clamp(1.8rem,5vw,3rem);margin:.4rem 0 1rem}.tracking-lookup p{line-height:1.65;color:#716c64}.tracking-lookup form{display:grid;gap:.8rem;margin-top:1.5rem}.tracking-lookup label{font-weight:600}.tracking-lookup input{width:100%;box-sizing:border-box;border:1px solid #d8d2c8;border-radius:9px;padding:.85rem;font:inherit}.tracking-lookup button{justify-self:start}.tracking-lookup__error{padding:.85rem;border:1px solid #b54735;background:#fff5f3;border-radius:10px;color:#7f241b}.tracking-lookup__hint{font-size:.92rem}
+</style>
+{% endblock %}
+{% block content %}
+<main class="tracking-lookup">
+  <section class="tracking-lookup__card" aria-labelledby="tracking-title">
+    <p class="checkout-eyebrow">MY LINE COLLECTION · SUIVI DE COMMANDE</p>
+    <h1 id="tracking-title">Où est ma commande ?</h1>
+    <p>Saisissez la référence complète indiquée dans l’e-mail de confirmation de commande. Aucun compte client ni mot de passe n’est nécessaire.</p>
+    {% if error %}<p class="tracking-lookup__error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{% url 'checkout:tracking_lookup' %}">
+      {% csrf_token %}
+      <label for="order-reference">Référence de commande</label>
+      <input id="order-reference" name="reference" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ex. : 8b2f…-…-…" maxlength="36" required>
+      <button class="button button-primary" type="submit">Consulter le suivi</button>
+    </form>
+    <p class="tracking-lookup__hint">Vous ne retrouvez plus votre e-mail ? Contactez notre service client en précisant le nom utilisé lors de la commande.</p>
+  </section>
+</main>
+{% endblock %}
