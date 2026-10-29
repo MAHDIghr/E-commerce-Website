@@ -31,7 +31,7 @@ FULFILLMENT_TRANSITIONS = {
     Order.FULFILLMENT_UNFULFILLED: {Order.FULFILLMENT_PREPARING, Order.FULFILLMENT_ON_HOLD},
     Order.FULFILLMENT_PREPARING: {Order.FULFILLMENT_UNFULFILLED, Order.FULFILLMENT_SHIPPED, Order.FULFILLMENT_ON_HOLD},
     Order.FULFILLMENT_ON_HOLD: {Order.FULFILLMENT_UNFULFILLED, Order.FULFILLMENT_PREPARING},
-    Order.FULFILLMENT_SHIPPED: {Order.FULFILLMENT_DELIVERED},
+    Order.FULFILLMENT_SHIPPED: {Order.FULFILLMENT_DELIVERED, Order.FULFILLMENT_ON_HOLD},
     Order.FULFILLMENT_DELIVERED: set(),
 }
 
@@ -168,7 +168,7 @@ def order_update_fulfillment(request, pk):
             return redirect("dashboard:order_detail", pk=order.pk)
         if new_status == Order.FULFILLMENT_DELIVERED and (
             not order.shipments.exists()
-            or order.shipments.exclude(status=Shipment.DELIVERED).exists()
+            or order.shipments.exclude(status__in=[Shipment.DELIVERED, Shipment.LOST, Shipment.RETURNED]).exists()
             or not all_order_quantities_covered(order, {Shipment.DELIVERED})
         ):
             messages.error(request, "Tous les colis et toutes les quantités commandées doivent être attestés livrés.")
