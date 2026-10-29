@@ -8,12 +8,27 @@
    Favoris (visuel uniquement pour le moment)
    ========================================================================== */
 
-document.querySelectorAll(".product-wishlist").forEach((button) => {
+const HOME_WISHLIST_KEY = "wishlist_v1";
+const homeWishlist = new Set(readStorage(HOME_WISHLIST_KEY, []).filter((slug) => typeof slug === "string"));
+
+document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").forEach((button) => {
+    const card = button.closest(".product-card");
+    const slug = card?.dataset.productSlug || "";
+    const validSlug = /^[a-z0-9-]{1,180}$/i.test(slug);
+    button.disabled = !validSlug;
+    button.classList.toggle("is-active", validSlug && homeWishlist.has(slug));
+    button.setAttribute("aria-pressed", String(validSlug && homeWishlist.has(slug)));
+
     button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (!validSlug) return;
 
-        const isActive = button.classList.toggle("is-active");
+        const isActive = !homeWishlist.has(slug);
+        if (isActive) homeWishlist.add(slug);
+        else homeWishlist.delete(slug);
+        writeStorage(HOME_WISHLIST_KEY, [...homeWishlist]);
+        button.classList.toggle("is-active", isActive);
         button.setAttribute("aria-pressed", String(isActive));
 
         if (isActive) {
