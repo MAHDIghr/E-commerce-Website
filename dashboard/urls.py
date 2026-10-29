@@ -4,6 +4,7 @@ from .views import (
     DashboardLoginView, DashboardLogoutView, categories, category_delete, category_edit,
     home, offers, product_delete, product_edit, products,
 )
+from .order_views import orders, order_detail, order_update_fulfillment
 
 app_name = "dashboard"
 
@@ -19,4 +20,7 @@ urlpatterns = [
     path("categories/<int:pk>/modifier/", category_edit, name="category_edit"),
     path("categories/<int:pk>/supprimer/", category_delete, name="category_delete"),
     path("offres/", offers, name="offers"),
+    path("commandes/", orders, name="orders"),
+    path("commandes/<int:pk>/", order_detail, name="order_detail"),
+    path("commandes/<int:pk>/suivi/", order_update_fulfillment, name="order_update_fulfillment"),
 ]
