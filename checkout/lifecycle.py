@@ -143,8 +143,9 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
         order = shipment.order
         old = order.fulfillment_status
         order.fulfillment_status = Order.FULFILLMENT_SHIPPED
+        order.commercial_status = Order.COMMERCIAL_SHIPPED
         order.shipped_at = shipment.handed_over_at
-        order.save(update_fields=["fulfillment_status", "shipped_at", "updated_at"])
+        order.save(update_fields=["fulfillment_status", "commercial_status", "shipped_at", "updated_at"])
         record_order_event(order, "fulfillment_status", from_value=old,
                            to_value=Order.FULFILLMENT_SHIPPED, source=source,
                            reason="Le transporteur a pris en charge un colis.", actor=actor)
@@ -154,8 +155,9 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
             order = shipment.order
             old = order.fulfillment_status
             order.fulfillment_status = Order.FULFILLMENT_DELIVERED
+            order.commercial_status = Order.COMMERCIAL_DELIVERED
             order.delivered_at = shipment.delivered_at
-            order.save(update_fields=["fulfillment_status", "delivered_at", "updated_at"])
+            order.save(update_fields=["fulfillment_status", "commercial_status", "delivered_at", "updated_at"])
             record_order_event(order, "fulfillment_status", from_value=old,
                                to_value=Order.FULFILLMENT_DELIVERED, source=source,
                                reason="Tous les colis sont déclarés livrés.", actor=actor)
