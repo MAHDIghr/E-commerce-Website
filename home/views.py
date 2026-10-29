@@ -183,13 +183,13 @@ def robots_txt(request):
 
     sitemap = request.build_absolute_uri("/sitemap.xml")
     body = (
-        "User-agent: *\\n"
-        "Disallow: /admin/\\n"
-        "Disallow: /gestion/\\n"
-        "Disallow: /boutique/mon-panier/\\n"
-        "Disallow: /boutique/panier/\\n"
-        "Disallow: /boutique/recherche/\\n"
-        f"Sitemap: {sitemap}\\n"
+        "User-agent: *\n"
+        "Disallow: /admin/\n"
+        "Disallow: /gestion/\n"
+        "Disallow: /boutique/mon-panier/\n"
+        "Disallow: /boutique/panier/\n"
+        "Disallow: /boutique/recherche/\n"
+        f"Sitemap: {sitemap}\n"
     )
     return HttpResponse(body, content_type="text/plain; charset=utf-8")
 
