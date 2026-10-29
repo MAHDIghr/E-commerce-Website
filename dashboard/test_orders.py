@@ -91,32 +91,44 @@ class DashboardOrderManagementTests(TestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_UNFULFILLED)
 
-    def test_paid_order_can_be_prepared_shipped_and_delivered(self):
+    def test_paid_order_requires_a_real_shipment_before_shipped_or_delivered(self):
         url = reverse("dashboard:order_update_fulfillment", args=[self.order.pk])
         response = self.client.post(url, {
             "fulfillment_status": Order.FULFILLMENT_PREPARING,
             "shipping_carrier": "Colissimo", "tracking_number": "TEST-123",
             "internal_note": "Emballage contrôlé",
         })
-        self.assertRedirects(response, reverse("dashboard:order_detail", args=[self.order.pk]), fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 302)
         self.order.refresh_from_db()
         self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_PREPARING)
         self.assertEqual(self.order.internal_note, "Emballage contrôlé")
+
         response = self.client.post(url, {
             "fulfillment_status": Order.FULFILLMENT_SHIPPED,
             "shipping_carrier": "Colissimo", "tracking_number": "TEST-123",
         })
-        self.assertEqual(response.status_code, 302)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_SHIPPED)
-        self.assertIsNotNone(self.order.shipped_at)
-        response = self.client.post(url, {
-            "fulfillment_status": Order.FULFILLMENT_DELIVERED,
-            "shipping_carrier": "Colissimo", "tracking_number": "TEST-123",
-        })
+        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_PREPARING)
+
+        line = OrderLine.objects.create(
+            order=self.order, product_name="Cabas camel", offer_id_snapshot=1,
+            variant_name="Camel", quantity=1, unit_price=Decimal("89.90"),
+            line_total=Decimal("89.90"), components_snapshot=[],
+        )
+        response = self.client.post(
+            reverse("dashboard:order_create_shipment", args=[self.order.pk]),
+            {"carrier": "Colissimo", "tracking_number": "TEST-123", f"line_{line.pk}": "1"},
+        )
         self.assertEqual(response.status_code, 302)
+        from checkout.models import Shipment
+        shipment = self.order.shipments.get()
+        status_url = reverse("dashboard:shipment_update_status", args=[self.order.pk, shipment.pk])
+        for status in (Shipment.READY, Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY, Shipment.DELIVERED):
+            response = self.client.post(status_url, {"status": status, "reason": "Événement de test"})
+            self.assertEqual(response.status_code, 302)
         self.order.refresh_from_db()
         self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_DELIVERED)
+        self.assertIsNotNone(self.order.shipped_at)
         self.assertIsNotNone(self.order.delivered_at)
 
     def test_invalid_transition_is_rejected_and_payment_status_is_unchanged(self):
