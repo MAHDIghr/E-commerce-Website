@@ -52,6 +52,17 @@
 </section>
 
 <section class="form-panel lifecycle-panel">
+  <div class="order-panel-heading"><div><h2>Cycle commercial de la commande</h2><p class="muted">Cet état est distinct du paiement et du suivi des colis. Les transitions sensibles sont validées côté serveur et historisées.</p></div><span class="order-status">{{ order.get_commercial_status_display }}</span></div>
+  <form method="post" action="{% url 'dashboard:order_update_commercial_status' order.pk %}" class="lifecycle-action-form">
+    {% csrf_token %}
+    <label><span>Nouvel état commercial</span><select name="commercial_status" required>{% for value,label in commercial_status_choices %}<option value="{{ value }}" {% if order.commercial_status == value %}selected{% endif %} {% if value != order.commercial_status and value not in allowed_commercial_transitions %}disabled{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>Motif / commentaire d'audit</span><textarea name="reason" rows="2" maxlength="2000" placeholder="Motif du changement d'état"></textarea></label>
+    <button class="button button-secondary" type="submit">Enregistrer l'état commercial</button>
+  </form>
+  <p class="helper-note">L'expédition et la livraison exigent des événements de colis vérifiés. L'annulation d'une commande payée exige un remboursement total confirmé.</p>
+</section>
+
+<section class="form-panel lifecycle-panel">
   <div class="order-panel-heading"><div><h2>Expéditions et suivi colis</h2><p class="muted">Une commande peut contenir plusieurs colis. La création d'une étiquette ne signifie pas que le colis a été remis au transporteur.</p></div></div>
   {% for shipment in shipments %}
     <article class="lifecycle-record">
