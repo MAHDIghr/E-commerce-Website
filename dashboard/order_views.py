@@ -350,7 +350,7 @@ def order_cancel(request, pk):
             order.payment_attempts.filter(status__in=[
                 PaymentAttempt.CREATED, PaymentAttempt.OPEN, PaymentAttempt.PROCESSING,
             ]).update(status=PaymentAttempt.FAILED)
-        elif order.status == Order.PAID:
+        elif order.status == Order.PAID and order.commercial_status != Order.COMMERCIAL_CANCELLED:
             confirmed_refunds = order.refunds.filter(status=Refund.SUCCEEDED).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
             if order.shipments.exists() or confirmed_refunds < order.total:
                 messages.error(request, "Pour annuler une commande payée, confirmez d'abord le remboursement total et assurez-vous qu'aucun colis n'a été créé.")
