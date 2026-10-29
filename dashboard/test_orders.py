@@ -31,6 +31,19 @@ class DashboardOrderManagementTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("dashboard:login"), response.url)
 
+    def test_staff_without_superuser_cannot_view_orders(self):
+        self.client.logout()
+        staff = get_user_model().objects.create_user(
+            username="orders-staff", email="orders-staff@example.test",
+            password="StrongTestPassword!2026", is_staff=True,
+        )
+        self.client.force_login(staff)
+        response = self.client.get(reverse("dashboard:orders"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("dashboard:login"), response.url)
+        response = self.client.get(reverse("dashboard:order_detail", args=[self.order.pk]))
+        self.assertEqual(response.status_code, 302)
+
     def test_orders_list_shows_all_payment_states_and_filters(self):
         unpaid = Order.objects.create(
             checkout_key=uuid.uuid4(), email="other@example.test",
