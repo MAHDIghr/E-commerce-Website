@@ -58,6 +58,29 @@ class Order(models.Model):
         (REVIEW, "Paiement à vérifier"),
     ]
 
+    COMMERCIAL_PENDING_PAYMENT = "pending_payment"
+    COMMERCIAL_CONFIRMED = "confirmed"
+    COMMERCIAL_PROCESSING = "processing"
+    COMMERCIAL_PREPARING = "preparing"
+    COMMERCIAL_READY_TO_SHIP = "ready_to_ship"
+    COMMERCIAL_SHIPPED = "shipped"
+    COMMERCIAL_DELIVERED = "delivered"
+    COMMERCIAL_COMPLETED = "completed"
+    COMMERCIAL_CANCELLED = "cancelled"
+    COMMERCIAL_ON_HOLD = "on_hold"
+    COMMERCIAL_STATUS_CHOICES = [
+        (COMMERCIAL_PENDING_PAYMENT, "En attente de paiement"),
+        (COMMERCIAL_CONFIRMED, "Confirmée"),
+        (COMMERCIAL_PROCESSING, "En traitement"),
+        (COMMERCIAL_PREPARING, "En préparation"),
+        (COMMERCIAL_READY_TO_SHIP, "Prête à expédier"),
+        (COMMERCIAL_SHIPPED, "Expédiée"),
+        (COMMERCIAL_DELIVERED, "Livrée"),
+        (COMMERCIAL_COMPLETED, "Terminée"),
+        (COMMERCIAL_CANCELLED, "Annulée"),
+        (COMMERCIAL_ON_HOLD, "Suspendue"),
+    ]
+
     FULFILLMENT_UNFULFILLED = "unfulfilled"
     FULFILLMENT_PREPARING = "preparing"
     FULFILLMENT_SHIPPED = "shipped"
@@ -89,8 +112,7 @@ class Order(models.Model):
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=PENDING, db_index=True)
-    fulfillment_status = models.CharField(
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=PENDING, db_index=True)\n    commercial_status = models.CharField(max_length=24, choices=COMMERCIAL_STATUS_CHOICES, default=COMMERCIAL_PENDING_PAYMENT, db_index=True)\n    fulfillment_status = models.CharField(
         max_length=20, choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_UNFULFILLED, db_index=True,
     )
