@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from checkout.lifecycle import (
     LifecycleProblem, create_return_request, create_shipment, transition_shipment, request_refund, transition_order_commercial_status,
 )
-from checkout.models import Order, OrderLine, ReturnRequest, Shipment
+from checkout.models import Order, OrderLine, ReturnRequest, Shipment, Refund
 
 
 class OrderLifecycleServiceTests(TestCase):
@@ -94,6 +94,22 @@ class OrderLifecycleServiceTests(TestCase):
         self.assertEqual(first.pk, second.pk)
         self.assertEqual(create.call_count, 1)
         self.assertEqual(first.status, "succeeded")
+
+    @patch.dict("os.environ", {"STRIPE_LIVE_MODE": "False"})
+    @override_settings(STRIPE_SECRET_KEY="sk_test_fake", DEBUG=False)
+    def test_failed_refund_does_not_reduce_remaining_refundable_balance(self):
+        Refund.objects.create(
+            order=self.order, amount=Decimal("30.00"), currency="eur",
+            reason="Tentative échouée", status=Refund.FAILED,
+            external_payment_reference=self.order.stripe_payment_intent_id,
+        )
+        provider_refund = SimpleNamespace(id="re_test_after_failure", status="succeeded")
+        with patch("checkout.lifecycle.stripe.Refund.create", return_value=provider_refund):
+            refund = request_refund(
+                self.order.pk, amount="30.00", reason="Nouvelle tentative validée",
+                actor=self.admin, idempotency_key=uuid.uuid4(),
+            )
+        self.assertEqual(refund.status, Refund.SUCCEEDED)
 
     def test_commercial_state_machine_requires_verified_delivery(self):
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_CONFIRMED, actor=self.admin)
