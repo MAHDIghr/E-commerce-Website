@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
 from checkout.lifecycle import (
-    LifecycleProblem, create_return_request, create_shipment, transition_shipment, request_refund,
+    LifecycleProblem, create_return_request, create_shipment, transition_shipment, request_refund, transition_order_commercial_status,
 )
 from checkout.models import Order, OrderLine, ReturnRequest, Shipment
 
@@ -93,3 +93,22 @@ class OrderLifecycleServiceTests(TestCase):
         self.assertEqual(first.pk, second.pk)
         self.assertEqual(create.call_count, 1)
         self.assertEqual(first.status, "succeeded")
+
+    def test_commercial_state_machine_requires_verified_delivery(self):
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_CONFIRMED, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PROCESSING, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PREPARING, actor=self.admin)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_READY_TO_SHIP, actor=self.admin)
+        with self.assertRaises(LifecycleProblem):
+            transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_SHIPPED, actor=self.admin)
+
+        shipment = create_shipment(
+            self.order.pk, actor=self.admin, line_quantities={self.line.pk: 1},
+        )
+        for status in (Shipment.READY, Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.DELIVERED):
+            transition_shipment(shipment.pk, status, actor=self.admin)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.commercial_status, Order.COMMERCIAL_DELIVERED)
+        transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_COMPLETED, actor=self.admin)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.commercial_status, Order.COMMERCIAL_COMPLETED)
