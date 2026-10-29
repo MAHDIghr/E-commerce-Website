@@ -7,7 +7,7 @@ from .views import (
 from .order_views import (
     orders, order_detail, order_update_fulfillment, order_create_shipment,
     shipment_update_status, return_update_status, order_create_refund,
-    order_create_incident, order_update_incident, order_retry_notification,
+    order_create_incident, order_update_incident, order_retry_notification, order_cancel,
 )
 
 app_name = "dashboard"
@@ -27,6 +27,7 @@ urlpatterns = [
     path("commandes/", orders, name="orders"),
     path("commandes/<int:pk>/", order_detail, name="order_detail"),
     path("commandes/<int:pk>/suivi/", order_update_fulfillment, name="order_update_fulfillment"),
+    path("commandes/<int:pk>/annuler/", order_cancel, name="order_cancel"),
     path("commandes/<int:pk>/expeditions/ajouter/", order_create_shipment, name="order_create_shipment"),
     path("commandes/<int:pk>/expeditions/<int:shipment_pk>/etat/", shipment_update_status, name="shipment_update_status"),
     path("commandes/<int:pk>/retours/<int:return_pk>/etat/", return_update_status, name="return_update_status"),
