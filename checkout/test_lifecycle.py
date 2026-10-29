@@ -137,6 +137,39 @@ class OrderLifecycleServiceTests(TestCase):
             )
         self.assertEqual(refund.status, Refund.SUCCEEDED)
 
+    def test_lost_shipment_pauses_order_and_allows_replacement(self):
+        for status in (
+            Order.COMMERCIAL_CONFIRMED,
+            Order.COMMERCIAL_PROCESSING,
+            Order.COMMERCIAL_PREPARING,
+            Order.COMMERCIAL_READY_TO_SHIP,
+        ):
+            transition_order_commercial_status(self.order.pk, status, actor=self.admin)
+
+        lost_shipment = create_shipment(
+            self.order.pk, actor=self.admin, line_quantities={self.line.pk: 2},
+        )
+        for status in (Shipment.READY, Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.LOST):
+            transition_shipment(lost_shipment.pk, status, actor=self.admin)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.commercial_status, Order.COMMERCIAL_ON_HOLD)
+        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_ON_HOLD)
+
+        transition_order_commercial_status(
+            self.order.pk, Order.COMMERCIAL_READY_TO_SHIP,
+            actor=self.admin, reason="Réexpédition après perte du premier colis",
+        )
+        replacement = create_shipment(
+            self.order.pk, actor=self.admin, line_quantities={self.line.pk: 2},
+        )
+        for status in (Shipment.READY, Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.DELIVERED):
+            transition_shipment(replacement.pk, status, actor=self.admin)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.commercial_status, Order.COMMERCIAL_DELIVERED)
+        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_DELIVERED)
+
     def test_partial_shipment_cannot_mark_full_order_delivered(self):
         for status in (
             Order.COMMERCIAL_CONFIRMED,
