@@ -239,26 +239,72 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
             )
     if new_status == Shipment.ACCEPTED:
         order = shipment.order
+        if order.status != Order.PAID or order.commercial_status != Order.COMMERCIAL_READY_TO_SHIP:
+            raise LifecycleProblem(
+                "Le colis ne peut être remis au transporteur que pour une commande payée et prête à expédier."
+            )
         old = order.fulfillment_status
-        order.fulfillment_status = Order.FULFILLMENT_SHIPPED
-        order.commercial_status = Order.COMMERCIAL_SHIPPED
-        order.shipped_at = shipment.handed_over_at
-        order.save(update_fields=["fulfillment_status", "commercial_status", "shipped_at", "updated_at"])
-        record_order_event(order, "fulfillment_status", from_value=old,
-                           to_value=Order.FULFILLMENT_SHIPPED, source=source,
-                           reason="Le transporteur a pris en charge un colis.", actor=actor)
+        all_units_handed_over = _all_order_quantities_covered(
+            order, SHIPMENT_HANDED_OVER_STATUSES
+        )
+        order.fulfillment_status = (
+            Order.FULFILLMENT_SHIPPED if all_units_handed_over
+            else Order.FULFILLMENT_PREPARING
+        )
+        order.shipped_at = order.shipped_at or shipment.handed_over_at
+        order.save(update_fields=["fulfillment_status", "shipped_at", "updated_at"])
+        record_order_event(
+            order, "fulfillment_status", from_value=old,
+            to_value=order.fulfillment_status, source=source,
+            reason=(
+                "Toutes les quantités commandées ont été prises en charge."
+                if all_units_handed_over
+                else "Une partie des colis a été prise en charge ; la préparation continue."
+            ), actor=actor,
+        )
+        if all_units_handed_over:
+            transition_order_commercial_status(
+                order.pk, Order.COMMERCIAL_SHIPPED, actor=actor,
+                reason="Toutes les quantités commandées ont été remises au transporteur.",
+            )
+
     if new_status == Shipment.DELIVERED:
-        # Keep order-level fulfillment as a summary; never rewrite payment state.
-        if not shipment.order.shipments.exclude(status=Shipment.DELIVERED).exists():
-            order = shipment.order
+        order = shipment.order
+        all_shipments_delivered = not order.shipments.exclude(status=Shipment.DELIVERED).exists()
+        all_units_delivered = _all_order_quantities_covered(order, {Shipment.DELIVERED})
+        if all_shipments_delivered and all_units_delivered:
             old = order.fulfillment_status
             order.fulfillment_status = Order.FULFILLMENT_DELIVERED
-            order.commercial_status = Order.COMMERCIAL_DELIVERED
             order.delivered_at = shipment.delivered_at
-            order.save(update_fields=["fulfillment_status", "commercial_status", "delivered_at", "updated_at"])
-            record_order_event(order, "fulfillment_status", from_value=old,
-                               to_value=Order.FULFILLMENT_DELIVERED, source=source,
-                               reason="Tous les colis sont déclarés livrés.", actor=actor)
+            order.save(update_fields=["fulfillment_status", "delivered_at", "updated_at"])
+            record_order_event(
+                order, "fulfillment_status", from_value=old,
+                to_value=Order.FULFILLMENT_DELIVERED, source=source,
+                reason="Tous les colis et toutes les quantités commandées sont déclarés livrés.",
+                actor=actor,
+            )
+            transition_order_commercial_status(
+                order.pk, Order.COMMERCIAL_DELIVERED, actor=actor,
+                reason="Tous les colis et toutes les quantités commandées sont déclarés livrés.",
+            )
+        else:
+            old = order.fulfillment_status
+            all_units_handed_over = _all_order_quantities_covered(
+                order, SHIPMENT_HANDED_OVER_STATUSES
+            )
+            summary_status = (
+                Order.FULFILLMENT_SHIPPED if all_units_handed_over
+                else Order.FULFILLMENT_PREPARING
+            )
+            if old != summary_status:
+                order.fulfillment_status = summary_status
+                order.save(update_fields=["fulfillment_status", "updated_at"])
+                record_order_event(
+                    order, "fulfillment_status", from_value=old,
+                    to_value=summary_status, source=source,
+                    reason="Le suivi d'un colis a évolué ; la commande complète n'est pas encore livrée.",
+                    actor=actor,
+                )
     return shipment
 
 
