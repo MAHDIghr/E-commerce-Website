@@ -99,7 +99,7 @@ def order_detail(request, pk):
     )
     return render(request, "dashboard/order_detail.html", {
         "order": order,
-        "can_manage_fulfillment": order.status == Order.PAID,
+        "can_manage_fulfillment": order.status == Order.PAID and order.commercial_status != Order.COMMERCIAL_CANCELLED,
         "can_cancel_order": order.status in {Order.PENDING, Order.AWAITING} or can_cancel_paid_order,
         "can_cancel_paid_order": can_cancel_paid_order,
         "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),
@@ -151,7 +151,7 @@ def order_update_fulfillment(request, pk):
 
         now = timezone.now()
         previous_status = order.fulfillment_status
-        changed_fields = ["fulfillment_status", "shipping_carrier", "tracking_number", "internal_note", "updated_at"]
+        changed_fields = ["fulfillment_status", "commercial_status", "shipping_carrier", "tracking_number", "internal_note", "updated_at"]
         order.fulfillment_status = new_status
         order.shipping_carrier = carrier
         order.tracking_number = tracking_number
