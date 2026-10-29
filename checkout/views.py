@@ -2,6 +2,8 @@
 import logging
 import os
 import uuid
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from decimal import Decimal
 import stripe
 from django.db import transaction
@@ -15,7 +17,8 @@ from django.views.decorators.http import require_GET, require_POST
 
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
-from .models import Order, PaymentAttempt
+from .models import Order, PaymentAttempt, ReturnRequest
+from .lifecycle import create_return_request, LifecycleProblem
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
 from .lifecycle import LifecycleProblem, create_return_request
 
@@ -223,3 +226,55 @@ def order_return_request(request, public_id):
             "order": order, "tracking_token": token, "return_error": str(exc),
         }, status=400)
     return redirect(f"{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}")
+
+
+@login_required
+@require_GET
+def customer_orders(request):
+    """Liste privée : une session authentifiée ne voit que ses propres commandes."""
+    orders = Order.objects.filter(customer=request.user).prefetch_related("lines", "shipments").order_by("-created_at")
+    return render(request, "checkout/my_orders.html", {"orders": orders})
+
+
+@login_required
+@require_GET
+def customer_order_detail(request, public_id):
+    """Détail et suivi accessibles uniquement au propriétaire authentifié."""
+    order = get_object_or_404(
+        Order.objects.filter(customer=request.user).prefetch_related(
+            "lines", "shipments__events", "return_requests__lines__order_line",
+            "refunds", "lifecycle_events",
+        ),
+        public_id=public_id,
+    )
+    return render(request, "checkout/customer_order_detail.html", {
+        "order": order,
+        "return_choices": ReturnRequest.REASONS,
+    })
+
+
+@login_required
+@require_POST
+def customer_return_request(request, public_id):
+    """Crée une demande de retour sans jamais accepter un order_id fourni comme autorité."""
+    order = get_object_or_404(Order.objects.filter(customer=request.user), public_id=public_id)
+    quantities = {}
+    for line in order.lines.all():
+        raw = request.POST.get(f"line_{line.pk}", "").strip()
+        if raw:
+            quantities[line.pk] = raw
+    try:
+        return_request = create_return_request(
+            order.pk,
+            reason_category=request.POST.get("reason_category", "").strip(),
+            reason=request.POST.get("reason", ""),
+            customer_note=request.POST.get("customer_note", "")[:2000],
+            lines=quantities,
+            customer=request.user,
+        )
+    except (LifecycleProblem, ValueError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Votre demande de retour a été enregistrée. Elle sera examinée par notre équipe.")
+        return redirect("checkout:customer_order_detail", public_id=order.public_id)
+    return redirect("checkout:customer_order_detail", public_id=order.public_id)
