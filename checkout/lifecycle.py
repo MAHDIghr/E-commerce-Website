@@ -236,6 +236,13 @@ def decide_return(return_id, *, new_status, actor, note=""):
     record_order_event(request.order, "return_status", from_value=previous,
                        to_value=new_status, source="admin", reason=note, actor=actor,
                        metadata={"return_id": str(request.public_id)})
+    from .services import _queue_order_email
+    if new_status in {ReturnRequest.ACCEPTED, ReturnRequest.REJECTED, ReturnRequest.RESOLVED, ReturnRequest.CLOSED}:
+        _queue_order_email(
+            request.order, f"return_status_{request.public_id}_{new_status}",
+            f"Mise à jour de votre demande de retour {str(request.public_id)[:8]}",
+            f"Bonjour {request.order.full_name},\n\nL'état de votre demande de retour est désormais : {request.get_status_display()}.\nRéférence de commande : {request.order.public_id}\n{note}\n\nMy Line Collection",
+        )
     return request
 
 
