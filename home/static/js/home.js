@@ -9,7 +9,11 @@
    ========================================================================== */
 
 const HOME_WISHLIST_KEY = "wishlist_v1";
-const homeWishlist = new Set(readStorage(HOME_WISHLIST_KEY, []).filter((slug) => typeof slug === "string"));
+const storedHomeWishlist = readStorage(HOME_WISHLIST_KEY, []);
+const homeWishlist = new Set(
+    (Array.isArray(storedHomeWishlist) ? storedHomeWishlist : [])
+        .filter((slug) => typeof slug === "string" && /^[a-z0-9-]{1,180}$/i.test(slug))
+);
 
 document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").forEach((button) => {
     const card = button.closest(".product-card");
