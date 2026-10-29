@@ -145,3 +145,24 @@ class DashboardOrderManagementTests(TestCase):
 
     def test_transition_graph_has_no_direct_unfulfilled_to_delivered(self):
         self.assertNotIn(Order.FULFILLMENT_DELIVERED, FULFILLMENT_TRANSITIONS[Order.FULFILLMENT_UNFULFILLED])
+
+    def test_unpaid_order_can_be_cancelled_and_audited(self):
+        self.order.status = Order.PENDING
+        self.order.save(update_fields=["status"])
+        response = self.client.post(
+            reverse("dashboard:order_cancel", args=[self.order.pk]),
+            {"reason": "Client n'a pas finalisé le paiement"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.CANCELLED)
+        self.assertTrue(self.order.lifecycle_events.filter(event_type="order_cancelled").exists())
+
+    def test_paid_order_cannot_use_unpaid_cancellation_action(self):
+        response = self.client.post(
+            reverse("dashboard:order_cancel", args=[self.order.pk]),
+            {"reason": "Tentative interdite"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.PAID)
