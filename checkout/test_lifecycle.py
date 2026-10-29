@@ -130,6 +130,29 @@ class OrderLifecycleServiceTests(TestCase):
             )
         self.assertEqual(refund.status, Refund.SUCCEEDED)
 
+    def test_partial_shipment_cannot_mark_full_order_delivered(self):
+        for status in (
+            Order.COMMERCIAL_CONFIRMED,
+            Order.COMMERCIAL_PROCESSING,
+            Order.COMMERCIAL_PREPARING,
+            Order.COMMERCIAL_READY_TO_SHIP,
+        ):
+            transition_order_commercial_status(self.order.pk, status, actor=self.admin)
+
+        shipment = create_shipment(
+            self.order.pk, actor=self.admin, line_quantities={self.line.pk: 1},
+        )
+        for status in (Shipment.READY, Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.DELIVERED):
+            transition_shipment(shipment.pk, status, actor=self.admin)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.commercial_status, Order.COMMERCIAL_READY_TO_SHIP)
+        self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_PREPARING)
+        with self.assertRaises(LifecycleProblem):
+            transition_order_commercial_status(
+                self.order.pk, Order.COMMERCIAL_DELIVERED, actor=self.admin
+            )
+
     def test_commercial_state_machine_requires_verified_delivery(self):
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_CONFIRMED, actor=self.admin)
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PROCESSING, actor=self.admin)
