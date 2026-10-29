@@ -76,7 +76,8 @@ class SignedOrderTrackingTests(TestCase):
         self.assertContains(response, "un lien privé de suivi")
         notification = OrderNotification.objects.get(order=self.order, recipient=self.order.email)
         self.assertEqual(notification.status, OrderNotification.SENT)
-        self.assertIn("token=", notification.payload["message"])
+        self.assertIn("token=", send_mail_mock.call_args.kwargs["message"])
+        self.assertEqual(notification.payload, {})
         send_mail_mock.assert_called_once()
 
     @patch("checkout.lifecycle.send_mail", return_value=1)
