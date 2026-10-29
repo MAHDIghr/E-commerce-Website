@@ -111,6 +111,13 @@ class PublicOrderTrackingTests(TestCase):
         )
         self.assertEqual(ReturnRequest.objects.filter(order=self.order).count(), 1)
 
+    def test_public_return_request_endpoint_is_rate_limited(self):
+        url = reverse("checkout:return_request", kwargs={"public_id": self.order.public_id})
+        payload = {"reason_category": "defective", "reason": "Produit endommagé"}
+        for _ in range(5):
+            self.assertEqual(self.client.post(url, payload).status_code, 400)
+        self.assertEqual(self.client.post(url, payload).status_code, 429)
+
     def test_unpaid_order_cannot_accept_public_return_request(self):
         self.order.status = Order.PENDING
         self.order.save(update_fields=["status"])
