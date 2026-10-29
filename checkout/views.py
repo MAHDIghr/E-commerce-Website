@@ -7,7 +7,8 @@ import stripe
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
-from django.core import signing\nfrom django.http import Http404
+from django.core import signing
+from django.http import Http404
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
