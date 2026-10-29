@@ -360,7 +360,8 @@ def deliver_notification(notification_id):
         if notification.attempts >= 5:
             notification.status = OrderNotification.FAILED
             notification.error_message = "Nombre maximal de tentatives atteint."
-            notification.save(update_fields=["status", "error_message", "updated_at"])
+            notification.payload = {}
+            notification.save(update_fields=["status", "error_message", "payload", "updated_at"])
             return notification
         notification.attempts += 1
         notification.status = OrderNotification.SENDING
