@@ -6,6 +6,7 @@ from urllib.parse import urljoin, urlparse
 
 import stripe
 from django.conf import settings
+from django.core import signing
 from django.db import transaction
 from django.db.models import F
 from django.urls import reverse
@@ -340,10 +341,19 @@ def process_stripe_event(event):
                         external_reference=event_id,
                         metadata={"payment_intent": order.stripe_payment_intent_id},
                     )
+                    tracking_token = signing.dumps(
+                        {"public_id": str(order.public_id), "email": order.email},
+                        salt="checkout.order-tracking",
+                    )
+                    base_url = os.environ.get("SITE_BASE_URL", "").rstrip("/")
+                    tracking_url = (
+                        f"{base_url}{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={tracking_token}"
+                        if base_url else "Contactez notre support pour obtenir votre lien de suivi sécurisé."
+                    )
                     _queue_order_email(
                         order, "payment_confirmed",
                         f"Confirmation de commande {str(order.public_id)[:8]}",
-                        f"Bonjour {order.full_name},\n\nNous avons confirmé le paiement de votre commande.\nRéférence : {order.public_id}\nMontant : {order.total} {order.currency.upper()}\n\nMerci pour votre confiance,\nMy Line Collection",
+                        f"Bonjour {order.full_name},\n\nNous avons confirmé le paiement de votre commande.\nRéférence : {order.public_id}\nMontant : {order.total} {order.currency.upper()}\n\nConsulter le suivi sécurisé : {tracking_url}\n\nMerci pour votre confiance,\nMy Line Collection",
                     )
                 else:
                     order.status = Order.REVIEW
