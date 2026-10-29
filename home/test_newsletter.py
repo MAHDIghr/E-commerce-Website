@@ -1,6 +1,7 @@
 import re
 
 from django.core import mail
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -9,6 +10,9 @@ from .models import NewsletterSubscription
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class NewsletterDoubleOptInTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def subscribe(self, email="client@example.com", consent="yes"):
         return self.client.post(reverse("home:newsletter_subscribe"), {"email": email, "consent": consent})
 
