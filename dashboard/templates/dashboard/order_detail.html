@@ -19,7 +19,7 @@
     </section>
     <section class="form-panel">
       <div class="order-panel-heading"><div><h2>Suivi de préparation</h2><p class="muted">L’état logistique est indépendant du statut de paiement.</p></div><span class="order-status fulfillment-{{ order.fulfillment_status }}">{{ order.get_fulfillment_status_display }}</span></div>
-      {% if order.status == order.PAID %}
+      {% if can_manage_fulfillment %}
       <form method="post" action="{% url 'dashboard:order_update_fulfillment' order.pk %}" class="fulfillment-form">
         {% csrf_token %}
         <label><span>État logistique</span><select name="fulfillment_status" required>{% for value,label in fulfillment_choices %}<option value="{{ value }}" {% if order.fulfillment_status == value %}selected{% endif %} {% if value != order.fulfillment_status and value not in allowed_transitions %}disabled{% endif %}>{{ label }}</option>{% endfor %}</select></label>
