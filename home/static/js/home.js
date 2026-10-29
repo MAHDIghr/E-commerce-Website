@@ -56,15 +56,17 @@ function renderRecentlyViewed() {
         return;
     }
 
-    grid.innerHTML = "";
+    grid.replaceChildren();
 
-    recent.forEach((product) => {
+    recent.filter((product) => product && typeof product.slug === "string" && /^[a-z0-9-]{1,180}$/i.test(product.slug)).forEach((product) => {
         const article = document.createElement("article");
         article.className = "product-card";
 
         const link = document.createElement("a");
         link.className = "product-image";
-        link.href = "#";
+        const slug = typeof product.slug === "string" && /^[a-z0-9-]{1,180}$/i.test(product.slug) ? product.slug : "";
+        if (!slug) return;
+        link.href = `/produit/${encodeURIComponent(slug)}/`;
 
         const img = document.createElement("img");
         img.src = product.image;
@@ -91,13 +93,19 @@ function renderRecentlyViewed() {
     section.classList.add("is-visible");
 }
 
-document.querySelectorAll(".product-image[data-product-id]").forEach((link) => {
+document.querySelectorAll(".product-card[data-product-id] .product-image").forEach((link) => {
     link.addEventListener("click", () => {
+        const card = link.closest(".product-card");
+        if (!card) return;
+        const slug = card.dataset.productSlug || "";
+        if (!/^[a-z0-9-]{1,180}$/i.test(slug)) return;
+        const price = Number.parseFloat(card.dataset.productPrice || "");
         addToRecentlyViewed({
-            id: link.dataset.productId,
-            name: link.dataset.productName,
-            price: parseFloat(link.dataset.productPrice),
-            image: link.dataset.productImage,
+            id: card.dataset.productId,
+            slug,
+            name: card.dataset.productName || "",
+            price: Number.isFinite(price) ? price : 0,
+            image: card.dataset.productImage || "",
         });
     });
 });
