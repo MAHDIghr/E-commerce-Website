@@ -87,7 +87,8 @@ def checkout(request):
                             locked = Order.objects.select_for_update().get(pk=order.pk)
                             release_reserved_stock(locked)
                             locked.status = Order.EXPIRED
-                            locked.save(update_fields=["stock_reserved", "status", "updated_at"])
+                            locked.commercial_status = Order.COMMERCIAL_CANCELLED
+                            locked.save(update_fields=["stock_reserved", "status", "commercial_status", "updated_at"])
                         if not request.session.get(CART_SESSION_KEY):
                             request.session[CART_SESSION_KEY] = order.cart_snapshot or {}
                         request.session.pop("checkout_attempt_key", None)
@@ -105,7 +106,8 @@ def checkout(request):
                         locked = Order.objects.select_for_update().get(pk=order.pk)
                         release_reserved_stock(locked)
                         locked.status = Order.CANCELLED
-                        locked.save(update_fields=["stock_reserved", "status", "updated_at"])
+                        locked.commercial_status = Order.COMMERCIAL_CANCELLED
+                        locked.save(update_fields=["stock_reserved", "status", "commercial_status", "updated_at"])
                         locked.payment_attempts.filter(status__in=[PaymentAttempt.CREATED, PaymentAttempt.OPEN]).update(status=PaymentAttempt.FAILED)
                     if not request.session.get(CART_SESSION_KEY):
                         request.session[CART_SESSION_KEY] = order.cart_snapshot or {}
