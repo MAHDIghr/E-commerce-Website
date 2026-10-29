@@ -338,7 +338,8 @@ def process_stripe_event(event):
             expected_cents = int((order.total * 100).quantize(Decimal("1")))
             if obj.get("currency", "").lower() != order.currency or obj.get("amount_total") != expected_cents:
                 order.status = Order.REVIEW
-                order.save(update_fields=["status", "updated_at"])
+                order.commercial_status = Order.COMMERCIAL_ON_HOLD
+                order.save(update_fields=["status", "commercial_status", "updated_at"])
                 if payment:
                     payment.status = PaymentAttempt.REVIEW
                     payment.save(update_fields=["status", "updated_at"])
@@ -354,10 +355,12 @@ def process_stripe_event(event):
                     return "already_paid"
                 if order.stock_reserved and order.status not in (Order.CANCELLED, Order.EXPIRED, Order.REVIEW):
                     order.status = Order.PAID
+                    if order.commercial_status == Order.COMMERCIAL_PENDING_PAYMENT:
+                        order.commercial_status = Order.COMMERCIAL_CONFIRMED
                     order.stock_reserved = False
                     order.stock_committed = True
                     order.stripe_payment_intent_id = obj.get("payment_intent") or ""
-                    order.save(update_fields=["status", "stock_reserved", "stock_committed", "stripe_payment_intent_id", "updated_at"])
+                    order.save(update_fields=["status", "commercial_status", "stock_reserved", "stock_committed", "stripe_payment_intent_id", "updated_at"])
                     if payment:
                         payment.status = PaymentAttempt.SUCCEEDED
                         payment.stripe_payment_intent_id = order.stripe_payment_intent_id
@@ -379,8 +382,9 @@ def process_stripe_event(event):
                     )
                 else:
                     order.status = Order.REVIEW
+                    order.commercial_status = Order.COMMERCIAL_ON_HOLD
                     order.stripe_payment_intent_id = obj.get("payment_intent") or ""
-                    order.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
+                    order.save(update_fields=["status", "commercial_status", "stripe_payment_intent_id", "updated_at"])
                     if payment:
                         payment.status = PaymentAttempt.REVIEW
                         payment.save(update_fields=["status", "stripe_payment_intent_id", "updated_at"])
@@ -395,7 +399,8 @@ def process_stripe_event(event):
             if order.status not in (Order.PAID, Order.REVIEW) and order.stock_reserved:
                 release_reserved_stock(order)
                 order.status = Order.EXPIRED if event_type.endswith("expired") else Order.CANCELLED
-                order.save(update_fields=["status", "stock_reserved", "updated_at"])
+                order.commercial_status = Order.COMMERCIAL_CANCELLED
+                order.save(update_fields=["status", "commercial_status", "stock_reserved", "updated_at"])
                 if payment:
                     payment.status = PaymentAttempt.EXPIRED if event_type.endswith("expired") else PaymentAttempt.FAILED
                     payment.save(update_fields=["status", "updated_at"])
