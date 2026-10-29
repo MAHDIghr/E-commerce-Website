@@ -393,9 +393,14 @@ def deliver_notification(notification_id):
 
     # Only finalize the attempt still marked as sending. This avoids overwriting
     # an administrative decision made while the provider call was in progress.
-    OrderNotification.objects.filter(pk=notification_id, status=OrderNotification.SENDING).update(
-        status=status, sent_at=sent_at, error_message=error_message, updated_at=timezone.now()
-    )
+    updates = {
+        "status": status, "sent_at": sent_at, "error_message": error_message,
+        "updated_at": timezone.now(),
+    }
+    if status == OrderNotification.SENT:
+        # Do not retain signed tracking tokens or full email bodies after delivery.
+        updates["payload"] = {}
+    OrderNotification.objects.filter(pk=notification_id, status=OrderNotification.SENDING).update(**updates)
     return OrderNotification.objects.get(pk=notification_id)
 
 
