@@ -399,13 +399,17 @@
                     et nos conseils styling.
                 </p>
 
-                <form class="newsletter-form" method="post" action="#">
+                {% if newsletter_notice %}<p class="newsletter-note" role="status">{{ newsletter_notice }}</p>{% endif %}
+                {% if newsletter_error %}<p class="newsletter-note" role="alert">{{ newsletter_error }}</p>{% endif %}
+                <form class="newsletter-form" method="post" action="{% url 'home:newsletter_subscribe' %}">
                     {% csrf_token %}
+                    <div class="newsletter-honeypot" aria-hidden="true"><label for="newsletter-website">Ne pas remplir</label><input id="newsletter-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
                     <label for="newsletter-email" class="visually-hidden">Votre adresse email</label>
                     <input id="newsletter-email" name="email" type="email"
                         data-i18n-placeholder="newsletter_placeholder"
                         placeholder="Votre adresse email"
                         autocomplete="email" maxlength="254" required>
+                    <label class="newsletter-consent"><input type="checkbox" name="consent" value="yes" required> J’accepte de recevoir les communications de My Line Collection. Je peux me désinscrire à tout moment. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</label>
                     <button type="submit" class="button button-primary" data-i18n="newsletter_button">S'inscrire</button>
                 </form>
 
