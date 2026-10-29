@@ -378,7 +378,7 @@ def process_stripe_event(event):
                     _queue_order_email(
                         order, "payment_confirmed",
                         f"Confirmation de commande {str(order.public_id)[:8]}",
-                        f"Bonjour {order.full_name},\n\nNous avons confirmé le paiement de votre commande.\nRéférence : {order.public_id}\nMontant : {order.total} {order.currency.upper()}\n\nConsulter le suivi sécurisé : {tracking_url}\n\nMerci pour votre confiance,\nMy Line Collection",
+                        f"Bonjour {order.full_name},\n\nNous avons confirmé le paiement de votre commande.\nRéférence : {order.public_id}\nMontant : {order.total} {order.currency.upper()}\n\nSuivre votre commande : {tracking_url}\n\nMerci pour votre confiance,\nMy Line Collection",
                     )
                 else:
                     order.status = Order.REVIEW
