@@ -46,6 +46,78 @@ class LifecycleProblem(Exception):
     """Violation d'une règle métier de cycle de vie."""
 
 
+
+COMMERCIAL_TRANSITIONS = {
+    Order.COMMERCIAL_PENDING_PAYMENT: {Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_CONFIRMED: {Order.COMMERCIAL_PROCESSING, Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_PROCESSING: {Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_PREPARING: {Order.COMMERCIAL_PROCESSING, Order.COMMERCIAL_READY_TO_SHIP, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_READY_TO_SHIP: {Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_SHIPPED: {Order.COMMERCIAL_DELIVERED, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_DELIVERED: {Order.COMMERCIAL_COMPLETED, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_ON_HOLD: {
+        Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_PROCESSING,
+        Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_READY_TO_SHIP,
+        Order.COMMERCIAL_SHIPPED, Order.COMMERCIAL_DELIVERED,
+    },
+    Order.COMMERCIAL_COMPLETED: set(),
+    Order.COMMERCIAL_CANCELLED: set(),
+}
+
+
+@transaction.atomic
+def transition_order_commercial_status(order_id, new_status, *, actor=None, reason=""):
+    """Apply an explicit commercial-state transition with payment/logistics preconditions."""
+    order = Order.objects.select_for_update().get(pk=order_id)
+    if new_status not in dict(Order.COMMERCIAL_STATUS_CHOICES):
+        raise LifecycleProblem("État commercial inconnu.")
+    if new_status == order.commercial_status:
+        return order
+    if new_status not in COMMERCIAL_TRANSITIONS.get(order.commercial_status, set()):
+        raise LifecycleProblem("Cette transition commerciale n'est pas autorisée.")
+    paid_required = {
+        Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_PROCESSING,
+        Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_READY_TO_SHIP,
+        Order.COMMERCIAL_SHIPPED, Order.COMMERCIAL_DELIVERED,
+        Order.COMMERCIAL_COMPLETED,
+    }
+    if new_status in paid_required and order.status != Order.PAID:
+        raise LifecycleProblem("Le paiement doit être confirmé avant cette étape commerciale.")
+    if new_status == Order.COMMERCIAL_SHIPPED and not order.shipments.filter(
+        status__in=[Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY, Shipment.PICKUP_POINT, Shipment.DELIVERED]
+    ).exists():
+        raise LifecycleProblem("La commande ne peut être expédiée sans prise en charge réelle d'un colis.")
+    if new_status == Order.COMMERCIAL_DELIVERED and (
+        not order.shipments.exists() or order.shipments.exclude(status=Shipment.DELIVERED).exists()
+    ):
+        raise LifecycleProblem("Tous les colis doivent être attestés livrés avant cette transition.")
+    if new_status == Order.COMMERCIAL_COMPLETED:
+        if order.commercial_status != Order.COMMERCIAL_DELIVERED:
+            raise LifecycleProblem("Seule une commande livrée peut être terminée.")
+        if order.incidents.filter(status__in=[OrderIncident.OPEN, OrderIncident.INVESTIGATING]).exists():
+            raise LifecycleProblem("Résolvez les incidents ouverts avant de terminer la commande.")
+        if order.return_requests.filter(status__in=[
+            ReturnRequest.RECEIVED, ReturnRequest.REVIEW, ReturnRequest.ACCEPTED,
+            ReturnRequest.IN_TRANSIT, ReturnRequest.ARRIVED, ReturnRequest.INSPECTING,
+        ]).exists():
+            raise LifecycleProblem("Les dossiers de retour en cours doivent être résolus avant de terminer la commande.")
+    previous = order.commercial_status
+    order.commercial_status = new_status
+    order.save(update_fields=["commercial_status", "updated_at"])
+    record_order_event(
+        order, "commercial_status", from_value=previous, to_value=new_status,
+        source="admin", actor=actor, reason=reason,
+    )
+    if new_status in {Order.COMMERCIAL_ON_HOLD, Order.COMMERCIAL_COMPLETED}:
+        from .services import _queue_order_email
+        _queue_order_email(
+            order, f"commercial_status_{new_status}",
+            f"Mise à jour de votre commande {str(order.public_id)[:8]}",
+            f"Bonjour {order.full_name},\\n\\nL'état de votre commande est désormais : {order.get_commercial_status_display()}.\\nRéférence : {order.public_id}\\n{reason}\\n\\nMy Line Collection",
+        )
+    return order
+
+
 def record_order_event(order, event_type, *, from_value="", to_value="", source="system",
                        reason="", actor=None, external_reference="", metadata=None):
     return OrderEvent.objects.create(
