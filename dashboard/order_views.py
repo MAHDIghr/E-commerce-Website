@@ -101,7 +101,7 @@ def order_detail(request, pk):
         "notifications": order.notifications.all()[:30],
         "shipment_choices": Shipment.STATUS_CHOICES,
         "return_choices": ReturnRequest.STATUS_CHOICES,
-        "incident_categories": OrderIncident.CATEGORIES,\n        "incident_status_choices": OrderIncident.STATUS_CHOICES,
+        "incident_categories": OrderIncident.CATEGORIES,\n        "incident_status_choices": OrderIncident.STATUS_CHOICES,\n        "refund_request_key": uuid.uuid4(),
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
@@ -227,7 +227,7 @@ def order_create_refund(request, pk):
     try:
         refund = request_refund(
             order.pk, amount=request.POST.get("amount", ""),
-            reason=request.POST.get("reason", ""), actor=request.user,
+            reason=request.POST.get("reason", ""), actor=request.user,\n            idempotency_key=request.POST.get("idempotency_key", ""),
         )
     except (LifecycleProblem, ValueError) as exc:
         messages.error(request, str(exc))
