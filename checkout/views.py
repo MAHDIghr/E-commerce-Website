@@ -197,7 +197,7 @@ def order_tracking(request, public_id):
         Order.objects.prefetch_related("lines", "shipments__events", "return_requests__lines__order_line"),
         public_id=public_id, email__iexact=claims["email"],
     )
-    return render(request, "checkout/order_tracking.html", {"order": order, "tracking_token": token})
+    return render(request, "order_tracking.html", {"order": order, "tracking_token": token})
 
 
 @require_POST
@@ -222,7 +222,7 @@ def order_return_request(request, public_id):
             customer=order.customer, customer_note=request.POST.get("customer_note", ""),
         )
     except LifecycleProblem as exc:
-        return render(request, "checkout/order_tracking.html", {
+        return render(request, "order_tracking.html", {
             "order": order, "tracking_token": token, "return_error": str(exc),
         }, status=400)
     return redirect(f"{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}")
