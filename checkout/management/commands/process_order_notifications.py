@@ -7,7 +7,7 @@ limite : les notifications sont verrouillées au moment de leur envoi.
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from checkout.lifecycle import deliver_notification
@@ -43,10 +43,16 @@ class Command(BaseCommand):
                 updated_at=timezone.now(),
             )
 
-        queue = OrderNotification.objects.filter(
-            status__in=[OrderNotification.PENDING, OrderNotification.FAILED],
-            attempts__lt=5,
-        ).order_by("created_at", "pk")[:limit]
+        now = timezone.now()
+        retryable = Q(status=OrderNotification.PENDING, attempts__lt=5)
+        retryable |= Q(status=OrderNotification.FAILED, attempts=0)
+        for attempt in range(1, 5):
+            retryable |= Q(
+                status=OrderNotification.FAILED,
+                attempts=attempt,
+                updated_at__lte=now - timedelta(minutes=2 ** attempt),
+            )
+        queue = OrderNotification.objects.filter(retryable).order_by("created_at", "pk")[:limit]
         ids = list(queue.values_list("pk", flat=True))
         if options["dry_run"]:
             self.stdout.write(
