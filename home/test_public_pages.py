@@ -6,7 +6,7 @@ class PublicInformationPagesTests(TestCase):
     def test_homepage_renders_newsletter_signup(self):
         response = self.client.get(reverse("home:home"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "newsletter_subscribe")
+        self.assertContains(response, "/newsletter/inscription/")
         self.assertContains(response, "footer-news-email")
         self.assertContains(response, 'name="consent"')
 
