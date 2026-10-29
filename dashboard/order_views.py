@@ -83,7 +83,7 @@ def order_detail(request, pk):
         "refunds": order.refunds.all(),
         "incidents": order.incidents.select_related("shipment").all(),
         "lifecycle_events": order.lifecycle_events.select_related("actor").all()[:50],
-        "notifications": order.notifications.all()[:30],
+        "notifications": order.notifications.all()[:30],\n        "shipment_choices": Shipment.STATUS_CHOICES,\n        "return_choices": ReturnRequest.STATUS_CHOICES,\n        "incident_categories": OrderIncident.CATEGORIES,
         "payment_attempts": order.payment_attempts.all(),
         "fulfillment_choices": Order.FULFILLMENT_CHOICES,
         "allowed_transitions": FULFILLMENT_TRANSITIONS.get(order.fulfillment_status, set()),
