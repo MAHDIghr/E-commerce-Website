@@ -151,6 +151,13 @@ def order_update_fulfillment(request, pk):
             order.delivered_at = now
             changed_fields.append("delivered_at")
         order.save(update_fields=changed_fields)
+        if new_status != order.fulfillment_status or changed_fields:
+            OrderEvent.objects.create(
+                order=order, event_type="fulfillment_updated", source="admin",
+                from_value="", to_value=new_status, actor=request.user,
+                reason=internal_note,
+                metadata={"carrier": carrier, "tracking_number": tracking_number},
+            )
 
     messages.success(request, "Suivi de commande enregistré.")
     return redirect("dashboard:order_detail", pk=order.pk)
