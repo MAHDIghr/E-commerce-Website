@@ -155,7 +155,11 @@
     const CHECK = "M5 12.5l4.5 4.5L19 7.5";
     const CLOSE = "M6 6l12 12M6 18L18 6";
 
-    const wishlist = new Set(readStorage(WISH_KEY, []).filter((id) => typeof id === "string"));
+    const storedWishlist = readStorage(WISH_KEY, []);
+    const wishlist = new Set(
+        (Array.isArray(storedWishlist) ? storedWishlist : [])
+            .filter((id) => typeof id === "string" && /^[a-z0-9-]{1,180}$/i.test(id))
+    );
 
     /* ---------- Carte produit ---------- */
     function buildCard(p, index) {
