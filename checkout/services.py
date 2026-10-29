@@ -6,7 +6,7 @@ from urllib.parse import urljoin, urlparse
 
 import stripe
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
@@ -149,19 +149,32 @@ def create_order_and_reserve(request, form, checkout_key):
             if locked[pk].stock_quantity < required:
                 raise CheckoutProblem("Le stock vient de changer. Réduisez les quantités puis réessayez.")
 
-        order = Order.objects.create(
-            checkout_key=checkout_key,
-            cart_snapshot=dict(_cart_state(request)),
-            customer=request.user if request.user.is_authenticated else None,
-            email=form.cleaned_data["email"], full_name=form.cleaned_data["full_name"],
-            phone=form.cleaned_data["phone"], address_line1=form.cleaned_data["address_line1"],
-            address_line2=form.cleaned_data["address_line2"], postal_code=form.cleaned_data["postal_code"],
-            city=form.cleaned_data["city"], country=form.cleaned_data["country"],
-            shipping_method=form.cleaned_data["shipping_method"], currency=stripe_currency(),
-            subtotal=subtotal, promo_code_snapshot=promo.code if promo else "",
-            discount_amount=discount, shipping_amount=shipping, total=total, stock_reserved=True,
-            stock_requirements_snapshot={str(pk): qty for pk, qty in usage.items()},
-        )
+        try:
+            # A session can submit the same checkout key concurrently. The unique
+            # constraint is the final arbiter when select_for_update found no row.
+            with transaction.atomic():
+                order = Order.objects.create(
+                    checkout_key=checkout_key,
+                    cart_snapshot=dict(_cart_state(request)),
+                    customer=request.user if request.user.is_authenticated else None,
+                    email=form.cleaned_data["email"], full_name=form.cleaned_data["full_name"],
+                    phone=form.cleaned_data["phone"], address_line1=form.cleaned_data["address_line1"],
+                    address_line2=form.cleaned_data["address_line2"], postal_code=form.cleaned_data["postal_code"],
+                    city=form.cleaned_data["city"], country=form.cleaned_data["country"],
+                    shipping_method=form.cleaned_data["shipping_method"], currency=stripe_currency(),
+                    subtotal=subtotal, promo_code_snapshot=promo.code if promo else "",
+                    discount_amount=discount, shipping_amount=shipping, total=total, stock_reserved=True,
+                    stock_requirements_snapshot={str(pk): qty for pk, qty in usage.items()},
+                )
+        except IntegrityError:
+            existing = Order.objects.select_for_update().filter(checkout_key=checkout_key).first()
+            if existing is None:
+                raise
+            if existing.status in (Order.CANCELLED, Order.EXPIRED, Order.REVIEW):
+                raise CheckoutProblem(
+                    "Cette tentative de commande n’est plus réutilisable. Rechargez la page et réessayez."
+                )
+            return existing, bool(existing.stripe_session_id)
         for details, quantity in lines:
             OrderLine.objects.create(
                 order=order, product_id=details["product_id"], variant_id=details["variant_id"],
