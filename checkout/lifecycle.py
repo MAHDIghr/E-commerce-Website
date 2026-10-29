@@ -68,6 +68,8 @@ def create_shipment(order_id, *, actor=None, carrier="", service="", tracking_nu
         status=Shipment.DRAFT,
     )
     line_quantities = line_quantities or {}
+    if not line_quantities:
+        raise LifecycleProblem("Affectez au moins une ligne de commande à ce colis.")
     for line_id, raw_quantity in line_quantities.items():
         line = order.lines.select_for_update().filter(pk=line_id).first()
         if not line:
@@ -121,6 +123,15 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
                        to_value=new_status, source=source, reason=reason, actor=actor,
                        external_reference=external_event_id,
                        metadata={"shipment_id": str(shipment.public_id)})
+    if new_status == Shipment.ACCEPTED:
+        order = shipment.order
+        old = order.fulfillment_status
+        order.fulfillment_status = Order.FULFILLMENT_SHIPPED
+        order.shipped_at = shipment.handed_over_at
+        order.save(update_fields=["fulfillment_status", "shipped_at", "updated_at"])
+        record_order_event(order, "fulfillment_status", from_value=old,
+                           to_value=Order.FULFILLMENT_SHIPPED, source=source,
+                           reason="Le transporteur a pris en charge un colis.", actor=actor)
     if new_status == Shipment.DELIVERED:
         # Keep order-level fulfillment as a summary; never rewrite payment state.
         if not shipment.order.shipments.exclude(status=Shipment.DELIVERED).exists():
