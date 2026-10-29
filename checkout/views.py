@@ -255,8 +255,8 @@ def order_return_request(request, public_id):
     remote_addr = request.META.get("REMOTE_ADDR", "unknown")
     rate_material = f"{remote_addr}:{public_id}".encode("utf-8")
     rate_key = "order-return-submit:" + hashlib.sha256(rate_material).hexdigest()
-    attempts = cache.get(rate_key, 0)
-    if attempts >= 5:
+    attempts = _increment_rate_limit(rate_key, 900)
+    if attempts > 5:
         order = Order.objects.prefetch_related(
             "lines", "shipments__events", "return_requests__lines__order_line"
         ).get(pk=order.pk)
@@ -267,8 +267,6 @@ def order_return_request(request, public_id):
         response["Cache-Control"] = "private, no-store"
         response["Referrer-Policy"] = "no-referrer"
         return response
-    _increment_rate_limit(rate_key, 900)
-
     lines = {}
     for line in order.lines.all():
         raw = request.POST.get(f"line_{line.pk}", "").strip()
