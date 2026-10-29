@@ -163,7 +163,7 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
 
 
 @transaction.atomic
-def create_return_request(order_id, *, reason_category, reason, lines, customer=None, customer_note=""):
+def create_return_request(order_id, *, reason_category, reason, lines, customer=None, customer_note="", source="customer"):
     order = Order.objects.select_for_update().get(pk=order_id)
     if order.status != Order.PAID:
         raise LifecycleProblem("Une demande de retour exige une commande payée.")
@@ -200,7 +200,7 @@ def create_return_request(order_id, *, reason_category, reason, lines, customer=
         ReturnLine.objects.create(return_request=request, order_line=line, quantity=quantity)
     if not request.lines.exists():
         raise LifecycleProblem("Sélectionnez au moins un article à retourner.")
-    record_order_event(order, "return_requested", source="customer" if customer else "admin",
+    record_order_event(order, "return_requested", source=source,
                        actor=customer, metadata={"return_id": str(request.public_id)})
     from .services import _queue_order_email
     _queue_order_email(
