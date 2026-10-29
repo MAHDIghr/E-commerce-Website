@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_POST
 
 from checkout.models import (Order, OrderLine, PaymentAttempt, OrderEvent, Shipment, ShipmentEvent, ReturnRequest, Refund, OrderIncident, OrderNotification)
-from checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification, restock_unshipped_cancelled_order
+from checkout.lifecycle import LifecycleProblem, create_shipment, transition_shipment, decide_return, request_refund, deliver_notification, restock_unshipped_cancelled_order, COMMERCIAL_TRANSITIONS, transition_order_commercial_status
 from checkout.services import release_reserved_stock
 from .views import is_dashboard_admin
 
@@ -109,6 +109,7 @@ def order_detail(request, pk):
         "can_manage_fulfillment": order.status == Order.PAID and order.commercial_status != Order.COMMERCIAL_CANCELLED,
         "can_cancel_order": order.status in {Order.PENDING, Order.AWAITING} or can_cancel_paid_order,
         "can_cancel_paid_order": can_cancel_paid_order,
+        "commercial_status_choices": Order.COMMERCIAL_STATUS_CHOICES,\n        "allowed_commercial_transitions": COMMERCIAL_TRANSITIONS.get(order.commercial_status, set()),
         "shipments": order.shipments.prefetch_related("lines__order_line", "events").all(),
         "return_requests": order.return_requests.prefetch_related("lines__order_line", "refunds").all(),
         "refunds": order.refunds.all(),
@@ -419,4 +420,20 @@ Référence : {order.public_id}
 My Line Collection",
         )
     messages.success(request, "Commande annulée et réservation de stock libérée si elle était active.")
+    return redirect("dashboard:order_detail", pk=pk)
+
+
+@dashboard_admin_required
+@require_POST
+def order_update_commercial_status(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    try:
+        transition_order_commercial_status(
+            order.pk, request.POST.get("commercial_status", "").strip(),
+            actor=request.user, reason=request.POST.get("reason", "").strip()[:2000],
+        )
+    except LifecycleProblem as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "État commercial mis à jour et historisé.")
     return redirect("dashboard:order_detail", pk=pk)
