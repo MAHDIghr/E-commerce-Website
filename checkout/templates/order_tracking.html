@@ -64,7 +64,7 @@
   {% if order.status == "paid" %}
   <section class="tracking-panel">
     <h2>Demander un retour ou signaler un problème</h2>
-    <p class="order-tracking__muted">Sélectionnez les articles concernés et décrivez la situation. L'éligibilité sera examinée selon le motif et les règles applicables ; cette demande ne constitue pas une confirmation automatique de remboursement.</p>
+    <p class="order-tracking__muted">Sélectionnez les articles concernés et décrivez la situation. Votre demande sera examinée ; son envoi ne confirme pas automatiquement un remboursement.</p>
     <form method="post" action="{% url 'checkout:return_request' order.public_id %}" class="tracking-form">
       {% csrf_token %}
       {% for line in order.lines.all %}
