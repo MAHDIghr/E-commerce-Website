@@ -45,6 +45,24 @@ class CustomerOrderAccessTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
+    def test_guest_order_result_requires_the_checkout_session_capability(self):
+        guest_order = Order.objects.create(
+            checkout_key=uuid.uuid4(),
+            email="guest@example.test",
+            full_name="Client invité",
+            address_line1="2 rue du Test",
+            postal_code="75002",
+            city="Paris",
+            shipping_method="standard",
+            subtotal=Decimal("20.00"),
+            total=Decimal("20.00"),
+        )
+        url = reverse("checkout:result", kwargs={"public_id": guest_order.public_id})
+        self.assertEqual(self.client.get(url).status_code, 404)
+        session = self.client.session
+        session["checkout_attempt_key"] = str(guest_order.checkout_key)
+        session.save()
+        self.assertEqual(self.client.get(url).status_code, 200)
     def test_customer_can_submit_a_return_for_an_owned_paid_order(self):
         self.order.fulfillment_status = Order.FULFILLMENT_DELIVERED
         self.order.save(update_fields=["fulfillment_status"])
