@@ -37,11 +37,12 @@ def orders(request):
     query = " ".join(request.GET.get("q", "").split())[:160]
     payment_status = request.GET.get("payment", "").strip()
     fulfillment_status = request.GET.get("fulfillment", "").strip()
+    commercial_status = request.GET.get("commercial", "").strip()
     carrier = " ".join(request.GET.get("carrier", "").split())[:80]
     date_from_raw = request.GET.get("date_from", "").strip()
     date_to_raw = request.GET.get("date_to", "").strip()
     date_from, date_to = parse_date(date_from_raw), parse_date(date_to_raw)
-    queryset = Order.objects.annotate(line_count=Count("lines")).order_by("-created_at")
+    queryset = Order.objects.annotate(line_count=Count("lines", distinct=True)).order_by("-created_at")
     if query:
         search = (Q(full_name__icontains=query) | Q(email__icontains=query) | Q(city__icontains=query) | Q(tracking_number__icontains=query) | Q(shipping_carrier__icontains=query) | Q(shipments__tracking_number__icontains=query) | Q(shipments__carrier__icontains=query))
         try:
@@ -57,6 +58,10 @@ def orders(request):
         queryset = queryset.filter(fulfillment_status=fulfillment_status)
     else:
         fulfillment_status = ""
+    if commercial_status in dict(Order.COMMERCIAL_STATUS_CHOICES):
+        queryset = queryset.filter(commercial_status=commercial_status)
+    else:
+        commercial_status = ""
 
     if carrier:
         queryset = queryset.filter(Q(shipping_carrier__icontains=carrier) | Q(shipments__carrier__icontains=carrier)).distinct()
@@ -73,6 +78,8 @@ def orders(request):
         "query": query,
         "selected_payment": payment_status,
         "selected_fulfillment": fulfillment_status,
+        "selected_commercial": commercial_status,
+        "commercial_choices": Order.COMMERCIAL_STATUS_CHOICES,
         "carrier": carrier,
         "date_from": date_from_raw if date_from else "",
         "date_to": date_to_raw if date_to else "",
@@ -372,7 +379,12 @@ def order_cancel(request, pk):
         _queue_order_email(
             order, "order_cancelled",
             f"Commande {str(order.public_id)[:8]} annulée",
-            f"Bonjour {order.full_name},\n\nVotre commande a été annulée. Le statut du paiement historique reste consultable séparément.\nRéférence : {order.public_id}\n\nMy Line Collection",
+            f"Bonjour {order.full_name},
+
+Votre commande a été annulée. Le statut du paiement historique reste consultable séparément.
+Référence : {order.public_id}
+
+My Line Collection",
         )
     messages.success(request, "Commande annulée. Le paiement historique et le remboursement restent enregistrés séparément.")
     return redirect("dashboard:order_detail", pk=pk)
@@ -399,7 +411,12 @@ def order_cancel(request, pk):
         _queue_order_email(
             order, "order_cancelled",
             f"Commande {str(order.public_id)[:8]} annulée",
-            f"Bonjour {order.full_name},\n\nVotre commande en attente de paiement a été annulée.\nRéférence : {order.public_id}\n\nMy Line Collection",
+            f"Bonjour {order.full_name},
+
+Votre commande en attente de paiement a été annulée.
+Référence : {order.public_id}
+
+My Line Collection",
         )
     messages.success(request, "Commande annulée et réservation de stock libérée si elle était active.")
     return redirect("dashboard:order_detail", pk=pk)
