@@ -43,6 +43,17 @@
             <h3 id="footer-news-title" data-i18n="footer_news_title">-10 % sur votre première commande</h3>
             <p data-i18n="footer_news_desc">Rejoignez la newsletter : nouveautés, offres privées et conseils style.</p>
 
+            <form class="footer-news__signup" method="post" action="{% url 'home:newsletter_subscribe' %}">
+                {% csrf_token %}
+                <div class="footer-news__honeypot" aria-hidden="true"><label for="footer-news-website">Ne pas remplir</label><input id="footer-news-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+                <label class="visually-hidden" for="footer-news-email">Votre adresse e-mail</label>
+                <div class="footer-news__form">
+                    <input id="footer-news-email" name="email" type="email" placeholder="Votre adresse e-mail" autocomplete="email" maxlength="254" required>
+                    <button type="submit" class="footer-news__btn">S’inscrire</button>
+                </div>
+                <label class="footer-news__consent"><input type="checkbox" name="consent" value="yes" required> J’accepte de recevoir les communications de My Line Collection. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</label>
+            </form>
+
             <div class="footer-news__offer">
                 <code>BIENVENUE</code>
                 <button type="button" class="footer-news__btn" data-copy-promo="BIENVENUE">Copier le code</button>
