@@ -47,6 +47,27 @@ class LifecycleProblem(Exception):
 
 
 
+SHIPMENT_HANDED_OVER_STATUSES = {
+    Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY,
+    Shipment.PICKUP_POINT, Shipment.DELIVERY_FAILED, Shipment.INCIDENT,
+    Shipment.LOST, Shipment.DELIVERED, Shipment.RETURNING, Shipment.RETURNED,
+}
+
+
+def _all_order_quantities_covered(order, shipment_statuses):
+    """Return True only when shipments in the given states cover every ordered unit."""
+    ordered_lines = list(order.lines.values_list("pk", "quantity"))
+    if not ordered_lines:
+        return False
+    shipped_totals = dict(
+        ShipmentLine.objects.filter(
+            shipment__order=order,
+            shipment__status__in=shipment_statuses,
+        ).values("order_line_id").annotate(total=Sum("quantity")).values_list("order_line_id", "total")
+    )
+    return all(shipped_totals.get(line_id, 0) >= quantity for line_id, quantity in ordered_lines)
+
+
 COMMERCIAL_TRANSITIONS = {
     Order.COMMERCIAL_PENDING_PAYMENT: {Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_ON_HOLD},
     Order.COMMERCIAL_CONFIRMED: {Order.COMMERCIAL_PROCESSING, Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
@@ -83,10 +104,13 @@ def transition_order_commercial_status(order_id, new_status, *, actor=None, reas
     }
     if new_status in paid_required and order.status != Order.PAID:
         raise LifecycleProblem("Le paiement doit être confirmé avant cette étape commerciale.")
-    if new_status == Order.COMMERCIAL_SHIPPED and not order.shipments.filter(
-        status__in=[Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY, Shipment.PICKUP_POINT, Shipment.DELIVERED]
-    ).exists():
-        raise LifecycleProblem("La commande ne peut être expédiée sans prise en charge réelle d'un colis.")
+    if new_status == Order.COMMERCIAL_SHIPPED and not _all_order_quantities_covered(
+        order, SHIPMENT_HANDED_OVER_STATUSES
+    ):
+        raise LifecycleProblem(
+            "La commande ne peut être marquée expédiée que lorsque toutes les quantités "
+            "commandées ont été prises en charge par le transporteur."
+        )
     if new_status == Order.COMMERCIAL_DELIVERED and (
         not order.shipments.exists() or order.shipments.exclude(status=Shipment.DELIVERED).exists()
     ):
