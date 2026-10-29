@@ -245,11 +245,17 @@ def create_return_request(order_id, *, reason_category, reason, lines, customer=
         raise LifecycleProblem("Une demande de retour exige une commande payée et non annulée.")
     if reason_category not in dict(ReturnRequest.REASONS):
         raise LifecycleProblem("Le motif de retour n'est pas valide.")
-    if not reason or not reason.strip():
+    reason = (reason or "").strip()
+    customer_note = (customer_note or "").strip()
+    if not reason:
         raise LifecycleProblem("Le motif détaillé est obligatoire.")
+    if len(reason) > 2000:
+        raise LifecycleProblem("Le motif détaillé ne peut pas dépasser 2 000 caractères.")
+    if len(customer_note) > 2000:
+        raise LifecycleProblem("Le commentaire ne peut pas dépasser 2 000 caractères.")
     request = ReturnRequest.objects.create(
         order=order, customer=customer, reason_category=reason_category,
-        reason=reason.strip(), customer_note=customer_note.strip(),
+        reason=reason, customer_note=customer_note,
     )
     seen = set()
     for line_id, raw_quantity in lines.items():
