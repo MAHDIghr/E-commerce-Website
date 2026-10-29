@@ -383,10 +383,24 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None,
             idempotency_key=str(refund.idempotency_key),
         )
     except stripe.error.StripeError as exc:
+        http_status = getattr(exc, "http_status", None)
+        # En cas de timeout, erreur réseau, rate-limit ou 5xx, Stripe peut avoir
+        # accepté la demande sans que la réponse soit parvenue à l'application.
+        # Garder le montant réservé en PROCESSING évite un second remboursement.
+        if http_status is None or http_status == 429 or http_status >= 500:
+            refund.failure_reason = (
+                "Résultat Stripe incertain ; vérifier le tableau de bord et les webhooks "
+                "avant toute nouvelle action."
+            )
+            refund.save(update_fields=["failure_reason"])
+            raise LifecycleProblem(
+                "Le résultat du remboursement est incertain. Il reste en vérification ; "
+                "ne relancez pas un autre remboursement avant réconciliation."
+            ) from exc
         refund.status = Refund.FAILED
-        refund.failure_reason = str(exc.user_message or "Erreur Stripe")[:2000]
+        refund.failure_reason = str(getattr(exc, "user_message", None) or "Erreur Stripe")[:2000]
         refund.save(update_fields=["status", "failure_reason"])
-        raise LifecycleProblem("Stripe n'a pas confirmé le remboursement. Consultez le détail avant toute nouvelle tentative.") from exc
+        raise LifecycleProblem("Stripe a refusé le remboursement. Consultez le détail avant une nouvelle tentative.") from exc
     with transaction.atomic():
         refund = Refund.objects.select_for_update().get(pk=refund.pk)
         previous_status = refund.status
