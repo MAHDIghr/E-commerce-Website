@@ -6,7 +6,7 @@ from decimal import Decimal
 import stripe
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect, render\nfrom django.core import signing\nfrom django.http import Http404
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from shop.views import CART_SESSION_KEY, _cart_state
 from .forms import CheckoutForm
 from .models import Order, PaymentAttempt
-from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart\nfrom .lifecycle import LifecycleProblem, create_return_request
 
 logger = logging.getLogger(__name__)
 
@@ -174,3 +174,49 @@ def stripe_webhook(request):
         logger.exception("Stripe webhook processing failed; Stripe may retry the event")
         return HttpResponse(status=500)
     return HttpResponse(status=200)
+
+
+@require_GET
+def order_tracking(request, public_id):
+    token = request.GET.get("token", "").strip()
+    if not token:
+        raise Http404
+    try:
+        claims = signing.loads(token, salt="checkout.order-tracking", max_age=90 * 24 * 60 * 60)
+    except signing.BadSignature:
+        raise Http404
+    if claims.get("public_id") != str(public_id) or not claims.get("email"):
+        raise Http404
+    order = get_object_or_404(
+        Order.objects.prefetch_related("lines", "shipments__events", "return_requests__lines__order_line"),
+        public_id=public_id, email__iexact=claims["email"],
+    )
+    return render(request, "checkout/order_tracking.html", {"order": order, "tracking_token": token})
+
+
+@require_POST
+def order_return_request(request, public_id):
+    token = request.POST.get("token", "").strip()
+    try:
+        claims = signing.loads(token, salt="checkout.order-tracking", max_age=90 * 24 * 60 * 60)
+    except signing.BadSignature:
+        raise Http404
+    if claims.get("public_id") != str(public_id) or not claims.get("email"):
+        raise Http404
+    order = get_object_or_404(Order, public_id=public_id, email__iexact=claims["email"])
+    lines = {}
+    for line in order.lines.all():
+        raw = request.POST.get(f"line_{line.pk}", "").strip()
+        if raw:
+            lines[line.pk] = raw
+    try:
+        create_return_request(
+            order.pk, reason_category=request.POST.get("reason_category", ""),
+            reason=request.POST.get("reason", ""), lines=lines,
+            customer=order.customer, customer_note=request.POST.get("customer_note", ""),
+        )
+    except LifecycleProblem as exc:
+        return render(request, "checkout/order_tracking.html", {
+            "order": order, "tracking_token": token, "return_error": str(exc),
+        }, status=400)
+    return redirect(f"{reverse('checkout:tracking', kwargs={'public_id': order.public_id})}?token={token}")
