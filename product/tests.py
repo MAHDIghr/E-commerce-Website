@@ -171,6 +171,21 @@ class CatalogViewTests(TestCase):
         self.assertEqual(structured["offers"]["availability"], "https://schema.org/InStock")
         self.assertEqual(structured["image"], ["https://cdn.example.test/cabas.webp"])
 
+    def test_product_page_only_shows_approved_reviews(self):
+        Review.objects.create(
+            product=self.product, author_name="Avis publié", rating=5,
+            comment="Avis approuvé visible", is_approved=True,
+        )
+        Review.objects.create(
+            product=self.product, author_name="Avis en attente", rating=1,
+            comment="Avis en attente invisible", is_approved=False,
+        )
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Avis approuvé visible")
+        self.assertNotContains(response, "Avis en attente invisible")
+        self.assertEqual(response.context["product"]["reviews_count"], 1)
+
     def test_offer_is_not_hidden_when_default_color_is_out_of_stock_but_another_color_is_available(self):
         self.variant.stock_quantity = 0
         self.variant.save(update_fields=["stock_quantity"])
