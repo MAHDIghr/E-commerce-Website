@@ -31,7 +31,7 @@
         <p>{{ shipment.carrier|default:"Transporteur non renseigné" }}{% if shipment.tracking_number %} · Suivi {{ shipment.tracking_number }}{% endif %}</p>
         {% if shipment.tracking_url %}<p><a href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Consulter le suivi du transporteur</a></p>{% endif %}
         <div class="customer-timeline">
-          {% for event in shipment.events.all %}<p class="customer-event"><strong>{{ event.get_status_display }}</strong><br><small>{{ event.occurred_at|default:event.created_at|date:"d/m/Y à H:i" }}</small>{% if event.description %}<br>{{ event.description|truncatechars:300 }}{% endif %}</p>{% empty %}<p class="customer-muted">Aucun événement de suivi supplémentaire.</p>{% endfor %}
+          {% for event in shipment.events.all %}<p class="customer-event"><strong>{{ event.get_status_display }}</strong><br><small>{{ event.created_at|date:"d/m/Y à H:i" }}</small>{% if event.description %}<br>{{ event.description|truncatechars:300 }}{% endif %}</p>{% empty %}<p class="customer-muted">Aucun événement de suivi supplémentaire.</p>{% endfor %}
         </div>
       </article>
     {% empty %}<p class="customer-muted">Aucune expédition enregistrée pour le moment. Le suivi apparaîtra après la préparation du colis.</p>{% endfor %}
