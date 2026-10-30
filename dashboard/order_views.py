@@ -432,49 +432,15 @@ def order_cancel(request, pk):
         _queue_order_email(
             order, "order_cancelled",
             f"Commande {str(order.public_id)[:8]} annulée",
-            f"Bonjour {order.full_name},
-
-Votre commande a été annulée. Le statut du paiement historique reste consultable séparément.
-Référence : {order.public_id}
-
-My Line Collection",
+            (
+                f"Bonjour {order.full_name},\n\n"
+                "Votre commande a été annulée. Le statut du paiement historique reste consultable séparément.\n"
+                f"Référence : {order.public_id}\n\n"
+                "My Line Collection"
+            ),
         )
     messages.success(request, "Commande annulée. Le paiement historique et le remboursement restent enregistrés séparément.")
     return redirect("dashboard:order_detail", pk=pk)
-        if order.shipments.filter(status__in=[
-            Shipment.ACCEPTED, Shipment.IN_TRANSIT, Shipment.OUT_FOR_DELIVERY,
-            Shipment.PICKUP_POINT, Shipment.DELIVERED,
-        ]).exists():
-            messages.error(request, "Une commande déjà prise en charge par le transporteur ne peut pas être annulée via cette action.")
-            return redirect("dashboard:order_detail", pk=pk)
-        previous = order.status
-        if order.stock_reserved:
-            release_reserved_stock(order)
-        order.status = Order.CANCELLED
-        order.save(update_fields=["status", "stock_reserved", "updated_at"])
-        order.payment_attempts.filter(status__in=[
-            PaymentAttempt.CREATED, PaymentAttempt.OPEN, PaymentAttempt.PROCESSING,
-        ]).update(status=PaymentAttempt.FAILED)
-        OrderEvent.objects.create(
-            order=order, event_type="order_cancelled", from_value=previous,
-            to_value=Order.CANCELLED, source="admin", actor=request.user,
-            reason=request.POST.get("reason", "").strip()[:2000],
-        )
-        from checkout.services import _queue_order_email
-        _queue_order_email(
-            order, "order_cancelled",
-            f"Commande {str(order.public_id)[:8]} annulée",
-            f"Bonjour {order.full_name},
-
-Votre commande en attente de paiement a été annulée.
-Référence : {order.public_id}
-
-My Line Collection",
-        )
-    messages.success(request, "Commande annulée et réservation de stock libérée si elle était active.")
-    return redirect("dashboard:order_detail", pk=pk)
-
-
 @dashboard_admin_required
 @require_POST
 def order_update_commercial_status(request, pk):
