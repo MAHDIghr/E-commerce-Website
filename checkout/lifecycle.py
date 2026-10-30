@@ -254,15 +254,21 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
                 Order.COMMERCIAL_PREPARING,
                 Order.COMMERCIAL_READY_TO_SHIP,
             )
-            for target_status in progression:
-                order.refresh_from_db(fields=["commercial_status"])
-                if order.commercial_status == target_status:
-                    continue
-                if target_status in COMMERCIAL_TRANSITIONS.get(order.commercial_status, set()):
-                    transition_order_commercial_status(
-                        order.pk, target_status, actor=actor,
-                        reason="Synchronisation automatique après préparation du colis.",
-                    )
+            order.refresh_from_db(fields=["commercial_status"])
+            current_status = order.commercial_status
+            if current_status == Order.COMMERCIAL_ON_HOLD:
+                next_statuses = (Order.COMMERCIAL_READY_TO_SHIP,)
+            elif current_status == Order.COMMERCIAL_PENDING_PAYMENT:
+                next_statuses = progression
+            elif current_status in progression:
+                next_statuses = progression[progression.index(current_status) + 1:]
+            else:
+                next_statuses = ()
+            for target_status in next_statuses:
+                transition_order_commercial_status(
+                    order.pk, target_status, actor=actor,
+                    reason="Synchronisation automatique après préparation du colis.",
+                )
 
     if new_status == Shipment.ACCEPTED:
         order = shipment.order
