@@ -93,12 +93,13 @@ class CheckoutIntegrationTests(TestCase):
             address_line1="1 rue Test", postal_code="75001", city="Paris", country="FR",
             shipping_method="standard", subtotal=Decimal("89.90"), shipping_amount=Decimal("4.90"),
             total=Decimal("94.80"), status=Order.PAID,
+            stripe_session_id="cs_test_paid_return",
             cart_snapshot={f"{self.variant.pk}:{self.offer.pk}": 1},
         )
         session = self.client.session
         session[CART_SESSION_KEY] = dict(order.cart_snapshot)
         session.save()
-        response = self.client.get(reverse("checkout:result", kwargs={"public_id": order.public_id}))
+        response = self.client.get(reverse("checkout:result", kwargs={"public_id": order.public_id}), {"session_id": order.stripe_session_id})
         self.assertEqual(response.status_code, 200)
         self.assertNotIn(CART_SESSION_KEY, self.client.session)
 
