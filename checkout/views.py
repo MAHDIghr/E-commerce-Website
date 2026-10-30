@@ -141,7 +141,6 @@ def checkout(request):
 
 
 @require_GET
-@require_GET
 def order_result(request, public_id):
     order = get_object_or_404(Order.objects.prefetch_related("lines"), public_id=public_id)
     session_id = request.GET.get("session_id", "")
