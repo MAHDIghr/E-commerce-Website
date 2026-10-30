@@ -73,7 +73,7 @@ COMMERCIAL_TRANSITIONS = {
     Order.COMMERCIAL_CONFIRMED: {Order.COMMERCIAL_PROCESSING, Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
     Order.COMMERCIAL_PROCESSING: {Order.COMMERCIAL_CONFIRMED, Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
     Order.COMMERCIAL_PREPARING: {Order.COMMERCIAL_PROCESSING, Order.COMMERCIAL_READY_TO_SHIP, Order.COMMERCIAL_ON_HOLD},
-    Order.COMMERCIAL_READY_TO_SHIP: {Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_ON_HOLD},
+    Order.COMMERCIAL_READY_TO_SHIP: {Order.COMMERCIAL_PREPARING, Order.COMMERCIAL_SHIPPED, Order.COMMERCIAL_ON_HOLD},
     Order.COMMERCIAL_SHIPPED: {Order.COMMERCIAL_DELIVERED, Order.COMMERCIAL_ON_HOLD},
     Order.COMMERCIAL_DELIVERED: {Order.COMMERCIAL_COMPLETED, Order.COMMERCIAL_ON_HOLD},
     Order.COMMERCIAL_ON_HOLD: {
@@ -243,6 +243,27 @@ def transition_shipment(shipment_id, new_status, *, actor=None, reason="", exter
                 f"Un colis de votre commande {str(shipment.order.public_id)[:8]} a été livré",
                 f"Bonjour {shipment.order.full_name},\n\nLe suivi indique que ce colis a été livré. Si vous constatez un problème, consultez la page de suivi de commande avec votre référence.\nRéférence de commande : {shipment.order.public_id}\n\nMy Line Collection",
             )
+    if new_status == Shipment.READY:
+        # Le colis est prêt : synchroniser l'état commercial jusqu'à
+        # « prêt à expédier » sans sauter les étapes métier.
+        order = shipment.order
+        if order.status == Order.PAID:
+            progression = (
+                Order.COMMERCIAL_CONFIRMED,
+                Order.COMMERCIAL_PROCESSING,
+                Order.COMMERCIAL_PREPARING,
+                Order.COMMERCIAL_READY_TO_SHIP,
+            )
+            for target_status in progression:
+                order.refresh_from_db(fields=["commercial_status"])
+                if order.commercial_status == target_status:
+                    continue
+                if target_status in COMMERCIAL_TRANSITIONS.get(order.commercial_status, set()):
+                    transition_order_commercial_status(
+                        order.pk, target_status, actor=actor,
+                        reason="Synchronisation automatique après préparation du colis.",
+                    )
+
     if new_status == Shipment.ACCEPTED:
         order = shipment.order
         if order.status != Order.PAID or order.commercial_status != Order.COMMERCIAL_READY_TO_SHIP:
