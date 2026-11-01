@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from shop.views import CART_SESSION_KEY, _cart_state
@@ -32,6 +32,7 @@ def _increment_rate_limit(key, timeout):
         return 1
 
 
+@ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def checkout(request):
     cart_items, subtotal, cart_error = [], None, ""
