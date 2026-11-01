@@ -182,7 +182,6 @@ const cartActionButtons = document.querySelectorAll('[data-action="open-cart"]')
 const cartStatus = document.querySelector("#cart-status");
 const cartTitleCount = document.querySelector("#cart-title-count");
 const shippingProgress = document.querySelector(".shipping-progress");
-const cartClearButton = document.querySelector("#cart-clear");
 const shippingFill = document.querySelector("#shipping-fill");
 const shippingText = document.querySelector("#shipping-text");
 const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
@@ -682,7 +681,6 @@ if (cartCheckoutButton) cartCheckoutButton.addEventListener("click", () => {
     }
     window.location.assign(cartCheckoutUrl);
 });
-if (cartClearButton) cartClearButton.addEventListener("click", async () => { try { await mutateCart({ action: "clear" }); showCartStatus("Le panier a été vidé."); } catch (e) {} });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCart(); closeSearch(); } });
 /* CTA fiche produit : délégation globale pour rester fonctionnel même si une
    interaction secondaire de product.js échoue pendant son initialisation. */
