@@ -1,3 +1,4 @@
+import re
 import uuid
 from decimal import Decimal
 
@@ -65,6 +66,53 @@ class PublicOrderTrackingTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(ReturnRequest.objects.filter(order=self.order).count(), 1)
+
+    def test_tracking_lookup_form_accepts_same_origin_csrf_submission(self):
+        from django.test import Client
+
+        client = Client(enforce_csrf_checks=True)
+        page = client.get(reverse("checkout:tracking_lookup"))
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("csrftoken", client.cookies)
+        match = re.search(
+            rb'name="csrfmiddlewaretoken" value="([^"]+)"',
+            page.content,
+        )
+        self.assertIsNotNone(match)
+
+        response = client.post(
+            reverse("checkout:tracking_lookup"),
+            {
+                "reference": str(self.order.public_id),
+                "csrfmiddlewaretoken": match.group(1).decode(),
+            },
+            HTTP_ORIGIN="http://testserver",
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, reverse("checkout:tracking", args=[self.order.public_id]),
+            fetch_redirect_response=False,
+        )
+
+    def test_tracking_lookup_rejects_opaque_null_origin(self):
+        from django.test import Client
+
+        client = Client(enforce_csrf_checks=True)
+        page = client.get(reverse("checkout:tracking_lookup"))
+        match = re.search(
+            rb'name="csrfmiddlewaretoken" value="([^"]+)"',
+            page.content,
+        )
+        self.assertIsNotNone(match)
+        response = client.post(
+            reverse("checkout:tracking_lookup"),
+            {
+                "reference": str(self.order.public_id),
+                "csrfmiddlewaretoken": match.group(1).decode(),
+            },
+            HTTP_ORIGIN="null",
+        )
+        self.assertEqual(response.status_code, 403)
 
     def test_tracking_lookup_redirects_when_reference_exists(self):
         response = self.client.post(reverse("checkout:tracking_lookup"), {
