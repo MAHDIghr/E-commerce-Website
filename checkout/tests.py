@@ -77,6 +77,48 @@ class CheckoutIntegrationTests(TestCase):
         self.assertEqual(payment_response.status_code, 200)
         self.assertNotEqual(payment_response.status_code, 403)
 
+    def test_checkout_forms_reject_opaque_null_origin(self):
+        client = Client(enforce_csrf_checks=True)
+        session = client.session
+        session[CART_SESSION_KEY] = {f"{self.variant.pk}:{self.offer.pk}": 1}
+        session.save()
+
+        page = client.get(reverse("checkout:checkout"))
+        self.assertEqual(page.status_code, 200)
+        match = re.search(
+            rb'name="csrfmiddlewaretoken" value="([^"]+)"',
+            page.content,
+        )
+        self.assertIsNotNone(match)
+        token = match.group(1).decode()
+
+        promo_response = client.post(
+            reverse("checkout:checkout"),
+            {
+                "promo_action": "apply",
+                "promo_code": "CODE-INCONNU",
+                "csrfmiddlewaretoken": token,
+            },
+            HTTP_ORIGIN="null",
+        )
+        self.assertEqual(promo_response.status_code, 403)
+
+        payment_response = client.post(
+            reverse("checkout:checkout"),
+            {
+                "full_name": "Camille Martin",
+                "email": "camille@example.test",
+                "address_line1": "1 rue du Test",
+                "postal_code": "75001",
+                "city": "Paris",
+                "country": "FR",
+                "shipping_method": "free",
+                "csrfmiddlewaretoken": token,
+            },
+            HTTP_ORIGIN="null",
+        )
+        self.assertEqual(payment_response.status_code, 403)
+
     def test_checkout_and_result_reject_unsupported_http_methods(self):
         self.assertEqual(self.client.put(reverse("checkout:checkout")).status_code, 405)
         self.assertEqual(
