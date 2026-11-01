@@ -33,7 +33,8 @@ class PublicOrderTrackingTests(TestCase):
         self.assertNotContains(response, "private-client@example.test")
         self.assertContains(response, "Sac test")
         self.assertEqual(response["Cache-Control"], "private, no-store")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
+        self.assertContains(response, 'name="referrer" content="same-origin"')
 
     def test_unknown_public_reference_returns_404(self):
         response = self.client.get(reverse("checkout:tracking", args=[uuid.uuid4()]))

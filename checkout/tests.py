@@ -53,6 +53,8 @@ class CheckoutIntegrationTests(TestCase):
         page = client.get(reverse("checkout:checkout"), secure=True)
         self.assertEqual(page.status_code, 200)
         self.assertIn("csrftoken", client.cookies)
+        self.assertContains(page, 'name="referrer" content="same-origin"')
+        self.assertNotContains(page, 'name="referrer" content="no-referrer"')
         match = re.search(
             rb'name="csrfmiddlewaretoken" value="([^"]+)"',
             page.content,

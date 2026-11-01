@@ -33,7 +33,7 @@ class PublicOrderTrackingTests(TestCase):
         self.assertContains(response, str(self.order.public_id))
         self.assertContains(response, "Suivi de commande")
         self.assertEqual(response["Cache-Control"], "private, no-store")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
         self.assertNotContains(response, self.order.email)
         self.assertNotContains(response, self.order.address_line1)
 

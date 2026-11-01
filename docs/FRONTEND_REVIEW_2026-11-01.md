@@ -32,3 +32,9 @@ Suite Django : 158 tests réussis (dont deux régressions sur ressources checkou
 Ce contrôle ne garantit pas l'absence de tout défaut front-end. Le dashboard authentifié et ses tableaux/formulaires riches, les commandes existantes, les variantes d'offres complexes, les médias tiers, les navigateurs Safari/Firefox, les lecteurs d'écran et les vrais appareils restent à recetter. Les captures utilisent des données locales de démonstration, pas le catalogue de production. Aucune certification WCAG ni mesure de performance en production n'est revendiquée.
 
 La traduction existante reste partielle ; les nouveaux textes légaux de consentement sont français. Le formulaire transmet toujours les mêmes champs au backend, dont `email`, `consent=yes`, `website` et le jeton CSRF. Le changement n'affecte ni le double opt-in ni le traitement serveur de la newsletter.
+
+## Correctif CSRF après recette des soumissions natives
+
+Chromium reproduisait un POST `Origin: null` et une réponse 403 sur le checkout en HTTP local, à cause de la balise `referrer=no-referrer`. Les tests Django fournissaient explicitement Origin et ne simulaient pas cette politique navigateur. Les formulaires checkout, recherche de commande et suivi utilisent désormais `same-origin`; les réponses de suivi sont alignées. Les liens externes ne reçoivent toujours pas de Referer. La page de résultat sans formulaire conserve `no-referrer`.
+
+Après correction, les POST natifs de promotion et de checkout transmettent l'origine locale et aboutissent au traitement Django (200 après redirection promo ; 200 avec erreurs de validation pour le checkout incomplet). Aucun paiement Stripe n'a été déclenché. Le middleware CSRF reste actif et les tests de rejet explicite de `Origin: null` sont conservés.

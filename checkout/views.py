@@ -247,7 +247,7 @@ def order_tracking(request, public_id):
         raise Http404
 
     response = render(request, "order_tracking.html", {"order": order})
-    response["Referrer-Policy"] = "no-referrer"
+    response["Referrer-Policy"] = "same-origin"
     response["Cache-Control"] = "private, no-store"
     return response
 
@@ -271,7 +271,7 @@ def order_return_request(request, public_id):
             "return_error": "Trop de demandes depuis cette connexion. Réessayez dans quelques minutes.",
         }, status=429)
         response["Cache-Control"] = "private, no-store"
-        response["Referrer-Policy"] = "no-referrer"
+        response["Referrer-Policy"] = "same-origin"
         return response
     lines = {}
     for line in order.lines.all():
@@ -292,6 +292,6 @@ def order_return_request(request, public_id):
             "order": order, "return_error": str(exc),
         }, status=400)
         response["Cache-Control"] = "private, no-store"
-        response["Referrer-Policy"] = "no-referrer"
+        response["Referrer-Policy"] = "same-origin"
         return response
     return redirect("checkout:tracking", public_id=order.public_id)
