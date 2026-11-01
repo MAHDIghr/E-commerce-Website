@@ -379,75 +379,7 @@ renderRecentlyViewed();
 })();
 
 
-/* ==========================================================================
-   Notification de preuve sociale.
-   ⚠️ Les entrées ci-dessous sont des exemples de démonstration : à
-   remplacer par un flux réel (dernières commandes anonymisées côté
-   Django) avant la mise en production, pour ne jamais afficher au
-   client une information fausse.
-   ========================================================================== */
-
-(function initSocialProofToast() {
-    const toast = document.querySelector("#social-proof-toast");
-    if (!toast) return;
-
-    const demoActivity = [
-        { initials: "SM", name: "Sarah", city: "Lyon", product: "le sac cabas cuir camel", minutesAgo: 6 },
-        { initials: "LB", name: "Léa", city: "Bordeaux", product: "le foulard imprimé en soie", minutesAgo: 14 },
-        { initials: "CD", name: "Camille", city: "Nantes", product: "le sac bandoulière noir", minutesAgo: 21 },
-    ];
-
-    const avatarEl = toast.querySelector(".social-toast__avatar");
-    const textEl = toast.querySelector(".social-toast__text");
-    const timeEl = toast.querySelector(".social-toast__time");
-    const closeButton = toast.querySelector('[data-action="close-toast"]');
-
-    let index = 0;
-    let intervalId = null;
-
-    function showNext() {
-        const entry = demoActivity[index % demoActivity.length];
-        index += 1;
-
-        if (avatarEl) avatarEl.textContent = entry.initials;
-        if (textEl) {
-            textEl.innerHTML = "";
-            const strongName = document.createElement("strong");
-            strongName.textContent = entry.name;
-            textEl.append(strongName, document.createTextNode(` (${entry.city}) vient de consulter ${entry.product}`));
-        }
-        if (timeEl) timeEl.textContent = `il y a ${entry.minutesAgo} min`;
-
-        toast.classList.add("is-visible");
-
-        window.setTimeout(() => toast.classList.remove("is-visible"), 5000);
-    }
-
-    if (closeButton) {
-        closeButton.addEventListener("click", () => {
-            toast.classList.remove("is-visible");
-        });
-    }
-
-    window.setTimeout(() => {
-        showNext();
-        intervalId = window.setInterval(showNext, 9000);
-    }, 6000);
-
-    /* Évite un minuteur qui tourne inutilement si l'onglet est masqué. */
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden && intervalId) {
-            window.clearInterval(intervalId);
-            intervalId = null;
-        } else if (!document.hidden && !intervalId) {
-            intervalId = window.setInterval(showNext, 9000);
-        }
-    });
-})();
-
-
-/* ==========================================================================
-   Carrousel 3D — section "Notre sélection signature"
+/* ==========================================================================\n   Carrousel 3D — section "Notre sélection signature"
    (fusionné depuis test.js, encapsulé pour ne rien exposer au scope global)
    ========================================================================== */
 
