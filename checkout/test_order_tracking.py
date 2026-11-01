@@ -27,7 +27,9 @@ class PublicOrderTrackingTests(TestCase):
     def test_valid_public_reference_displays_only_its_order(self):
         response = self.client.get(reverse("checkout:tracking", args=[self.order.public_id]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Client Privé")
+        # Le suivi public ne doit pas exposer les données personnelles du client.
+        self.assertNotContains(response, "Client Privé")
+        self.assertNotContains(response, "private-client@example.test")
         self.assertContains(response, "Sac test")
         self.assertEqual(response["Cache-Control"], "private, no-store")
         self.assertEqual(response["Referrer-Policy"], "no-referrer")
@@ -47,7 +49,8 @@ class PublicOrderTrackingTests(TestCase):
         )
         response = self.client.get(reverse("checkout:tracking", args=[another_order.public_id]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Autre client")
+        self.assertNotContains(response, "Autre client")
+        self.assertNotContains(response, "another@example.test")
         self.assertNotContains(response, "Client Privé")
         self.assertNotContains(response, "Sac test")
 
