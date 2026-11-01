@@ -70,10 +70,26 @@ class MediaFormSetBase(BaseInlineFormSet):
 class OfferFormSetBase(BaseInlineFormSet):
     def clean(self):
         super().clean()
-        featured_forms = [
-            form for form in self.forms
-            if form.cleaned_data and not form.cleaned_data.get("DELETE") and form.cleaned_data.get("is_featured")
-        ]
+
+        active_badges = set()
+        featured_forms = []
+
+        for form in self.forms:
+            if not form.cleaned_data or form.cleaned_data.get("DELETE"):
+                continue
+
+            if form.cleaned_data.get("is_featured"):
+                featured_forms.append(form)
+
+            if form.cleaned_data.get("is_active"):
+                badge = form.cleaned_data.get("badge")
+                if badge in active_badges:
+                    raise ValidationError(
+                        "Chaque niveau (Essentiel, Medium et Premium) ne peut avoir "
+                        "qu'une seule offre active par produit."
+                    )
+                active_badges.add(badge)
+
         if len(featured_forms) > 1:
             raise ValidationError("Une seule offre peut être mise en avant par produit.")
 
