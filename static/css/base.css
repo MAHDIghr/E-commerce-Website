@@ -1304,3 +1304,40 @@ body.cart-open { overflow: hidden; }
 .cart-promo small { display:block; margin-top:.35rem; color:var(--color-ink-muted); font-size:.7rem; }
 .footer-news__offer { display:flex; flex-wrap:wrap; align-items:center; gap:.8rem; margin-top:1rem; }
 .footer-news__link { display:inline-block; margin-top:.85rem; color:var(--color-accent-dark); font-size:.78rem; font-weight:700; text-decoration:underline; }
+
+
+/* Accès au suivi de commande — CTA discret dans la colonne Aide du footer. */
+.footer-col li a.footer-track-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .65rem;
+    min-height: 44px;
+    margin: .45rem 0 .65rem;
+    padding: .55rem .8rem;
+    border: 1px solid rgb(210 177 126 / 42%);
+    border-radius: 8px;
+    color: #f4e6d1;
+    background: linear-gradient(135deg, rgb(210 177 126 / 13%), rgb(255 255 255 / 3%));
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+    text-decoration: none;
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+.footer-track-link__icon { width: 19px; height: 19px; flex: 0 0 auto; color: var(--color-gold); }
+.footer-track-link__arrow { margin-left: .15rem; color: var(--color-gold); transition: transform var(--transition-fast); }
+.footer-col li a.footer-track-link:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-gold);
+    color: #fff;
+    background: rgb(210 177 126 / 19%);
+}
+.footer-col li a.footer-track-link:hover .footer-track-link__arrow { transform: translateX(3px); }
+.footer-col li a.footer-track-link:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+}
+@media (min-width: 900px) {
+    .footer-col li a.footer-track-link { min-height: 42px; }
+}
