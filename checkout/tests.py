@@ -1,14 +1,16 @@
 import json
+import re
 import uuid
 from types import SimpleNamespace
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
 from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent, Refund, OrderEvent
+from shop.views import CART_SESSION_KEY
 from .forms import CheckoutForm
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
@@ -41,6 +43,39 @@ class CheckoutIntegrationTests(TestCase):
         session.save()
         self.add_to_cart()
         self.assertNotIn("checkout_attempt_key", self.client.session)
+
+    def test_checkout_promo_and_payment_forms_accept_valid_csrf_tokens(self):
+        client = Client(enforce_csrf_checks=True)
+        session = client.session
+        session[CART_SESSION_KEY] = {f"{self.variant.pk}:{self.offer.pk}": 1}
+        session.save()
+
+        page = client.get(reverse("checkout:checkout"), secure=True)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("csrftoken", client.cookies)
+        match = re.search(
+            rb'name="csrfmiddlewaretoken" value="([^"]+)"',
+            page.content,
+        )
+        self.assertIsNotNone(match)
+        csrf_token = match.group(1).decode()
+
+        promo_response = client.post(
+            reverse("checkout:checkout"),
+            {"promo_action": "apply", "promo_code": "CODE-INCONNU", "csrfmiddlewaretoken": csrf_token},
+            secure=True,
+            HTTP_ORIGIN="https://testserver",
+        )
+        self.assertEqual(promo_response.status_code, 302)
+
+        payment_response = client.post(
+            reverse("checkout:checkout"),
+            {"csrfmiddlewaretoken": csrf_token},
+            secure=True,
+            HTTP_ORIGIN="https://testserver",
+        )
+        self.assertEqual(payment_response.status_code, 200)
+        self.assertNotEqual(payment_response.status_code, 403)
 
     def test_checkout_and_result_reject_unsupported_http_methods(self):
         self.assertEqual(self.client.put(reverse("checkout:checkout")).status_code, 405)
