@@ -788,7 +788,7 @@ const translations = {
         nav_new: "Nouveautés",
         nav_bags: "Sacs",
         nav_accessories: "Accessoires",
-        nav_collections: "Collections",
+        nav_collections: "Collection",
         nav_about: "À propos",
         search_placeholder: "Rechercher un sac, un accessoire…",
         search_hint: "Recherchez par nom, type de produit, matière ou catégorie.",
