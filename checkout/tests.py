@@ -107,8 +107,10 @@ class CheckoutIntegrationTests(TestCase):
         session = self.client.session
         session[CART_SESSION_KEY] = new_cart
         session.save()
+        # Après le premier retour, la clé de session est invalidée : sans
+        # session Stripe ni preuve de propriété, l'URL seule ne doit plus suffire.
         response = self.client.get(reverse("checkout:result", kwargs={"public_id": order.public_id}))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         self.assertEqual(self.client.session.get(CART_SESSION_KEY), new_cart)
 
     def test_return_page_never_marks_order_paid_and_rejects_mismatched_session(self):
