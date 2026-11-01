@@ -579,11 +579,6 @@ def cart_mutation(request):
         return JsonResponse({"error": "Action de panier invalide."}, status=400)
 
     state = _cart_state(request)
-    if action == "clear":
-        request.session[CART_SESSION_KEY] = {}
-        request.session.pop("checkout_attempt_key", None)
-        request.session.modified = True
-        return JsonResponse(_cart_payload(request))
 
     try:
         variant_id = _strict_int(data.get("variant_id"))
