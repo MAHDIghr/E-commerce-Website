@@ -44,13 +44,23 @@ ALLOWED_HOSTS = [
 # CSRF
 # -----------------------------------------------------------------------------
 
-CSRF_TRUSTED_ORIGINS = [
+# Autorise les origines HTTPS explicitement configurées, ainsi que les
+# domaines exacts déjà déclarés dans ALLOWED_HOSTS. Cela évite les refus
+# CSRF lorsque le navigateur utilise HTTPS et que le proxy/Passenger transmet
+# un schéma différent à Django. Les jokers ne sont jamais ajoutés ici.
+_configured_csrf_origins = [
     origin.strip()
-    for origin in get_required_env(
-        "DJANGO_CSRF_TRUSTED_ORIGINS"
-    ).split(",")
+    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+_allowed_host_csrf_origins = [
+    f"https://{host}"
+    for host in ALLOWED_HOSTS
+    if host and "*" not in host and not host.startswith(".")
+]
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(
+    _configured_csrf_origins + _allowed_host_csrf_origins
+))
 
 
 # -----------------------------------------------------------------------------
