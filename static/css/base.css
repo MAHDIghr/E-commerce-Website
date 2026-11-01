@@ -485,9 +485,10 @@ h3 { font-size: 1.05rem; font-weight: 500; }
     background-color: var(--color-surface);
     box-shadow: -20px 0 60px rgb(36 31 28 / 18%);
     transform: translateX(100%);
-    transition: transform var(--transition-normal);
+    visibility: hidden;
+    transition: transform var(--transition-normal), visibility var(--transition-normal);
 }
-.cart-drawer.is-open { transform: translateX(0); }
+.cart-drawer.is-open { transform: translateX(0); visibility: visible; }
 
 .cart-drawer__header {
     display: flex; align-items: center; justify-content: space-between;
@@ -779,7 +780,7 @@ h3 { font-size: 1.05rem; font-weight: 500; }
    Responsive — parties communes (header, panier, footer, boutons)
    ========================================================================== */
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
     .container { width: min(calc(100% - 2rem), var(--container-width)); }
 
     .header-inner { position: relative; }
@@ -1299,10 +1300,10 @@ body.cart-open { overflow: hidden; }
 .cart-promo__eyebrow { display:block; margin-bottom:.25rem; color:var(--color-accent-dark); font-size:.65rem; font-weight:700; letter-spacing:.13em; }
 .cart-promo p { margin:0 0 .5rem; font-size:.85rem; }
 .cart-promo p strong { color:var(--color-accent-dark); font-size:1.1rem; }
-.cart-promo code, .footer-news__offer code { padding:.25rem .45rem; border:1px dashed var(--color-accent); border-radius:5px; background:#fff; letter-spacing:.12em; font-weight:700; }
+.cart-promo code { padding:.25rem .45rem; border:1px dashed var(--color-accent); border-radius:5px; background:#fff; letter-spacing:.12em; font-weight:700; }
 .cart-promo button { color:var(--color-accent-dark); font-size:.78rem; font-weight:700; text-decoration:underline; }
 .cart-promo small { display:block; margin-top:.35rem; color:var(--color-ink-muted); font-size:.7rem; }
-.footer-news__offer { display:flex; flex-wrap:wrap; align-items:center; gap:.8rem; margin-top:1rem; }
+
 .footer-news__link { display:inline-block; margin-top:.85rem; color:var(--color-accent-dark); font-size:.78rem; font-weight:700; text-decoration:underline; }
 
 
@@ -1340,4 +1341,25 @@ body.cart-open { overflow: hidden; }
 }
 @media (min-width: 900px) {
     .footer-col li a.footer-track-link { min-height: 42px; }
+}
+
+/* Keep newsletter controls readable and usable on narrow screens. */
+.footer-news__consent { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 10px; align-items: start; line-height: 1.6; cursor: pointer; }
+.footer-news__consent input { width: 20px; height: 20px; margin: 2px 0 0; }
+.footer-news__form input { font-size: 16px; min-width: 0; }
+.footer-news__form { min-width: 0; }
+.footer-news__btn { min-height: 44px; }
+@media (max-width: 380px) { .footer-news__form { flex-direction: column; } .footer-news__form input { width: 100%; min-height: 48px; } }
+.footer-main > * { min-width: 0; }
+.footer-news__form input { width: 100%; flex-basis: 0; }
+.footer-news__consent { font-size: .8125rem; }
+.footer-news__link { color: var(--color-gold); }
+@media (max-width: 600px) { .footer-news__form { flex-direction: column; } .footer-news__form input { flex-basis: auto; } }
+/* Hidden off-canvas content must not enlarge the document. */
+.cart-drawer:not(.is-open) { transform: none; visibility: hidden; pointer-events: none; }
+@media (max-width: 380px) {
+    .header-inner { gap: 6px; }
+    .header-actions { gap: 0; }
+    .logo__image { max-width: 96px; height: 34px; }
+    .header-actions > * { flex-shrink: 0; }
 }

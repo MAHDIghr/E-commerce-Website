@@ -312,4 +312,12 @@ body.page-shop.has-cart-bar .site-footer { padding-bottom: 4.5rem; }
 
 @media (prefers-reduced-motion: reduce) {
     .skel, .pgrid.is-ready .pcard { animation: none; }
+}@media (max-width: 899px) {
+    .toolbar { margin-inline: 0; padding-inline: 0; flex-wrap: wrap; }
+    .toolbar__sort { min-width: 0; }
+    .toolbar__sort select { max-width: 100%; }
+}
+@media (max-width: 380px) {
+    .toolbar__sort { width: 100%; }
+    .toolbar__sort select { width: 100%; min-height: 44px; }
 }

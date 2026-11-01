@@ -409,18 +409,17 @@
                 <form class="newsletter-form" method="post" action="{% url 'home:newsletter_subscribe' %}">
                     {% csrf_token %}
                     <div class="newsletter-honeypot" aria-hidden="true"><label for="newsletter-website">Ne pas remplir</label><input id="newsletter-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
-                    <label for="newsletter-email" class="visually-hidden">Votre adresse email</label>
-                    <input id="newsletter-email" name="email" type="email"
-                        data-i18n-placeholder="newsletter_placeholder"
-                        placeholder="Votre adresse email"
-                        autocomplete="email" maxlength="254" required>
-                    <label class="newsletter-consent"><input type="checkbox" name="consent" value="yes" required> J’accepte de recevoir les communications de My Line Collection. Je peux me désinscrire à tout moment. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</label>
-                    <button type="submit" class="button button-primary" data-i18n="newsletter_button">S'inscrire</button>
+                    <label for="newsletter-email" class="newsletter-label">Votre adresse e-mail</label>
+                    <div class="newsletter-fields">
+                        <input id="newsletter-email" name="email" type="email" placeholder="vous@exemple.fr" autocomplete="email" maxlength="254" required aria-describedby="newsletter-privacy">
+                        <button type="submit" class="button button-primary">Je m’inscris</button>
+                    </div>
+                    <label class="newsletter-consent" for="newsletter-consent">
+                        <input id="newsletter-consent" type="checkbox" name="consent" value="yes" required>
+                        <span>J’accepte de recevoir les nouveautés et les offres de My Line Collection par e-mail.</span>
+                    </label>
+                    <p class="newsletter-note" id="newsletter-privacy">Désinscription à tout moment. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</p>
                 </form>
-
-                <p class="newsletter-note" data-i18n="newsletter_note">
-                    En vous inscrivant, vous acceptez de recevoir nos communications par email.
-                </p>
             </div>
         </div>
     </section>
@@ -450,15 +449,6 @@
     </div>
 </div>
 
-
-<!-- PREUVE SOCIALE -->
-    <button type="button" class="social-toast__close" data-action="close-toast" aria-label="Fermer la notification">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-            <line x1="6" y1="18" x2="18" y2="6"></line>
-        </svg>
-    </button>
-</div>
 
 {% endblock %}
 

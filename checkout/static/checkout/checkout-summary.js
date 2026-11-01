@@ -22,6 +22,9 @@
         if (method === "standard") shipping = Number(form.dataset.standardShipping || "4.90");
         else if (method === "express") shipping = Number(form.dataset.expressShipping || "9.90");
 
+        if (!Number.isFinite(subtotal) || !Number.isFinite(shipping)) return;
+        const totalLabel = document.querySelector("#checkout-total-label");
+        if (totalLabel) totalLabel.textContent = "Total estimé, livraison incluse";
         if (shippingPreview) shippingPreview.textContent = shipping === 0 ? "Offerte" : money(shipping);
         if (totalPreview) totalPreview.textContent = money(subtotal + shipping);
     }

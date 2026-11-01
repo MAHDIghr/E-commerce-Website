@@ -51,13 +51,8 @@
                     <input id="footer-news-email" name="email" type="email" placeholder="Votre adresse e-mail" autocomplete="email" maxlength="254" required>
                     <button type="submit" class="footer-news__btn">S’inscrire</button>
                 </div>
-                <label class="footer-news__consent"><input type="checkbox" name="consent" value="yes" required> J’accepte de recevoir les communications de My Line Collection. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</label>
+                <label class="footer-news__consent"><input type="checkbox" name="consent" value="yes" required> <span>J’accepte de recevoir les nouveautés et les offres par e-mail. Désinscription à tout moment. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</span></label>
             </form>
-
-            <div class="footer-news__offer">
-                <code>BIENVENUE</code>
-                <button type="button" class="footer-news__btn" data-copy-promo="BIENVENUE">Copier le code</button>
-            </div>
             <p class="footer-news__msg" id="footer-news-msg" role="status" aria-live="polite"></p>
             <a class="footer-news__link" href="{% url 'shop:catalog' %}">Découvrir la collection</a>
         </section>
@@ -65,7 +60,7 @@
         <!-- Marque + réseaux -->
         <div class="footer-brand">
             <a href="{% url 'home:home' %}" class="footer-logo" aria-label="My Line Collection - Accueil">
-                <img src="{% static 'images/mainLogo.svg' %}" alt="My Line Collection" class="logo__image">
+                <img src="{% static 'images/whiteMainLogo.svg' %}" alt="My Line Collection" class="logo__image">
             </a>
             <p data-i18n="footer_tagline">Sacs et accessoires pensés pour l'élégance au quotidien.</p>
        </div>
