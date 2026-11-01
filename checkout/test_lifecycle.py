@@ -48,11 +48,13 @@ class OrderLifecycleServiceTests(TestCase):
         )
         with self.assertRaises(LifecycleProblem):
             transition_shipment(shipment.pk, Shipment.DELIVERED, actor=self.admin)
-        transition_shipment(shipment.pk, Shipment.READY, actor=self.admin)
+        # La transition READY synchronise automatiquement le statut commercial ;
+        # préparer d'abord les étapes métier évite de tenter ensuite un retour arrière.
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_CONFIRMED, actor=self.admin)
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PROCESSING, actor=self.admin)
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_PREPARING, actor=self.admin)
         transition_order_commercial_status(self.order.pk, Order.COMMERCIAL_READY_TO_SHIP, actor=self.admin)
+        transition_shipment(shipment.pk, Shipment.READY, actor=self.admin)
         transition_shipment(shipment.pk, Shipment.ACCEPTED, actor=self.admin)
         self.order.refresh_from_db()
         self.assertEqual(self.order.fulfillment_status, Order.FULFILLMENT_PREPARING)
@@ -123,6 +125,7 @@ class OrderLifecycleServiceTests(TestCase):
         self.assertEqual(refund.status, Refund.PROCESSING)
         self.assertIn("incertain", refund.failure_reason.lower())
 
+    @patch.dict("os.environ", {"STRIPE_SECRET_KEY": "sk_test_unit_test_only", "STRIPE_LIVE_MODE": "False"})
     def test_failed_refund_does_not_reduce_remaining_refundable_balance(self):
         Refund.objects.create(
             order=self.order, amount=Decimal("30.00"), currency="eur",
