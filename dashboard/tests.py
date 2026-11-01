@@ -7,6 +7,7 @@ from django.urls import reverse
 from product.models import (
     Category, Product, ProductOffer, ProductOfferItem, ProductVariant,
 )
+from .forms import OfferFormSet
 from .services import ensure_default_offer
 
 
@@ -95,6 +96,27 @@ class DashboardCatalogManagementTests(TestCase):
         self.product = Product.objects.create(
             category=self.category, name="Cabas dashboard", slug="cabas-dashboard-test",
         )
+
+    def test_offer_formset_rejects_duplicate_active_badges(self):
+        formset = OfferFormSet(data={
+            "offers-TOTAL_FORMS": "2",
+            "offers-INITIAL_FORMS": "0",
+            "offers-MIN_NUM_FORMS": "1",
+            "offers-MAX_NUM_FORMS": "3",
+            "offers-0-badge": ProductOffer.BADGE_ESSENTIAL,
+            "offers-0-display_delivery_label": ProductOffer.DELIVERY_PAID,
+            "offers-0-price": "49.90",
+            "offers-0-reference_price": "",
+            "offers-0-is_active": "on",
+            "offers-1-badge": ProductOffer.BADGE_ESSENTIAL,
+            "offers-1-display_delivery_label": ProductOffer.DELIVERY_PAID,
+            "offers-1-price": "59.90",
+            "offers-1-reference_price": "",
+            "offers-1-is_active": "on",
+        }, instance=self.product, prefix="offers")
+
+        self.assertFalse(formset.is_valid())
+        self.assertIn("qu'une seule offre active", str(formset.non_form_errors()))
 
     def test_category_cannot_be_deleted_while_products_are_attached(self):
         response = self.client.post(reverse("dashboard:category_delete", args=[self.category.pk]))
