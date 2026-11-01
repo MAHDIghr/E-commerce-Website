@@ -203,6 +203,7 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
+@ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def order_tracking_lookup(request):
     """Recherche une commande à partir de sa référence publique, sans compte client."""
