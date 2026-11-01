@@ -116,7 +116,7 @@ class DashboardCatalogManagementTests(TestCase):
         }, instance=self.product, prefix="offers")
 
         self.assertFalse(formset.is_valid())
-        self.assertIn("qu'une seule offre active", str(formset.non_form_errors()))
+        self.assertIn("qu'une seule offre active", formset.non_form_errors().as_text())
 
     def test_category_cannot_be_deleted_while_products_are_attached(self):
         response = self.client.post(reverse("dashboard:category_delete", args=[self.category.pk]))
