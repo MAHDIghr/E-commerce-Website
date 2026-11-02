@@ -51,12 +51,12 @@
       <p class="buy__line">{{ product.brand_line }}</p>
       <h1 id="p-title">{{ product.name }}</h1>
       <p class="buy__tag">{{ product.tagline }}</p>
-      <a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">★★★★★</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>
+      {% if product.details_available %}<a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">★★★★★</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>{% endif %}
 
       <p class="price">
         <strong id="price-now">{{ product.selected.price_label }}</strong>
-        <del id="price-old"><span class="visually-hidden">Prix avant remise </span>{{ product.selected.old_label }}</del>
-        <span class="price__off" id="price-off">-{{ product.selected.off }} %</span>
+        <del id="price-old" {% if not product.selected.off %}hidden{% endif %}><span class="visually-hidden">Prix avant remise </span>{{ product.selected.old_label }}</del>
+        <span class="price__off" id="price-off" {% if not product.selected.off %}hidden{% endif %}>-{{ product.selected.off }} %</span>
       </p>
 
       <fieldset class="opt">
@@ -76,7 +76,7 @@
           <span class="offer__card">
             <span class="offer__dot" aria-hidden="true"></span>
             <span class="offer__body"><strong>{{ o.title }}</strong><span>{{ o.items }}</span><em>{{ o.ship }}</em></span>
-            <span class="offer__price"><strong>{{ o.price_label }}</strong><del>{{ o.old_label }}</del></span>
+            <span class="offer__price"><strong>{{ o.price_label }}</strong>{% if o.off %}<del>{{ o.old_label }}</del>{% endif %}</span>
           </span>
           <span class="offer__badge">{{ o.badge }}</span>
         </label>
@@ -91,6 +91,7 @@
   </div>
 </div>
 
+{% if product.details_available %}
 <section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Pourquoi ce sac</h2>
   <ul class="grid grid--4">
@@ -146,10 +147,11 @@
   {% for q, a in product.faq %}<details class="faq" name="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
 </div></section>
 
+{% endif %}
 <section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Vous aimerez aussi</h2>
   <ul class="grid grid--4">
-    {% for name, price, pid in product.related %}<li><a class="rel" href="{% url 'shop:catalog' %}"><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><strong>{{ name }}</strong><span>{{ price }}</span></a></li>{% endfor %}
+    {% for related in product.related %}<li><a class="rel" href="{% url 'product:detail' related.slug %}"><img src="{{ related.image }}" alt="" width="500" height="625" loading="lazy"><strong>{{ related.name }}</strong><span>{{ related.price }}</span></a></li>{% endfor %}
   </ul>
 </div></section>
 
