@@ -3,6 +3,11 @@
    Lit les données depuis #product-data (json_script) : aucun contenu produit en dur ici. */
 (() => {
     const data = JSON.parse(document.getElementById("product-data").textContent);
+    /* Historique local indicatif ; aucun prix n'est utilisé pour une commande. */
+    const recentKey = "recently_viewed_v1";
+    const recent = readStorage(recentKey, []);
+    const entry = { id: data.slug, name: data.name, price: data.selected.price, image: data.media[0].src };
+    writeStorage(recentKey, [entry, ...(Array.isArray(recent) ? recent.filter((item) => item && item.id !== entry.id) : [])].slice(0, 4));
     const media = data.media;
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -81,6 +86,8 @@
         $("#price-now").textContent = o.label;
         $("#price-old").lastChild.textContent = o.old;
         $("#price-off").textContent = `-${o.off} %`;
+        $("#price-old").hidden = !Number(o.off);
+        $("#price-off").hidden = !Number(o.off);
         $("#sbar-price").textContent = o.label;
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = colorIn().dataset.label;
