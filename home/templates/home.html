@@ -145,19 +145,21 @@
                 <div class="carousel-scene">
                     <div class="carousel" id="carousel">
                         {% for selection in signature_selections %}
+                        {% with variant=selection.product.display_variant media=selection.product.media_items.all|first %}
                         <a
                             class="card"
                             href="{% url 'product:detail' slug=selection.product.slug %}"
                         >
                             <img
-                                src="{{ selection.image.url }}"
-                                alt="{{ selection.alt_text|default:selection.product.name }}"
+                                src="{% if variant.image_src %}{{ variant.image_src }}{% elif media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}"
+                                alt="{% if variant.image_src %}{{ variant.image_alt }}{% else %}{{ media.alt_text|default:selection.product.name }}{% endif %}"
                                 loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
                                 decoding="async"
                                 draggable="false"
                             >
-                            <span class="card__details"><strong>{{ selection.product.name }}</strong>{% if selection.product.display_price %}<span>{{ selection.product.display_price|floatformat:2 }} €</span>{% endif %}</span>
+                            <span class="card__details"><strong>{{ selection.product.display_name }}</strong>{% if selection.product.display_price %}<span>{{ selection.product.display_price|floatformat:2 }} €</span>{% endif %}</span>
                         </a>
+                        {% endwith %}
                         {% empty %}
                         <p class="empty-catalog">Notre sélection signature sera bientôt disponible.</p>
                         {% endfor %}
@@ -233,24 +235,24 @@
 
             <div class="products-grid">
                 {% for product in new_products %}
-                {% with variant=product.default_variant media=product.media_items.all|first %}
+                {% with variant=product.display_variant media=product.media_items.all|first %}
                 {% if variant %}
                 <article class="product-card reveal"
                     data-product-id="{{ product.slug }}:default:{{ variant.pk }}"
                     data-variant-id="{{ variant.pk }}"
                     data-product-slug="{{ product.slug }}"
                     data-offers-url="{% url 'shop:offer_options' slug=product.slug %}"
-                    data-product-name="{{ product.name }}{% if variant.color_name %} — {{ variant.color_name }}{% endif %}"
+                    data-product-name="{{ product.display_name }}"
                     data-product-price="{{ product.display_price }}"
-                    data-product-image="{% if media %}{% if media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
-                    <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.name }}">
+                    data-product-image="{% if variant.image_src %}{{ variant.image_src }}{% elif media %}{% if media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}{% endif %}">
+                    <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.display_name }}">
                         <div class="product-badge-stack">
                             {% if product.display_discount_percent %}<span class="product-badge product-badge--sale">-{{ product.display_discount_percent }} %</span>{% elif product.is_new %}<span class="product-badge">Nouveau</span>{% endif %}
                             {% if variant.stock_quantity > 0 and variant.stock_quantity <= 5 %}
                             <span class="product-badge product-badge--stock">Plus que {{ variant.stock_quantity }} en stock</span>
                             {% endif %}
                         </div>
-                        {% if media %}{% if media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
+                        {% if variant.image_src %}<img src="{{ variant.image_src }}" alt="{{ variant.image_alt }}" loading="lazy" decoding="async">{% elif media %}{% if media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
                     </a>
                     <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -258,7 +260,7 @@
                         </svg>
                     </button>
                     <div class="product-info">
-                        <h3>{{ product.name }}</h3>
+                        <h3>{{ product.display_name }}</h3>
                         <p class="product-category">{{ product.category.name }}</p>
                         <div class="product-buy">
                             <p class="product-price">

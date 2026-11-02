@@ -183,6 +183,21 @@
         $("#sbar-price").textContent = priceLabel;
         $("#sbar-offer").textContent = o.name;
         $("#color-label").textContent = color.label;
+        const selected = data.colors.find((item) => item.id === colorIn().value);
+        const name = selected?.name || data.base_name;
+        $("#p-title").textContent = name;
+        $("#product-crumb-name").textContent = name;
+
+        /* Une couleur illustrée ne montre que sa propre photo. */
+        if (selected && selected.image && media[0]) {
+            media[0] = { ...media[0], src: selected.image, poster: selected.image, thumb: selected.image, alt: selected.image_alt };
+            const photo = $(".gal__slide img");
+            const thumb = $(".gal__thumb img");
+            if (photo) { photo.src = selected.image; photo.alt = selected.image_alt; }
+            if (thumb) thumb.src = selected.image;
+            const zoom = $(".gal__slide [data-zoom]");
+            if (zoom) zoom.setAttribute("aria-label", `Agrandir : ${selected.image_alt}`);
+        }
 
         // Le prix est propre à l'offre choisie et ne varie pas avec la couleur.
         $$('input[name="offer"]').forEach((input) => {

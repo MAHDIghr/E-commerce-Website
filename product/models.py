@@ -139,6 +139,35 @@ class Product(models.Model):
         queryset = self.variants.filter(is_active=True).order_by("position", "pk")
         return queryset.filter(stock_quantity__gt=0).first() or queryset.first()
 
+    @property
+    def public_variants(self):
+        """Une couleur n'est proposée que si sa photo existe, sauf produit sans déclinaison illustrée."""
+        cached = getattr(self, "_prefetched_objects_cache", {}).get("variants")
+        variants = [v for v in (cached if cached is not None else self.variants.filter(is_active=True)) if v.is_active]
+        variants.sort(key=lambda v: (v.stock_quantity <= 0, v.position, v.pk))
+        illustrated = [v for v in variants if v.image or v.image_url]
+        return illustrated if illustrated else variants[:1]
+
+    @property
+    def display_variant(self):
+        return next(iter(self.public_variants), None)
+
+    def display_name_for(self, variant):
+        base = self.name
+        variants = getattr(self, "_prefetched_objects_cache", {}).get("variants")
+        for candidate in (variants if variants is not None else self.variants.filter(is_active=True)):
+            color = (candidate.color_name or "").strip()
+            if color and base.casefold().endswith(" " + color.casefold()):
+                if variant and color.casefold() == (variant.color_name or "").strip().casefold():
+                    return self.name
+                base = base[:-(len(color) + 1)].rstrip()
+                break
+        return f"{base} — {variant.color_name}" if variant and variant.color_name else base
+
+    @property
+    def display_name(self):
+        return self.display_name_for(self.display_variant)
+
     def _active_offers(self):
         cached = getattr(self, "_prefetched_objects_cache", {}).get("offers")
         if cached is not None:
@@ -192,6 +221,9 @@ class ProductVariant(models.Model):
     color_name = models.CharField("Couleur", max_length=80, blank=True)
     color_slug = models.SlugField("Identifiant de couleur", max_length=80, blank=True)
     color_code = models.CharField("Code couleur", max_length=7, blank=True)
+    image = models.ImageField("Photo de la couleur", upload_to="products/variants/%Y/%m/", blank=True)
+    image_url = models.URLField("URL HTTPS de la couleur", max_length=1000, blank=True)
+    image_alt = models.CharField("Texte alternatif de la couleur", max_length=240, blank=True)
     stock_quantity = models.PositiveIntegerField("Stock", default=0)
     is_active = models.BooleanField("Active", default=True, db_index=True)
     position = models.PositiveIntegerField("Ordre d'affichage des couleurs", default=0)
@@ -214,6 +246,14 @@ class ProductVariant(models.Model):
         super().clean()
         if self.color_code and not re.fullmatch(r"#[0-9a-fA-F]{6}", self.color_code):
             raise ValidationError({"color_code": "Utilisez un code hexadécimal au format #RRGGBB."})
+        _require_https(self.image_url, "image_url")
+        _validate_uploaded_image(self.image, "image")
+        if (self.image or self.image_url) and not self.image_alt.strip():
+            raise ValidationError({"image_alt": "Décrivez la photo de cette couleur."})
+
+    @property
+    def image_src(self):
+        return self.image.url if self.image else self.image_url
 
     def __str__(self):
         return f"{self.product.name} — {self.color_name or 'Variante standard'} ({self.sku})"

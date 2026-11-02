@@ -16,7 +16,7 @@ from .models import (
 class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
     extra = 1
-    fields = ("sku", "color_name", "color_slug", "color_code", "stock_quantity", "is_active", "position")
+    fields = ("sku", "color_name", "color_slug", "color_code", "image", "image_url", "image_alt", "stock_quantity", "is_active", "position")
 
 
 class ProductMediaInline(admin.TabularInline):

@@ -49,11 +49,10 @@ def detail(request, slug):
     except Product.DoesNotExist as exc:
         raise Http404("Produit introuvable.") from exc
 
-    variants = list(product.variants.all())
+    variants = product.public_variants
     if not variants:
         raise Http404("Produit indisponible.")
     # Le sélecteur démarre sur une variante vendable si l'une existe.
-    variants.sort(key=lambda variant: (variant.stock_quantity <= 0, variant.position, variant.pk))
     default_variant = variants[0]
 
     media_items = list(product.media_items.all())
@@ -64,6 +63,14 @@ def detail(request, slug):
         "thumb": item.poster_url or (item.image.url if item.image else item.source_url),
         "alt": item.alt_text,
     } for item in media_items]
+    if default_variant.image_src:
+        media = [{
+            "type": ProductMedia.IMAGE,
+            "src": default_variant.image_src,
+            "poster": default_variant.image_src,
+            "thumb": default_variant.image_src,
+            "alt": default_variant.image_alt,
+        }]
 
     offers = []
     for offer_obj in product.offers.all():
@@ -81,7 +88,8 @@ def detail(request, slug):
                 ):
                     invalid_offer = True
                     break
-                lines.append(f"{item.product.name} × {item.quantity}" if item.quantity > 1 else item.product.name)
+                base_name = product.display_name_for(None)
+                lines.append(f"{base_name} × {item.quantity}" if item.quantity > 1 else base_name)
             else:
                 if (
                     item.product_id == product.pk
@@ -101,9 +109,9 @@ def detail(request, slug):
                     ),
                     None,
                 )
-                accessory_image = (
+                accessory_image = item.variant.image_src or ((
                     media_item.image.url if media_item and media_item.image else media_item.source_url
-                ) if media_item else ""
+                ) if media_item else "")
                 accessory_offers = [
                     candidate for candidate in item.product.offers.all()
                     if candidate.is_active and any(
@@ -126,7 +134,7 @@ def detail(request, slug):
                     "item_id": item.pk,
                     "product_id": item.product_id,
                     "slug": item.product.slug,
-                    "name": item.product.name,
+                    "name": item.product.display_name_for(item.variant),
                     "variant_name": item.variant.color_name or "",
                     "image": accessory_image,
                     "quantity": item.quantity,
@@ -176,9 +184,8 @@ def detail(request, slug):
     if not offers:
         raise Http404("Offre indisponible.")
 
-    selected = next((item for item in offers if item["featured"]), offers[0])
-    for offer_data in offers:
-        offer_data["featured"] = offer_data is selected
+    catalog_offer = product.display_offer
+    selected = next((item for item in offers if item["id"] == str(catalog_offer.pk)), offers[0]) if catalog_offer else offers[0]
     reviews = list(product.reviews.filter(is_approved=True))
     reviews_count = len(reviews)
     rating = round(sum(review.rating for review in reviews) / reviews_count, 1) if reviews_count else 0
@@ -203,16 +210,18 @@ def detail(request, slug):
         photo = next(iter(candidate.media_items.all()), None)
         price = candidate.display_price
         if photo and price is not None:
+            related_variant = candidate.display_variant
             related.append({
-                "slug": candidate.slug, "name": candidate.name,
+                "slug": candidate.slug, "name": candidate.display_name_for(related_variant),
                 "price": _eur(price),
-                "image": photo.image.url if photo.image else photo.source_url,
-                "alt": photo.alt_text or candidate.name,
+                "image": related_variant.image_src or (photo.image.url if photo.image else photo.source_url),
+                "alt": related_variant.image_alt if related_variant.image_src else (photo.alt_text or candidate.name),
             })
 
     context_product = {
         "slug": product.slug,
-        "name": product.name,
+        "name": product.display_name_for(default_variant),
+        "base_name": product.display_name_for(None),
         "brand_line": product.brand_line,
         "usage_section_title": product.usage_section_title,
         "tagline": product.tagline or product.short_description,
@@ -224,8 +233,11 @@ def detail(request, slug):
         "colors": [{
             "id": str(variant.pk),
             "label": variant.color_name or "Standard",
+            "name": product.display_name_for(variant),
             "hex": variant.color_code or "#b07a4a",
             "stock": variant.stock_quantity,
+            "image": variant.image_src,
+            "image_alt": variant.image_alt,
         } for variant in variants],
         "offers": offers,
         "selected": selected,

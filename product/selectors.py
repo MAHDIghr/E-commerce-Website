@@ -33,7 +33,7 @@ def product_card_data(queryset):
     """Sérialise les champs publics nécessaires aux cartes du catalogue."""
     products = []
     for product in queryset:
-        variant = product.default_variant
+        variant = product.display_variant
         if not variant:
             continue
 
@@ -50,8 +50,8 @@ def product_card_data(queryset):
         )
         colors = [
             {"slug": item.color_slug, "name": item.color_name, "hex": item.color_code}
-            for item in product.variants.all()
-            if item.is_active and item.color_slug and item.color_code
+            for item in product.public_variants
+            if item.color_slug and item.color_code
         ]
         active_offers = product._active_offers()
         valid_offers = [
@@ -75,7 +75,7 @@ def product_card_data(queryset):
             "id": product.slug,
             "variantId": variant.pk,
             "variantName": variant.color_name,
-            "name": product.name,
+            "name": product.display_name_for(variant),
             "cat": product.category.slug,
             "price": float(offer.price),
             "old": (
@@ -93,6 +93,6 @@ def product_card_data(queryset):
             "isNew": bool(product.is_new),
             "pop": 0,
             "best": bool(product.is_best_seller),
-            "img": (media.image.url if media and media.image else media.source_url) if media else "",
+            "img": variant.image_src or ((media.image.url if media and media.image else media.source_url) if media else ""),
         })
     return products

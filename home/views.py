@@ -34,6 +34,8 @@ def home(request):
         product__in=published_products(),
     ).select_related("product", "product__category").prefetch_related(
         Prefetch("product__offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
+        Prefetch("product__variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
+        Prefetch("product__media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.IMAGE).order_by("-is_primary", "position", "pk")),
     ).order_by("position", "pk")
     new_products = published_products().filter(is_new=True).select_related("category").prefetch_related(
         Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),

@@ -58,8 +58,8 @@ def catalog(request):
 
     color_map = {}
     for product in products:
-        for variant in product.variants.all():
-            if variant.is_active and variant.color_slug and variant.color_code:
+        for variant in product.public_variants:
+            if variant.color_slug and variant.color_code:
                 color_map.setdefault(
                     variant.color_slug,
                     {"hex": variant.color_code, "name": variant.color_name or variant.color_slug},
@@ -104,11 +104,11 @@ def search_suggestions(request):
 
     results = []
     for product in products:
-        variant = product.default_variant
+        variant = product.display_variant
         if not variant:
             continue
         media = next((item for item in product.media_items.all() if item.media_type == ProductMedia.IMAGE), None)
-        image = (media.image.url if media and media.image else media.source_url) if media else ""
+        image = variant.image_src or ((media.image.url if media and media.image else media.source_url) if media else "")
         offers = [
             candidate for candidate in product._active_offers()
             if sum(
@@ -119,11 +119,13 @@ def search_suggestions(request):
                 and item.quantity > 0
             ) == 1
         ]
-        offer = next((candidate for candidate in offers if candidate.is_featured), offers[0] if offers else None)
+        offer = next((candidate for candidate in offers if candidate.badge == ProductOffer.BADGE_ESSENTIAL), None) or next(
+            (candidate for candidate in offers if candidate.is_featured), offers[0] if offers else None,
+        )
         if offer is None:
             continue
         results.append({
-            "name": product.name,
+            "name": product.display_name_for(variant),
             "category": product.category.name,
             "price": f"{offer.price:.2f}",
             "image": image,
@@ -268,7 +270,7 @@ def _accessory_option(item):
             product_id=item.product_id, media_type=ProductMedia.IMAGE,
         ).order_by("-is_primary", "position", "pk").first()
     )
-    image = (media.image.url if media and media.image else media.source_url) if media else ""
+    image = component.image_src or ((media.image.url if media and media.image else media.source_url) if media else "")
     reference_price = _product_reference_price(item.product)
     available_quantity = component.stock_quantity // max(1, item.quantity)
     return {
@@ -276,7 +278,7 @@ def _accessory_option(item):
         "variant_id": component.pk,
         "product_id": item.product_id,
         "slug": item.product.slug,
-        "name": item.product.name,
+        "name": item.product.display_name_for(component),
         "variant_name": component.color_name or "",
         "image": image,
         "quantity": item.quantity,
@@ -360,10 +362,8 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
     media = ProductMedia.objects.filter(
         product_id=variant.product_id, media_type=ProductMedia.IMAGE,
     ).order_by("-is_primary", "position", "pk").first()
-    image = (media.image.url if media and media.image else media.source_url) if media else ""
-    title = f"{variant.product.name} — {offer.title}"
-    if variant.color_name:
-        title += f" ({variant.color_name})"
+    image = variant.image_src or ((media.image.url if media and media.image else media.source_url) if media else "")
+    title = f"{variant.product.display_name_for(variant)} — {offer.title}"
     available = max_available >= quantity and max_available > 0
     return {
         "key": _cart_key(variant.pk, offer.pk, selected_item_ids),

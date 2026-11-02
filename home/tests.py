@@ -69,15 +69,15 @@ class SignatureSelectionTests(TestCase):
             is_active=True,
         )
 
-    def test_home_uses_dedicated_signature_image_and_product_link(self):
+    def test_home_signature_uses_product_image_and_product_link(self):
         response = self.client.get(reverse("home:home"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("product:detail", kwargs={"slug": self.product.slug}))
-        self.assertContains(response, self.selection.image.url)
-        self.assertContains(response, "Sac signature test</strong>")
+        self.assertContains(response, "https://cdn.example.test/product.webp")
+        self.assertContains(response, "Sac signature test — Noir</strong>")
         self.assertContains(response, "59,90 €")
-        self.assertNotContains(response, "cdn.example.test/product.webp")
+        self.assertNotContains(response, self.selection.image.url)
 
     def test_inactive_signature_selection_is_not_rendered(self):
         self.selection.is_active = False

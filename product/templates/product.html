@@ -14,7 +14,7 @@
   <nav class="p-crumb" aria-label="Fil d'Ariane">
     <a href="{% url 'home:home' %}">Accueil</a><span aria-hidden="true">/</span>
     <a href="{% url 'shop:catalog' %}">Boutique</a><span aria-hidden="true">/</span>
-    <span aria-current="page">{{ product.name }}</span>
+    <span aria-current="page" id="product-crumb-name">{{ product.name }}</span>
   </nav>
 
   <div class="p-top">
@@ -74,7 +74,7 @@
         <legend>Choisissez votre offre</legend>
         {% for o in product.offers %}
         <label class="offer{% if o.featured %} offer--featured{% endif %}">
-          <input type="radio" name="offer" value="{{ o.id }}" data-name="{{ o.title }}" data-price="{{ o.price|stringformat:'.2f' }}" data-label="{{ o.price_label }}" data-old="{{ o.old_label }}" data-off="{{ o.off }}" data-uses-variant-price="{% if o.uses_variant_price %}true{% else %}false{% endif %}" data-reference-total="{{ o.reference_total|default_if_none:'' }}" data-main-quantity="{{ o.main_quantity|default:1 }}" data-includes-selected-variant="{% if o.includes_selected_variant %}true{% else %}false{% endif %}" {% if o.featured %}checked{% endif %}>
+          <input type="radio" name="offer" value="{{ o.id }}" data-name="{{ o.title }}" data-price="{{ o.price|stringformat:'.2f' }}" data-label="{{ o.price_label }}" data-old="{{ o.old_label }}" data-off="{{ o.off }}" data-uses-variant-price="{% if o.uses_variant_price %}true{% else %}false{% endif %}" data-reference-total="{{ o.reference_total|default_if_none:'' }}" data-main-quantity="{{ o.main_quantity|default:1 }}" data-includes-selected-variant="{% if o.includes_selected_variant %}true{% else %}false{% endif %}" {% if o.id == product.selected.id %}checked{% endif %}>
           <span class="offer__card">
             <span class="offer__dot" aria-hidden="true"></span>
             <span class="offer__body"><strong>{{ o.title }}</strong><span>{{ o.items }}</span><em>{{ o.ship }}</em></span>

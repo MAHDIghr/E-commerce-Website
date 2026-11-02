@@ -171,6 +171,58 @@ class CatalogViewTests(TestCase):
         self.assertEqual(structured["offers"]["availability"], "https://schema.org/InStock")
         self.assertEqual(structured["image"], ["https://cdn.example.test/cabas.webp"])
 
+    def test_color_photos_and_names_match_home_catalog_detail_and_cart(self):
+        self.variant.image_url = "https://cdn.example.test/camel.webp"
+        self.variant.image_alt = "Cabas en cuir camel de face"
+        self.variant.full_clean()
+        self.variant.save(update_fields=["image_url", "image_alt"])
+        noir = ProductVariant.objects.create(
+            product=self.product, sku="CABAS-NOIR", color_name="Noir",
+            color_slug="noir", color_code="#222222", stock_quantity=3,
+            position=1, image_url="https://cdn.example.test/noir.webp",
+            image_alt="Cabas en cuir noir de face",
+        )
+
+        catalog = self.client.get(reverse("shop:catalog"))
+        card = next(item for item in catalog.context["catalog_data"]["products"] if item["id"] == self.product.slug)
+        detail = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        home = self.client.get(reverse("home:home"))
+
+        self.assertEqual((card["name"], card["price"], card["img"]),
+                         ("Cabas camel", 89.9, "https://cdn.example.test/camel.webp"))
+        self.assertEqual(detail.context["product"]["name"], card["name"])
+        self.assertEqual(detail.context["product"]["media"][0]["src"], card["img"])
+        self.assertEqual(detail.context["product"]["selected"]["price"], card["price"])
+        self.assertContains(home, 'data-product-image="https://cdn.example.test/camel.webp"')
+        self.assertContains(home, '<h3>Cabas camel</h3>')
+        colors = detail.context["product"]["colors"]
+        self.assertEqual([(item["name"], item["image"]) for item in colors], [
+            ("Cabas camel", "https://cdn.example.test/camel.webp"),
+            ("Cabas — Noir", "https://cdn.example.test/noir.webp"),
+        ])
+        add = self.client.post(reverse("shop:cart_mutation"), data=json.dumps({
+            "action": "add", "variant_id": noir.pk, "offer_id": self.offer.pk, "quantity": 1,
+            "price": "0.01", "name": "Mensonge",
+        }), content_type="application/json")
+        self.assertEqual(add.status_code, 200)
+        line = add.json()["items"][0]
+        self.assertEqual(line["name"], "Cabas — Noir — Essentiel")
+        self.assertEqual(line["image"], "https://cdn.example.test/noir.webp")
+        self.assertEqual(line["unit_price"], "89.90")
+        self.assertTrue(line["key"].startswith(f"{noir.pk}:{self.offer.pk}"))
+
+    def test_unillustrated_extra_color_is_not_offered_and_http_image_is_rejected(self):
+        ProductVariant.objects.create(
+            product=self.product, sku="CABAS-NOIR", color_name="Noir",
+            color_slug="noir", color_code="#222222", stock_quantity=3,
+        )
+        detail = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertEqual([item["label"] for item in detail.context["product"]["colors"]], ["Camel"])
+        self.variant.image_url = "http://cdn.example.test/camel.webp"
+        self.variant.image_alt = "Cabas camel"
+        with self.assertRaises(ValidationError):
+            self.variant.full_clean()
+
     def test_product_page_only_shows_approved_reviews(self):
         Review.objects.create(
             product=self.product, author_name="Avis publié", rating=5,
