@@ -3,6 +3,14 @@
    Lit les données depuis #product-data (json_script) : aucun contenu produit en dur ici. */
 (() => {
     const data = JSON.parse(document.getElementById("product-data").textContent);
+    /* L'historique est indicatif ; le panier et le checkout utilisent les prix serveur. */
+    const firstImage = data.media.find((item) => item.type === "image" && item.src);
+    if (firstImage && /^[a-z0-9-]{1,180}$/i.test(data.slug)) {
+        const key = "recently_viewed_v1";
+        const saved = readStorage(key, []);
+        const entry = { id: data.slug, slug: data.slug, name: data.name, price: Number(data.catalog_price), image: firstImage.src };
+        writeStorage(key, [entry, ...(Array.isArray(saved) ? saved.filter((item) => item && item.slug !== data.slug) : [])].slice(0, 4));
+    }
     let media = data.media;
     const allMedia = data.media;
     const $ = (s, r = document) => r.querySelector(s);

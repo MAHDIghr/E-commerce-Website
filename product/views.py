@@ -194,6 +194,22 @@ def detail(request, slug):
         "weight": f"{product.weight_g / 1000:.1f}".replace(".", ",") + " kg" if product.weight_g is not None else "—",
         "volume": f"{product.capacity_liters}".replace(".", ",") + " L" if product.capacity_liters is not None else "—",
     }
+    related_products = published_products().filter(category_id=product.category_id).exclude(pk=product.pk).prefetch_related(
+        Prefetch("media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.IMAGE).order_by("-is_primary", "position", "pk")),
+        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
+    ).order_by("-is_new", "-published_at", "pk")[:4]
+    related = []
+    for candidate in related_products:
+        photo = next(iter(candidate.media_items.all()), None)
+        price = candidate.display_price
+        if photo and price is not None:
+            related.append({
+                "slug": candidate.slug, "name": candidate.name,
+                "price": _eur(price),
+                "image": photo.image.url if photo.image else photo.source_url,
+                "alt": photo.alt_text or candidate.name,
+            })
+
     context_product = {
         "slug": product.slug,
         "name": product.name,
@@ -213,6 +229,7 @@ def detail(request, slug):
         } for variant in variants],
         "offers": offers,
         "selected": selected,
+        "catalog_price": str(product.display_price or selected["price"]),
         "max_off": max((item["off"] for item in offers), default=0),
         "upgrade": "",
         "benefits": [{"t": item.title, "d": item.description} for item in product.reasons.all()],
@@ -223,8 +240,7 @@ def detail(request, slug):
         "dist": distribution,
         "reviews": [{"who": item.author_name, "stars": item.rating, "stars_display": "★" * item.rating + "☆" * (5 - item.rating), "t": item.comment} for item in reviews],
         "faq": [(item.question, item.answer) for item in product.faqs.all()],
-        # Produits associés exclus du périmètre actuel ; aucun contenu fictif n'est injecté.
-        "related": [],
+        "related": related,
         "dims_raw": dims,
     }
     context_product["tagline"] = context_product["tagline"] or ""

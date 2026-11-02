@@ -75,6 +75,8 @@ class SignatureSelectionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("product:detail", kwargs={"slug": self.product.slug}))
         self.assertContains(response, self.selection.image.url)
+        self.assertContains(response, "Sac signature test</strong>")
+        self.assertContains(response, "59,90 €")
         self.assertNotContains(response, "cdn.example.test/product.webp")
 
     def test_inactive_signature_selection_is_not_rendered(self):

@@ -68,7 +68,7 @@
                     <a href="#selection" class="button button-primary button-glow" data-i18n="hero_cta_primary">
                         Découvrir la collection
                     </a>
-                    <a href="#categories" class="button button-ghost" data-i18n="hero_cta_secondary">
+                    <a href="{% url 'shop:catalog' %}{% if handbags_category %}?cat={{ handbags_category.slug|urlencode }}{% endif %}" class="button button-ghost" data-i18n="hero_cta_secondary">
                         Voir les sacs
                     </a>
                 </div>
@@ -148,7 +148,6 @@
                         <a
                             class="card"
                             href="{% url 'product:detail' slug=selection.product.slug %}"
-                            aria-label="Découvrir {{ selection.product.name }}"
                         >
                             <img
                                 src="{{ selection.image.url }}"
@@ -157,6 +156,7 @@
                                 decoding="async"
                                 draggable="false"
                             >
+                            <span class="card__details"><strong>{{ selection.product.name }}</strong>{% if selection.product.display_price %}<span>{{ selection.product.display_price|floatformat:2 }} €</span>{% endif %}</span>
                         </a>
                         {% empty %}
                         <p class="empty-catalog">Notre sélection signature sera bientôt disponible.</p>
@@ -250,13 +250,13 @@
                             <span class="product-badge product-badge--stock">Plus que {{ variant.stock_quantity }} en stock</span>
                             {% endif %}
                         </div>
-                        <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
-                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
-                            </svg>
-                        </button>
                         {% if media %}{% if media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
                     </a>
+                    <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
+                        </svg>
+                    </button>
                     <div class="product-info">
                         <h3>{{ product.name }}</h3>
                         <p class="product-category">{{ product.category.name }}</p>

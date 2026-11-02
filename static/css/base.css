@@ -893,8 +893,8 @@ h3 { font-size: 1.05rem; font-weight: 500; }
     flex: 0 0 auto;
     display: grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     border: 1px solid var(--color-line);
     border-radius: 50%;
     background: transparent;
@@ -993,6 +993,8 @@ h3 { font-size: 1.05rem; font-weight: 500; }
 }
 .cart-continue-link {
     display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     margin-top: 1rem;
     color: var(--color-ink-muted);
     font-size: .8rem;

@@ -161,12 +161,12 @@
   {% for q, a in product.faq %}<details class="faq" name="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
 </div></section>
 
-<section class="p-sec p-sec--alt"><div class="p-wrap">
+{% if product.related %}<section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Vous aimerez aussi</h2>
   <ul class="grid grid--4">
-    {% for name, price, pid in product.related %}<li><a class="rel" href="{% url 'shop:catalog' %}"><img src="https://images.unsplash.com/photo-{{ pid }}?auto=format&fit=crop&w=500&q=80" alt="" width="500" height="625" loading="lazy"><strong>{{ name }}</strong><span>{{ price }}</span></a></li>{% endfor %}
+    {% for related in product.related %}<li><a class="rel" href="{% url 'product:detail' slug=related.slug %}"><img src="{{ related.image }}" alt="{{ related.alt }}" width="500" height="625" loading="lazy"><strong>{{ related.name }}</strong><span>{{ related.price }}</span></a></li>{% endfor %}
   </ul>
-</div></section>
+</div></section>{% endif %}
 
 <section class="final"><div class="p-wrap">
   <h2>Prêt à l'adopter ?</h2>

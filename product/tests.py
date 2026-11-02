@@ -308,6 +308,29 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, "Notre sélection signature")
         self.assertContains(response, reverse("shop:catalog") + "?cat=" + self.category.slug)
         self.assertNotContains(response, "?cat=handbags")
+        self.assertContains(response, 'href="/boutique/?cat=sacs-a-main" class="button button-ghost"')
+        html = response.content.decode()
+        card = html.split('class="product-card reveal"', 1)[1].split('class="product-info"', 1)[0]
+        self.assertLess(card.index('</a>'), card.index('class="product-wishlist"'))
+
+    def test_related_products_link_only_published_same_category(self):
+        related = Product.objects.create(
+            category=self.category, name="Mini sac", slug="mini-sac", is_active=True,
+        )
+        ProductVariant.objects.create(product=related, sku="MINI-SAC", stock_quantity=2)
+        ProductMedia.objects.create(
+            product=related, media_type=ProductMedia.IMAGE,
+            source_url="https://cdn.example.test/mini.webp", alt_text="Mini sac de face",
+        )
+        offer = ProductOffer.objects.create(product=related, title="Essentiel", price=Decimal("45.00"))
+        ProductOfferItem.objects.create(offer=offer, product=related, use_selected_variant=True, quantity=1)
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertContains(response, reverse("product:detail", kwargs={"slug": related.slug}))
+        self.assertContains(response, "45,00 €")
+        related.is_active = False
+        related.save(update_fields=["is_active"])
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertNotContains(response, reverse("product:detail", kwargs={"slug": related.slug}))
 
     def test_product_without_linked_offer_is_not_published(self):
         self.product.offers.all().delete()

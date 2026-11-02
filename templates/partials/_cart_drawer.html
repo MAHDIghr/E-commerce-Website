@@ -58,7 +58,7 @@
             <span class="cart-drawer__list-note">Prix affichés en euros</span>
         </div>
         <ul class="cart-drawer__items" id="cart-items"></ul>
-        <a class="cart-continue-link" href="{% url 'shop:catalog' %}">← Continuer mes achats</a>
+        <button type="button" class="cart-continue-link" data-action="continue-shopping">← Continuer mes achats</button>
     </div>
 
     <div class="cart-drawer__footer" id="cart-footer" hidden>
@@ -67,7 +67,7 @@
             <strong id="cart-subtotal">0,00 €</strong>
         </div>
         <p class="cart-drawer__shipping-note">Livraison et éventuelles réductions confirmées lors de la commande.</p>
-        <button type="button" class="button button-primary button-block cart-checkout-disabled" id="cart-checkout">Valider le panier</button>
+        <button type="button" class="button button-primary button-block cart-checkout-disabled" id="cart-checkout">Commander</button>
         <div class="cart-trust">
             <span aria-hidden="true">◇</span>
             <p>Le paiement est effectué sur la page sécurisée hébergée par Stripe. Les données de carte ne transitent pas par cette boutique.</p>

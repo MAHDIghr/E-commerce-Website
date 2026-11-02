@@ -417,6 +417,7 @@ renderRecentlyViewed();
 
         cards.forEach((card, index) => {
             const offset = getOffset(index);
+            card.tabIndex = offset === 0 ? 0 : -1;
             const absoluteOffset = Math.abs(offset);
 
             let shouldJump = false;
@@ -537,6 +538,7 @@ renderRecentlyViewed();
 
     function startAutoPlay() {
         stopAutoPlay();
+        if (prefersReducedMotion() || carousel.contains(document.activeElement)) return;
         autoPlayTimer = setInterval(() => {
             nextSlide();
         }, AUTO_PLAY_DELAY);
@@ -560,6 +562,8 @@ renderRecentlyViewed();
     carousel.addEventListener("mouseleave", () => {
         startAutoPlay();
     });
+    carousel.addEventListener("focusin", stopAutoPlay);
+    carousel.addEventListener("focusout", () => window.setTimeout(startAutoPlay, 0));
 
     /* Navigation clavier : n'agit que si le focus n'est pas dans un champ
        de saisie, pour ne pas gêner la recherche ou la newsletter. */
@@ -578,6 +582,7 @@ renderRecentlyViewed();
     let suppressNextClick = false;
 
     function startDrag(clientX) {
+        suppressNextClick = false;
         isDragging = true;
         dragStartX = clientX;
         dragCurrentX = clientX;
@@ -604,7 +609,6 @@ renderRecentlyViewed();
 
         if (Math.abs(dragDifference) >= minimumSwipeDistance) {
             suppressNextClick = true;
-            window.setTimeout(() => { suppressNextClick = false; }, 0);
             if (dragDifference < 0) {
                 nextSlide();
             } else {
@@ -623,7 +627,6 @@ renderRecentlyViewed();
     }, true);
 
     carousel.addEventListener("mousedown", (event) => {
-        event.preventDefault();
         startDrag(event.clientX);
     });
 

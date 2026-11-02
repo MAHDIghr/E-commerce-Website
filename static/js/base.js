@@ -172,6 +172,7 @@ const cartDrawer = document.querySelector("#cart-drawer");
 if (cartDrawer) cartDrawer.inert = true;
 const cartBackdrop = document.querySelector("#cart-backdrop");
 const cartClose = document.querySelector('[data-action="close-cart"]');
+const cartContinue = document.querySelector('[data-action="continue-shopping"]');
 const cartItemsContainer = document.querySelector("#cart-items");
 const cartDrawerBody = document.querySelector("#cart-body");
 const cartEmptyState = document.querySelector("#cart-empty");
@@ -673,6 +674,7 @@ function closeCart() {
 function bumpCartIcon() { cartActionButtons.forEach((b) => { b.classList.remove("is-bumping"); void b.offsetWidth; b.classList.add("is-bumping"); }); }
 cartActionButtons.forEach((button) => button.addEventListener("click", openCart));
 if (cartClose) cartClose.addEventListener("click", closeCart);
+if (cartContinue) cartContinue.addEventListener("click", closeCart);
 if (cartBackdrop) cartBackdrop.addEventListener("click", closeCart);
 if (cartCheckoutButton) cartCheckoutButton.addEventListener("click", () => {
     if (cartCheckoutButton.disabled) {
