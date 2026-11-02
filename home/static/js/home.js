@@ -623,6 +623,7 @@ if (newsletterForm) {
     let swiped = false;
 
     function startDrag(clientX) {
+        swiped = false;
         isDragging = true;
         dragStartX = clientX;
         dragCurrentX = clientX;
@@ -649,7 +650,6 @@ if (newsletterForm) {
 
         if (Math.abs(dragDifference) >= minimumSwipeDistance) {
             swiped = true;
-            window.setTimeout(() => { swiped = false; }, 400);
             if (dragDifference < 0) {
                 nextSlide();
             } else {
