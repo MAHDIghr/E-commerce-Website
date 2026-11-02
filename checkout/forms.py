@@ -1,7 +1,7 @@
 """Formulaire de livraison : seules les données nécessaires sont collectées."""
-import os
 from decimal import Decimal
 from django import forms
+from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
 
 COUNTRIES = [
     ("FR", "France"), ("BE", "Belgique"), ("LU", "Luxembourg"),
@@ -23,9 +23,9 @@ class CheckoutForm(forms.Form):
 
     def __init__(self, *args, subtotal=None, **kwargs):
         super().__init__(*args, **kwargs)
-        standard = Decimal(os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90"))
-        express = Decimal(os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90"))
-        threshold = Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00"))
+        standard = SHIPPING_PRICES["standard"]
+        express = SHIPPING_PRICES["express"]
+        threshold = FREE_SHIPPING_THRESHOLD
         if subtotal is not None and Decimal(str(subtotal)) >= threshold:
             self.fields["shipping_method"].choices = (("free", "Livraison offerte — 0,00 €"),)
             self.fields["shipping_method"].initial = "free"

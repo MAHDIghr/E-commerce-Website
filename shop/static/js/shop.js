@@ -17,6 +17,8 @@
 
     /* Données rendues par Django via json_script. */
     const catalogDataNode = document.getElementById("catalog-data");
+    const commercial = JSON.parse(document.querySelector("#commercial-config").textContent);
+    const shippingThreshold = Number(commercial.free_shipping_threshold);
     const catalogData = catalogDataNode ? JSON.parse(catalogDataNode.textContent) : { products: [], categories: [], colors: {} };
     const PRODUCTS = Array.isArray(catalogData.products) ? catalogData.products : [];
     const CATEGORIES = Array.isArray(catalogData.categories) ? catalogData.categories : [];
@@ -31,7 +33,7 @@
     const T = {
         fr: {
             bc_home: "Accueil", bc_shop: "Boutique", title: "Notre boutique",
-            subtitle: "Sacs et accessoires en cuir, choisis pour durer. Livraison offerte dès 80 €, retours gratuits sous 30 jours.",
+            subtitle: "",
             filters: "Filtres", f_category: "Catégorie", f_price: "Prix (€)", f_color: "Couleur", f_more: "Autres",
             f_sale: "En promotion", f_lowstock: "Derniers exemplaires", unavailable: "Indisponible", reset: "Réinitialiser", show: "Voir",
             sort_label: "Trier par", empty_title: "Aucun produit ne correspond",
@@ -43,14 +45,14 @@
             newTag: "Nouveau", bestTag: "Meilleure vente", left: (n) => `Plus que ${n}`,
             add: (n) => `Ajouter ${n} au panier`, wish: "Ajouter aux favoris", reviews: "avis",
             clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Derniers exemplaires",
-            ra_ship: "Livraison offerte dès 80 €", ra_ship_s: "Expédition sous 24 h", ra_ret: "Retours gratuits 30 jours",
+            ra_ship: "", ra_ret: "Retours gratuits 30 jours",
             ra_ret_s: "Sans condition", ra_pay: "Paiement sécurisé", ra_pay_s: "SSL & 3D Secure",
             item: (n) => (n > 1 ? "articles" : "article"),
-            shipLeft: (r) => `Plus que ${r} pour la livraison offerte`, shipOk: "Livraison offerte",
+            shipLeft: (r) => `Plus que ${r} avant remise pour la livraison offerte`, shipOk: "Seuil atteint avant remise ; confirmation à la commande",
         },
         en: {
             bc_home: "Home", bc_shop: "Shop", title: "Our shop",
-            subtitle: "Leather bags and accessories, chosen to last. Free shipping over €80, free returns within 30 days.",
+            subtitle: "",
             filters: "Filters", f_category: "Category", f_price: "Price (€)", f_color: "Colour", f_more: "More",
             f_sale: "On sale", f_lowstock: "Last few left", unavailable: "Unavailable", reset: "Reset", show: "Show",
             sort_label: "Sort by", empty_title: "No products match",
@@ -62,12 +64,16 @@
             newTag: "New", bestTag: "Best seller", left: (n) => `Only ${n} left`,
             add: (n) => `Add ${n} to cart`, wish: "Add to wishlist", reviews: "reviews",
             clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Last few left",
-            ra_ship: "Free shipping over €80", ra_ship_s: "Ships within 24h", ra_ret: "Free returns, 30 days",
+            ra_ship: "", ra_ret: "Free returns, 30 days",
             ra_ret_s: "No questions asked", ra_pay: "Secure payment", ra_pay_s: "SSL & 3D Secure",
             item: (n) => (n > 1 ? "items" : "item"),
-            shipLeft: (r) => `${r} away from free shipping`, shipOk: "Free shipping unlocked",
+            shipLeft: (r) => `${r} before discounts for free shipping`, shipOk: "Threshold reached before discounts; confirmed at checkout",
         },
     };
+    T.fr.ra_ship = `Livraison offerte dès ${formatPrice(shippingThreshold)}`;
+    T.en.ra_ship = `Free shipping from ${formatPrice(shippingThreshold)}`;
+    T.fr.subtitle = `Sacs et accessoires en cuir, choisis pour durer. ${T.fr.ra_ship}, retours gratuits sous 30 jours.`;
+    T.en.subtitle = `Leather bags and accessories, chosen to last. ${T.en.ra_ship}, free returns within 30 days.`;
     let lang = document.documentElement.lang === "en" ? "en" : "fr";
     const t = () => T[lang];
 
@@ -458,7 +464,7 @@
 
     /* ---------- Barre panier collante (mobile) ---------- */
     const bar = $("cart-bar");
-    const FREE_SHIPPING = typeof FREE_SHIPPING_THRESHOLD === "number" ? FREE_SHIPPING_THRESHOLD : 80;
+    const FREE_SHIPPING = shippingThreshold;
 
     function updateCartBar() {
         const cart = getCart();

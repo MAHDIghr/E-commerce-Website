@@ -31,8 +31,9 @@ function writeStorage(key, value) {
     }
 }
 
+const commercialConfig = JSON.parse(document.querySelector("#commercial-config").textContent);
 function formatPrice(amount) {
-    return `${amount.toFixed(2).replace(".", ",")} €`;
+    return new Intl.NumberFormat("fr-FR", { style: "currency", currency: commercialConfig.currency }).format(amount);
 }
 
 function prefersReducedMotion() {
@@ -189,7 +190,7 @@ const cartApiUrl = cartDrawer?.dataset.cartUrl || "/boutique/panier/";
 const cartMutationUrl = cartDrawer?.dataset.cartMutationUrl || "/boutique/panier/modifier/";
 const cartCheckoutUrl = cartDrawer?.dataset.checkoutUrl || "/checkout/";
 const cartCheckoutButton = document.querySelector("#cart-checkout");
-const FREE_SHIPPING_THRESHOLD = 80;
+const FREE_SHIPPING_THRESHOLD = Number(commercialConfig.free_shipping_threshold);
 let cartSnapshot = { items: [], count: 0, subtotal: "0.00" };
 let cartMutationQueue = Promise.resolve();
 let cartReady = Promise.resolve();
@@ -313,8 +314,8 @@ function updateShippingProgress() {
     shippingFill.setAttribute("aria-valuemax", String(threshold));
     shippingFill.setAttribute("aria-valuenow", String(Math.min(subtotal, threshold)));
     shippingText.textContent = threshold > 0 && subtotal >= threshold
-        ? "✦ Livraison offerte débloquée !"
-        : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " pour la livraison offerte";
+        ? "Seuil atteint avant remise ; livraison confirmée à la commande."
+        : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " avant remise pour la livraison offerte";
 }
 function renderCartDrawer() {
     if (!cartItemsContainer) return;
@@ -768,13 +769,13 @@ cartReady = refreshCartUI();
 
 document.querySelectorAll("[data-copy-promo]").forEach((button) => {
     button.addEventListener("click", async () => {
-        const code = button.dataset.copyPromo || "BIENVENUE";
+        const code = button.dataset.copyPromo;
         const status = document.querySelector("#footer-news-msg");
         const original = button.textContent;
         try {
             await navigator.clipboard.writeText(code);
             button.textContent = "Code copié ✓";
-            if (status) status.textContent = "Le code BIENVENUE est prêt à être collé au moment de la commande.";
+            if (status) status.textContent = `Le code ${code} est prêt à être collé au moment de la commande.`;
         } catch (error) {
             if (status) status.textContent = "Code à saisir au checkout : " + code;
             button.textContent = code;
@@ -804,7 +805,7 @@ const translations = {
         hero_desc: "Des sacs et accessoires façonnés pour accompagner chaque femme, avec exigence et raffinement.",
         hero_cta_primary: "Découvrir la collection",
         hero_cta_secondary: "Voir les sacs",
-        trust_ship: "Livraison offerte dès 80€",
+        trust_ship: "",
         trust_return: "Retours gratuits sous 30 jours",
         trust_secure: "Paiement 100% sécurisé",
         trust_support: "Service client 7j/7",
@@ -822,8 +823,8 @@ const translations = {
         badge_new: "Nouveau",
         badge_sale: "Promo",
         add_to_cart: "Ajouter au panier",
-        promo_1: "Livraison gratuite dès 80€ d'achat",
-        promo_2: "— 15% sur votre première commande avec le code BIENVENUE",
+        promo_1: "",
+        promo_2: "",
         promo_3: "Nouvelle collection disponible dès maintenant",
         banner_eyebrow: "Savoir-faire",
         banner_title: "Des pièces choisies\navec exigence.",
@@ -853,21 +854,19 @@ const translations = {
         footer_privacy: "Politique de confidentialité",
         footer_terms: "CGV",
         lang_toggle: "EN",
-        flash_sale_text: "⚡ Vente flash : -20% sur une sélection de sacs",
-        flash_sale_cta: "J'en profite",
         welcome_title: "Bienvenue chez nous !",
-        welcome_desc: "Profitez de -15% sur votre première commande avec le code BIENVENUE.",
+        welcome_desc: "",
         welcome_cta: "Découvrir la collection",
         welcome_copy: "Copier le code",
         social_proof_stock: "produit(s) restant(s)",
         social_proof_watching: "regardent ce produit",
-        perk_ship: "Livraison offerte dès 80 €",
+        perk_ship: "",
         perk_ret: "Retours gratuits 30 jours",
         perk_pay: "Paiement sécurisé",
         perk_help: "Service client 7j/7",
-        footer_news_title: "-15 % sur votre première commande",
-        footer_news_desc: "Profitez de 15 % sur votre première commande avec le code BIENVENUE.",
-        footer_news_ok: "Votre code : BIENVENUE",
+        footer_news_title: "",
+        footer_news_desc: "Rejoignez la newsletter : nouveautés, offres privées et conseils style.",
+        footer_news_ok: "Vérifiez votre boîte de réception pour confirmer votre inscription.",
         footer_news_err: "Saisissez une adresse e-mail valide.",
         footer_sale: "Promotions",
         footer_help: "Aide",
@@ -892,7 +891,7 @@ const translations = {
         hero_desc: "Bags and accessories crafted to accompany every woman, with care and refinement.",
         hero_cta_primary: "Discover the collection",
         hero_cta_secondary: "Shop bags",
-        trust_ship: "Free shipping over €80",
+        trust_ship: "",
         trust_return: "Free returns within 30 days",
         trust_secure: "100% secure payment",
         trust_support: "Customer support 7/7",
@@ -910,8 +909,8 @@ const translations = {
         badge_new: "New",
         badge_sale: "Sale",
         add_to_cart: "Add to cart",
-        promo_1: "Free shipping on orders over €80",
-        promo_2: "15% off your first order with code WELCOME",
+        promo_1: "",
+        promo_2: "",
         promo_3: "New collection available now",
         banner_eyebrow: "Craftsmanship",
         banner_title: "Pieces chosen\nwith care.",
@@ -941,21 +940,19 @@ const translations = {
         footer_privacy: "Privacy policy",
         footer_terms: "Terms of sale",
         lang_toggle: "FR",
-        flash_sale_text: "⚡ Flash sale: -20% on selected bags",
-        flash_sale_cta: "Shop the offer",
         welcome_title: "Welcome!",
-        welcome_desc: "Enjoy 15% off your first order with code BIENVENUE.",
+        welcome_desc: "",
         welcome_cta: "Discover the collection",
         welcome_copy: "Copy code",
         social_proof_stock: "left in stock",
         social_proof_watching: "watching this item",
-        perk_ship: "Free shipping over €80",
+        perk_ship: "",
         perk_ret: "Free returns, 30 days",
         perk_pay: "Secure payment",
         perk_help: "Customer support 7/7",
-        footer_news_title: "15% off your first order",
-        footer_news_desc: "Enjoy 15% off your first order with code BIENVENUE.",
-        footer_news_ok: "Your code: BIENVENUE",
+        footer_news_title: "",
+        footer_news_desc: "Sign up for updates, offers and styling tips.",
+        footer_news_ok: "Check your inbox to confirm your subscription.",
         footer_news_err: "Please enter a valid email address.",
         footer_sale: "Sale",
         footer_help: "Help",
@@ -963,6 +960,23 @@ const translations = {
         footer_rights: "All rights reserved.",
     },
 };
+
+const shippingThresholdLabel = formatPrice(FREE_SHIPPING_THRESHOLD);
+const welcome = commercialConfig.welcome;
+for (const [language, dict] of Object.entries(translations)) {
+    const english = language === "en";
+    const shippingText = english ? `Free shipping from ${shippingThresholdLabel}` : `Livraison offerte dès ${shippingThresholdLabel}`;
+    dict.trust_ship = dict.perk_ship = shippingText;
+    dict.promo_1 = english ? `${shippingText} of purchases` : `${shippingText} d'achat`;
+    if (welcome) {
+        const promoText = english
+            ? `${welcome.percent}% off with code ${welcome.code} from ${formatPrice(Number(welcome.minimum))}`
+              + (welcome.maximum ? `, capped at ${formatPrice(Number(welcome.maximum))}` : "")
+              + (welcome.once_per_email ? ", once per email address." : ".")
+            : welcome.message;
+        dict.promo_2 = dict.welcome_desc = dict.footer_news_title = promoText;
+    }
+}
 
 function renderProductSocialProof(dict) {
     document.querySelectorAll("[data-watchers]").forEach((node) => {

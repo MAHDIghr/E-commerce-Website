@@ -1,13 +1,13 @@
 <div class="promo-bar" role="note" aria-label="Offres en cours">
     <div class="promo-bar__track">
         <div class="promo-bar__group">
-            <span class="promo-bar__item" data-i18n="promo_1">Livraison gratuite dès 80€ d'achat</span>
-            <span class="promo-bar__item" data-i18n="promo_2">— 15% sur votre première commande avec le code BIENVENUE</span>
+            <span class="promo-bar__item" data-i18n="promo_1">Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} € d'achat</span>
+            {% if commercial.welcome %}<span class="promo-bar__item" data-i18n="promo_2">{{ commercial.welcome.message }}</span>{% endif %}
             <span class="promo-bar__item" data-i18n="promo_3">Nouvelle collection disponible dès maintenant</span>
         </div>
         <div class="promo-bar__group" aria-hidden="true">
-            <span class="promo-bar__item" data-i18n="promo_1">Livraison gratuite dès 80€ d'achat</span>
-            <span class="promo-bar__item" data-i18n="promo_2">— 15% sur votre première commande avec le code BIENVENUE</span>
+            <span class="promo-bar__item" data-i18n="promo_1">Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} € d'achat</span>
+            {% if commercial.welcome %}<span class="promo-bar__item" data-i18n="promo_2">{{ commercial.welcome.message }}</span>{% endif %}
             <span class="promo-bar__item" data-i18n="promo_3">Nouvelle collection disponible dès maintenant</span>
         </div>
     </div>

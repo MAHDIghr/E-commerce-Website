@@ -16,19 +16,6 @@
 
 {% block content %}
 
-<!-- VENTE FLASH -->
-<div class="flash-sale" id="flash-sale" data-duration-hours="6">
-    <div class="container">
-        <p class="flash-sale__text" data-i18n="flash_sale_text">⚡ Vente flash : -20% sur une sélection de sacs</p>
-        <div class="flash-sale__timer" aria-hidden="true">
-            <span data-hours>06</span>
-            <span data-minutes>00</span>
-            <span data-seconds>00</span>
-        </div>
-        <a href="#nouveautes" class="button button-secondary" data-i18n="flash_sale_cta">J'en profite</a>
-    </div>
-</div>
-
     <!-- ============================================================
          HERO — effet WOW à l'ouverture
          ============================================================ -->
@@ -73,20 +60,6 @@
                     </a>
                 </div>
 
-                <ul class="hero-stats hero-anim" data-anim="5">
-                    <li>
-                        <strong>+12k</strong>
-                        <span>Clientes satisfaites</span>
-                    </li>
-                    <li>
-                        <strong>4.9<span class="hero-stats__slash">/</span>5</strong>
-                        <span>Note moyenne</span>
-                    </li>
-                    <li>
-                        <strong>48h</strong>
-                        <span>Livraison express</span>
-                    </li>
-                </ul>
             </div>
 
         </div>
@@ -98,7 +71,7 @@
                         <path d="M16 10h3l3 3v4h-6z"></path>
                         <circle cx="6" cy="20" r="1.5"></circle>
                         <circle cx="17.5" cy="20" r="1.5"></circle>
-                    </svg></span><div><strong data-i18n="trust_ship">Livraison offerte dès 80€</strong><span>Expédition sous 24h</span></div></div>
+                    </svg></span><div><strong data-i18n="trust_ship">Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} €</strong>{% if commercial.delivery_days.standard %}<span>Livraison standard : {{ commercial.delivery_days.standard }}</span>{% endif %}</div></div>
 <div class="hero-trust__item"><span class="hero-trust__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M3 12a9 9 0 1 0 3-6.7"></path>
                         <polyline points="3 4 3 9 8 9"></polyline>
@@ -431,7 +404,7 @@
 
 {% block after_main %}
 
-<!-- POP-UP DE BIENVENUE -->
+{% if commercial.welcome %}<!-- POP-UP DE BIENVENUE -->
 <div class="welcome-modal-backdrop" id="welcome-modal-backdrop" aria-hidden="true">
     <div class="welcome-modal" role="dialog" aria-labelledby="welcome-modal-title">
         <button type="button" class="welcome-modal__close" data-action="close-welcome" aria-label="Fermer">
@@ -442,14 +415,15 @@
         </button>
         <p class="eyebrow" data-i18n="hero_eyebrow">Nouvelle collection</p>
         <h2 id="welcome-modal-title" data-i18n="welcome_title">Bienvenue chez nous !</h2>
-        <p data-i18n="welcome_desc">Profitez de -15% sur votre première commande avec le code BIENVENUE.</p>
+        <p data-i18n="welcome_desc">{{ commercial.welcome.message }}</p>
         <div class="welcome-modal__code">
-            <code id="welcome-code">BIENVENUE</code>
+            <code id="welcome-code">{{ commercial.welcome.code }}</code>
             <button type="button" class="welcome-modal__copy" data-action="copy-code" data-i18n="welcome_copy">Copier le code</button>
         </div>
         <a href="#nouveautes" class="button button-primary button-block" data-i18n="welcome_cta">Découvrir la collection</a>
     </div>
 </div>
+{% endif %}
 
 
 {% endblock %}

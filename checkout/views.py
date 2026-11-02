@@ -5,6 +5,7 @@ import os
 import uuid
 from decimal import Decimal
 import stripe
+from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
 from django.db import transaction
 from django.core.cache import cache
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
@@ -133,11 +134,11 @@ def checkout(request):
         "form": form, "cart_items": cart_items, "subtotal": subtotal,
         "promo_code": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
         "promo_notice": promo_notice, "promo_error": promo_error,
-        "free_shipping_threshold": os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00"),
-        "standard_shipping": os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90"),
-        "express_shipping": os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90"),
+        "free_shipping_threshold": str(FREE_SHIPPING_THRESHOLD),
+        "standard_shipping": str(SHIPPING_PRICES["standard"]),
+        "express_shipping": str(SHIPPING_PRICES["express"]),
         "stripe_configured": stripe_configured(), "cart_error": cart_error,
-        "free_shipping": discounted_subtotal is not None and discounted_subtotal >= Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")),
+        "free_shipping": discounted_subtotal is not None and discounted_subtotal >= FREE_SHIPPING_THRESHOLD,
     })
 
 

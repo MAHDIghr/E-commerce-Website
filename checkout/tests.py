@@ -29,6 +29,39 @@ class CheckoutIntegrationTests(TestCase):
             "action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1,
         }), content_type="application/json")
 
+    def test_commercial_message_and_shipping_config_match_across_pages(self):
+        from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
+        welcome, _ = PromoCode.objects.update_or_create(code="BIENVENUE", defaults={
+            "discount_type": PromoCode.PERCENT, "value": Decimal("12.00"),
+            "minimum_subtotal": Decimal("25.00"), "once_per_email": True,
+            "is_active": True,
+        })
+        home = self.client.get(reverse("home:home"))
+        catalog = self.client.get(reverse("shop:catalog"))
+        detail = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.add_to_cart()
+        checkout = self.client.get(reverse("checkout:checkout"))
+        message = "−12 % avec le code BIENVENUE dès 25 €"
+        for page in (home, catalog, detail, checkout):
+            self.assertEqual(page.status_code, 200)
+            self.assertContains(page, message)
+            self.assertEqual(page.context["commercial"]["free_shipping_threshold"], str(FREE_SHIPPING_THRESHOLD))
+        config = json.loads(re.search(r'<script id="commercial-config" type="application/json">(.*?)</script>', checkout.content.decode()).group(1))
+        self.assertEqual(config["standard_shipping"], str(SHIPPING_PRICES["standard"]))
+        self.assertEqual(config["express_shipping"], str(SHIPPING_PRICES["express"]))
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": welcome.code})
+        discounted_checkout = self.client.get(reverse("checkout:checkout"))
+        self.assertFalse(discounted_checkout.context["free_shipping"])
+        self.assertEqual(discounted_checkout.context["discounted_subtotal"], Decimal("79.11"))
+        self.assertEqual([choice[0] for choice in discounted_checkout.context["form"].fields["shipping_method"].choices], ["standard", "express"])
+        self.assertNotContains(home, "Vente flash")
+        self.assertNotContains(detail, "Livraison payante")
+        welcome.is_active = False
+        welcome.save(update_fields=["is_active"])
+        home = self.client.get(reverse("home:home"))
+        self.assertNotContains(home, "−12 % avec le code")
+        self.assertNotContains(home, 'id="welcome-modal-backdrop"')
+
     def test_cart_page_renders_current_server_validated_cart(self):
         self.add_to_cart()
         response = self.client.get(reverse("shop:cart_page"))

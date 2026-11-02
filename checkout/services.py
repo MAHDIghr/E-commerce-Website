@@ -10,6 +10,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
+from config.commercial import CURRENCY, FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
 
 from product.models import ProductVariant
 from shop.views import _cart_key_parts, _cart_state
@@ -17,11 +18,7 @@ from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEv
 
 logger = logging.getLogger(__name__)
 CENT = Decimal("0.01")
-SHIPPING = {
-    "standard": Decimal(os.environ.get("CHECKOUT_STANDARD_SHIPPING", "4.90")).quantize(CENT),
-    "express": Decimal(os.environ.get("CHECKOUT_EXPRESS_SHIPPING", "9.90")).quantize(CENT),
-}
-FREE_SHIPPING_THRESHOLD = Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00")).quantize(CENT)
+SHIPPING = SHIPPING_PRICES
 
 
 class CheckoutProblem(Exception):
@@ -43,8 +40,7 @@ def stripe_configured():
 
 
 def stripe_currency():
-    value = os.environ.get("STRIPE_CURRENCY", "eur").strip().lower()
-    return value if len(value) == 3 and value.isalpha() else "eur"
+    return CURRENCY.lower()
 
 
 def apply_promo_code(code, subtotal, email="", *, lock=False):

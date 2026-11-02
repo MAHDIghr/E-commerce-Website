@@ -270,58 +270,6 @@ renderRecentlyViewed();
 
 
 /* ==========================================================================
-   Vente flash — compte à rebours réel, sans réinitialisation trompeuse.
-   La date de fin est calculée une seule fois puis conservée le temps de
-   la session (sessionStorage) : elle n'est jamais recalculée à chaque
-   rafraîchissement pour éviter un faux sentiment d'urgence.
-   ========================================================================== */
-
-(function initFlashSaleCountdown() {
-    const banner = document.querySelector("#flash-sale");
-    if (!banner) return;
-
-    const hoursEl = banner.querySelector("[data-hours]");
-    const minutesEl = banner.querySelector("[data-minutes]");
-    const secondsEl = banner.querySelector("[data-seconds]");
-
-    const DURATION_HOURS = parseFloat(banner.dataset.durationHours || "6");
-    const DEADLINE_KEY = "flash_sale_deadline";
-
-    let deadline = parseInt(readStorage(DEADLINE_KEY, 0), 10);
-    const now = Date.now();
-
-    if (!deadline || deadline < now) {
-        deadline = now + DURATION_HOURS * 60 * 60 * 1000;
-        writeStorage(DEADLINE_KEY, deadline);
-    }
-
-    function tick() {
-        const remaining = deadline - Date.now();
-
-        if (remaining <= 0) {
-            banner.classList.add("is-ended");
-            const textEl = banner.querySelector(".flash-sale__text");
-            if (textEl) textEl.textContent = "L'offre du jour est terminée — revenez demain !";
-            window.clearInterval(intervalId);
-            return;
-        }
-
-        const totalSeconds = Math.floor(remaining / 1000);
-        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-        const seconds = String(totalSeconds % 60).padStart(2, "0");
-
-        if (hoursEl) hoursEl.textContent = hours;
-        if (minutesEl) minutesEl.textContent = minutes;
-        if (secondsEl) secondsEl.textContent = seconds;
-    }
-
-    tick();
-    const intervalId = window.setInterval(tick, 1000);
-})();
-
-
-/* ==========================================================================
    Pop-up de bienvenue avec code de réduction — une fois par semaine max,
    jamais de manière insistante.
    ========================================================================== */

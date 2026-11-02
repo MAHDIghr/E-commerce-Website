@@ -4,7 +4,6 @@ Le navigateur ne fournit que des identifiants et des quantités. Prix, variantes
 offres, publication et disponibilité sont toujours vérifiés côté serveur.
 """
 import json
-import os
 from decimal import Decimal
 
 from django.db.models import Q, Prefetch
@@ -17,13 +16,13 @@ from product.models import (
     Category, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant, Review,
 )
 from product.selectors import product_card_data, published_products
+from config.commercial import FREE_SHIPPING_THRESHOLD
 
 
 CART_SESSION_KEY = "shop_cart_v1"
 MAX_CART_QUANTITY = 10
 MAX_CART_LINES = 30
 MAX_CART_REQUEST_BYTES = 8192
-FREE_SHIPPING_THRESHOLD = Decimal(os.environ.get("CHECKOUT_FREE_SHIPPING_THRESHOLD", "80.00"))
 
 
 def _search_queryset(queryset, query):

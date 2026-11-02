@@ -5,11 +5,12 @@
 (() => {
     const form = document.querySelector("#checkout-form");
     if (!form) return;
+    const config = JSON.parse(document.querySelector("#commercial-config").textContent);
 
     const subtotal = Number(form.dataset.discountedSubtotal || "0");
     const shippingPreview = document.querySelector("#shipping-preview");
     const totalPreview = document.querySelector("#checkout-total-preview");
-    const money = (value) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
+    const money = (value) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: config.currency }).format(value);
 
     function selectedShipping() {
         const selected = form.querySelector('input[name="shipping_method"]:checked') || form.querySelector('select[name="shipping_method"]');
@@ -19,8 +20,8 @@
     function updateSummary() {
         const method = selectedShipping();
         let shipping = 0;
-        if (method === "standard") shipping = Number(form.dataset.standardShipping || "4.90");
-        else if (method === "express") shipping = Number(form.dataset.expressShipping || "9.90");
+        if (method === "standard") shipping = Number(config.standard_shipping);
+        else if (method === "express") shipping = Number(config.express_shipping);
 
         if (!Number.isFinite(subtotal) || !Number.isFinite(shipping)) return;
         const totalLabel = document.querySelector("#checkout-total-label");

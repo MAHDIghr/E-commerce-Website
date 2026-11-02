@@ -11,7 +11,7 @@
                     <circle cx="6" cy="20" r="1.5"></circle>
                     <circle cx="17.5" cy="20" r="1.5"></circle>
                 </svg>
-                <span data-i18n="perk_ship">Livraison offerte dès 80 €</span>
+                <span data-i18n="perk_ship">Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} €</span>
             </li>
             <li>
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,7 +40,7 @@
 
         <!-- Newsletter : première position sur mobile, c'est le levier de conversion du footer -->
         <section class="footer-news" aria-labelledby="footer-news-title">
-            <h3 id="footer-news-title" data-i18n="footer_news_title">-15 % sur votre première commande</h3>
+            <h3 id="footer-news-title"{% if commercial.welcome %} data-i18n="footer_news_title"{% endif %}>{% if commercial.welcome %}{{ commercial.welcome.message }}{% else %}Restez informée{% endif %}</h3>
             <p data-i18n="footer_news_desc">Rejoignez la newsletter : nouveautés, offres privées et conseils style.</p>
 
             <form class="footer-news__signup" method="post" action="{% url 'home:newsletter_subscribe' %}">

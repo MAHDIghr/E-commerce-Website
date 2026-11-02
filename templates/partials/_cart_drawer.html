@@ -22,11 +22,11 @@
     <div class="shipping-progress" aria-label="Progression vers la livraison offerte">
         <div class="shipping-progress__label">
             <span class="shipping-progress__icon" aria-hidden="true">✦</span>
-            <span id="shipping-text">Plus que 80,00 € pour la livraison offerte</span>
+            <span id="shipping-text">Plus que {{ commercial.free_shipping_threshold|floatformat:2 }} € pour la livraison offerte</span>
         </div>
         <div class="shipping-progress__track">
             <div class="shipping-progress__fill" id="shipping-fill" role="progressbar"
-                 aria-label="Progression vers la livraison offerte" aria-valuemin="0" aria-valuemax="80" aria-valuenow="0"></div>
+                 aria-label="Progression vers la livraison offerte" aria-valuemin="0" aria-valuemax="{{ commercial.free_shipping_threshold }}" aria-valuenow="0"></div>
         </div>
     </div>
 
@@ -47,12 +47,13 @@
     </div>
 
     <div class="cart-drawer__body" id="cart-body" hidden>
-        <div class="cart-promo">
+        {% if commercial.welcome %}<div class="cart-promo">
             <span class="cart-promo__eyebrow">VOTRE AVANTAGE DE BIENVENUE</span>
-            <p><strong>−15 %</strong> sur votre première commande avec le code <code>BIENVENUE</code></p>
-            <button type="button" data-copy-promo="BIENVENUE">Copier le code</button>
+            <p>{{ commercial.welcome.message }}</p>
+            <button type="button" data-copy-promo="{{ commercial.welcome.code }}">Copier le code</button>
             <small>Le code sera vérifié et déduit au checkout.</small>
         </div>
+        {% endif %}
         <div class="cart-drawer__list-heading">
             <span>Votre sélection</span>
             <span class="cart-drawer__list-note">Prix affichés en euros</span>

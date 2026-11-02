@@ -11,6 +11,7 @@ from django.views.decorators.http import require_GET
 
 from .models import Product, ProductMedia, ProductOffer, ProductVariant, Review
 from .selectors import published_products
+from config.commercial import FREE_SHIPPING_THRESHOLD
 
 
 def _eur(value):
@@ -172,7 +173,7 @@ def detail(request, slug):
             "old_label": _eur(old_price) if old_price else "",
             "save_label": _eur(old_price - offer_obj.price) if old_price else "",
             "off": off,
-            "ship": offer_obj.get_display_delivery_label_display(),
+            "ship": f"Livraison offerte dès {FREE_SHIPPING_THRESHOLD:g} € de sous-total après remise",
             "badge": offer_obj.get_badge_display(),
             "featured": offer_obj.is_featured,
             "includes_selected_variant": any(item.use_selected_variant for item in offer_items),

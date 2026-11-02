@@ -56,6 +56,7 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.request",
                 "product.context_processors.active_catalog_categories",
+                "config.commercial.commercial_context",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],

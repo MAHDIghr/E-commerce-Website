@@ -45,6 +45,8 @@
 
     {% block after_main %}{% endblock %}
 
+    {{ commercial|json_script:"commercial-config" }}
+
     {# Scripts partagés : panier, langue, recherche, header #}
     <script src="{% static 'js/base.js' %}" defer></script>
     {% block extra_js %}{% endblock %}

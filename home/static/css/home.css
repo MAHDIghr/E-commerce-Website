@@ -562,45 +562,6 @@
    ========================================================================== */
 
 /* ==========================================================================
-   Vente flash
-   ========================================================================== */
-
-.flash-sale {
-    background: linear-gradient(120deg, var(--color-accent-dark), var(--color-accent));
-    color: #fff;
-}
-.flash-sale .container {
-    display: flex; flex-wrap: wrap;
-    align-items: center; justify-content: center;
-    gap: var(--spacing-md);
-    padding-block: var(--spacing-sm);
-    text-align: center;
-}
-.flash-sale__text {
-    margin: 0;
-    font-size: 0.88rem; font-weight: 600;
-}
-.flash-sale__timer {
-    display: flex; gap: 0.4rem;
-    font-variant-numeric: tabular-nums;
-}
-.flash-sale__timer span {
-    min-width: 2.4rem;
-    padding: 0.3rem 0.5rem;
-    border-radius: var(--radius-sm);
-    background-color: rgb(255 255 255 / 20%);
-    font-weight: 700; font-size: 0.88rem;
-    text-align: center;
-    backdrop-filter: blur(6px);
-}
-.flash-sale.is-ended .flash-sale__timer { display: none; }
-.flash-sale .button-secondary {
-    min-height: 40px;
-    padding-inline: 1.2rem;
-    font-size: 0.72rem;
-}
-
-/* ==========================================================================
    Welcome modal
    ========================================================================== */
 
@@ -980,19 +941,6 @@
    MISE À JOUR — v2 (bandeau flash, réassurance, carrousel, produits,
    avis, communauté). Placé en fin de fichier pour surcharger proprement.
    ========================================================================== */
-
-/* --- Bandeau vente flash : fin et compact --- */
-.flash-sale .container { flex-wrap: nowrap; gap: 0.6rem; padding-block: 0.4rem; }
-.flash-sale__text { font-size: 0.8rem; line-height: 1.2; }
-.flash-sale__timer span { min-width: 1.9rem; padding: 0.15rem 0.35rem; font-size: 0.76rem; }
-.flash-sale .button-secondary { min-height: 30px; padding-inline: 0.9rem; font-size: 0.66rem; white-space: nowrap; }
-@media (max-width: 600px) {
-    .flash-sale .container { gap: 0.5rem; padding-block: 0.35rem; }
-    .flash-sale__text { flex: 1; min-width: 0; font-size: 0.7rem; text-align: left; }
-    .flash-sale__timer { gap: 0.2rem; }
-    .flash-sale__timer span { min-width: 1.5rem; font-size: 0.68rem; padding: 0.15rem 0.25rem; }
-}
-@media (max-width: 480px) { .flash-sale .button-secondary { display: none; } }
 
 /* --- Barre de réassurance : cartes modernes, grille 2x2 sur mobile --- */
 .trust-bar { padding-block: 1.1rem; }
