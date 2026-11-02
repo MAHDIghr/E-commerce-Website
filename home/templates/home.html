@@ -56,7 +56,7 @@
                     <a href="#selection" class="button button-primary button-glow" data-i18n="hero_cta_primary">
                         Découvrir la collection
                     </a>
-                    <a href="#categories" class="button button-ghost" data-i18n="hero_cta_secondary">
+                    <a href="{% url 'shop:catalog' %}?cat=handbags" class="button button-ghost" data-i18n="hero_cta_secondary">
                         Voir les sacs
                     </a>
                 </div>
@@ -135,38 +135,38 @@
 
                         
                         <article class="card">
-                            <img
-                                src="{% static 'images/sac1.png' %}"
-                                alt="Sac 1"
-                            >
+                            <a class="card__link" href="{% url 'product:detail' 'sac-cuir-camel' %}">
+                                <img src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=700&q=80" alt="Sac cabas camel en cuir, vue de face">
+                                <span class="card__details"><strong>Sac cabas cuir camel</strong><span>129,90 €</span></span>
+                            </a>
                         </article>
 
                         <article class="card">
-                            <img
-                                src="{% static 'images/sac2.png' %}"
-                                alt="Sac 2"
-                            >
+                            <a class="card__link" href="{% url 'product:detail' 'sac-bandouliere-noir' %}">
+                                <img src="https://images.unsplash.com/photo-1548863227-3af567fc3b27?auto=format&fit=crop&w=700&q=80" alt="Sac bandoulière noir matelassé, vue de face">
+                                <span class="card__details"><strong>Sac bandoulière noir matelassé</strong><span>89,90 €</span></span>
+                            </a>
                         </article>
 
                         <article class="card">
-                            <img
-                                src="{% static 'images/sac3.png' %}"
-                                alt="Sac 3"
-                            >
+                            <a class="card__link" href="{% url 'product:detail' 'portefeuille-beige' %}">
+                                <img src="https://images.unsplash.com/photo-1591344395067-98c9a56b1a1a?auto=format&fit=crop&w=700&q=80" alt="Portefeuille compact beige, vue de face">
+                                <span class="card__details"><strong>Portefeuille compact beige</strong><span>45,00 €</span></span>
+                            </a>
                         </article>
 
                         <article class="card">
-                            <img
-                                src="{% static 'images/sac1.png' %}"
-                                alt="Sac 1"
-                            >
+                            <a class="card__link" href="{% url 'product:detail' 'sac-cuir-camel' %}">
+                                <img src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=700&q=80" alt="Sac cabas camel en cuir, vue de face">
+                                <span class="card__details"><strong>Sac cabas cuir camel</strong><span>129,90 €</span></span>
+                            </a>
                         </article>
 
                         <article class="card">
-                            <img
-                                src="{% static 'images/sac2.png' %}"
-                                alt="Sac 2"
-                            >
+                            <a class="card__link" href="{% url 'product:detail' 'sac-bandouliere-noir' %}">
+                                <img src="https://images.unsplash.com/photo-1548863227-3af567fc3b27?auto=format&fit=crop&w=700&q=80" alt="Sac bandoulière noir matelassé, vue de face">
+                                <span class="card__details"><strong>Sac bandoulière noir matelassé</strong><span>89,90 €</span></span>
+                            </a>
                         </article>
 
                     </div>
@@ -203,28 +203,28 @@
             </div>
 
             <div class="categories-grid">
-                <a href="#" class="category-card reveal">
+                <a href="{% url 'shop:catalog' %}?cat=handbags" class="category-card reveal">
                     <img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=80" alt="Sacs à main" loading="lazy">
                     <div class="category-content">
                         <h3 data-i18n="cat_handbags">Sacs à main</h3>
                         <span class="category-content__cta" data-i18n="discover">Découvrir →</span>
                     </div>
                 </a>
-                <a href="#" class="category-card reveal">
+                <a href="{% url 'shop:catalog' %}?cat=shoulder" class="category-card reveal">
                     <img src="https://images.unsplash.com/photo-1591561954557-26941169b49e?auto=format&fit=crop&w=900&q=80" alt="Sacs bandoulière" loading="lazy">
                     <div class="category-content">
                         <h3 data-i18n="cat_shoulder">Sacs bandoulière</h3>
                         <span class="category-content__cta" data-i18n="discover">Découvrir →</span>
                     </div>
                 </a>
-                <a href="#" class="category-card reveal">
+                <a href="{% url 'shop:catalog' %}?cat=wallets" class="category-card reveal">
                     <img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80" alt="Portefeuilles" loading="lazy">
                     <div class="category-content">
                         <h3 data-i18n="cat_wallets">Portefeuilles</h3>
                         <span class="category-content__cta" data-i18n="discover">Découvrir →</span>
                     </div>
                 </a>
-                <a href="#" class="category-card reveal">
+                <a href="{% url 'shop:catalog' %}?cat=accessories" class="category-card reveal">
                     <img src="https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=900&q=80" alt="Accessoires" loading="lazy">
                     <div class="category-content">
                         <h3 data-i18n="cat_accessories">Accessoires</h3>
@@ -248,7 +248,7 @@
                     <p class="eyebrow" data-i18n="new_eyebrow">À découvrir</p>
                     <h2 data-i18n="new_title">Nos nouveautés</h2>
                 </div>
-                <a href="#" class="text-link" data-i18n="view_all">Voir tout →</a>
+                <a href="{% url 'shop:catalog' %}" class="text-link" data-i18n="view_all">Voir tout →</a>
             </div>
 
             <div class="products-grid">
@@ -267,13 +267,13 @@
                             <span class="product-badge" data-i18n="badge_new">Nouveau</span>
                             <span class="product-badge product-badge--stock">Plus que 3 en stock</span>
                         </div>
-                        <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
+                        <img src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
+                    </a>
+                    <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
                             </svg>
                         </button>
-                        <img src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
-                    </a>
                     <div class="product-info">
                         <h3>Sac cabas cuir camel</h3>
                         <p class="product-category" data-i18n="cat_handbags">Sacs à main</p>
@@ -293,13 +293,13 @@
                         data-product-price="89.90"
                         data-product-image="https://images.unsplash.com/photo-1548863227-3af567fc3b27?auto=format&fit=crop&w=700&q=80">
                         <span class="product-badge product-badge--bestseller">★ Meilleure vente</span>
-                        <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
+                        <img src="https://images.unsplash.com/photo-1548863227-3af567fc3b27?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
+                    </a>
+                    <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
                             </svg>
                         </button>
-                        <img src="https://images.unsplash.com/photo-1548863227-3af567fc3b27?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
-                    </a>
                     <div class="product-info">
                         <h3>Sac bandoulière noir matelassé</h3>
                         <p class="product-category" data-i18n="cat_shoulder">Sacs bandoulière</p>
@@ -322,13 +322,13 @@
                             <span class="product-badge product-badge--sale" data-i18n="badge_sale">Promo</span>
                             <span class="product-badge product-badge--stock">Plus que 5 en stock</span>
                         </div>
-                        <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
+                        <img src="https://images.unsplash.com/photo-1591344395067-98c9a56b1a1a?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
+                    </a>
+                    <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
                             </svg>
                         </button>
-                        <img src="https://images.unsplash.com/photo-1591344395067-98c9a56b1a1a?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
-                    </a>
                     <div class="product-info">
                         <h3>Portefeuille compact beige</h3>
                         <p class="product-category" data-i18n="cat_wallets">Portefeuilles</p>
@@ -348,13 +348,13 @@
                         data-product-price="39.90"
                         data-product-image="https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=700&q=80">
                         <span class="product-badge" data-i18n="badge_new">Nouveau</span>
-                        <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
+                        <img src="https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
+                    </a>
+                    <button type="button" class="product-wishlist" aria-label="Ajouter aux favoris" aria-pressed="false">
                             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z"></path>
                             </svg>
                         </button>
-                        <img src="https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy">
-                    </a>
                     <div class="product-info">
                         <h3>Foulard imprimé en soie</h3>
                         <p class="product-category" data-i18n="cat_accessories">Accessoires</p>
@@ -392,7 +392,7 @@
     <!-- ============================================================
          VUS RÉCEMMENT
          ============================================================ -->
-    <section class="section recent-section" id="recently-viewed">
+    <section class="section recent-section" id="recently-viewed" data-product-url="{% url 'product:detail' 'placeholder' %}">
         <div class="container">
             <div class="section-header reveal">
                 <div>
