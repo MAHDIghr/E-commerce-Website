@@ -5,19 +5,20 @@ import os
 import uuid
 from decimal import Decimal
 import stripe
+from django.contrib import messages
 from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
 from django.db import transaction
 from django.core.cache import cache
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from shop.views import CART_SESSION_KEY, _cart_state
-from .forms import CheckoutForm
+from .forms import CheckoutForm, COUNTRIES
 from .models import Order, PaymentAttempt, OrderNotification
-from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, stripe_configured, validated_cart
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price, stripe_configured, validated_cart
 from .lifecycle import LifecycleProblem, create_return_request, queue_notification, deliver_notification
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ def _increment_rate_limit(key, timeout):
 @ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def checkout(request):
+    if not _cart_state(request):
+        messages.info(request, "Votre panier est vide. Choisissez un article pour commencer votre commande.")
+        return redirect("shop:catalog")
     cart_items, subtotal, cart_error = [], None, ""
     try:
         lines, _, subtotal = validated_cart(request)
@@ -71,6 +75,8 @@ def checkout(request):
             request.session.pop("checkout_promo_code", None)
     discounted_subtotal = max(Decimal("0.00"), subtotal - promo_discount) if subtotal is not None else None
     form = CheckoutForm(request.POST or None, subtotal=discounted_subtotal)
+    initial_method = "free" if discounted_subtotal is not None and discounted_subtotal >= FREE_SHIPPING_THRESHOLD else "standard"
+    estimated_total = discounted_subtotal + shipping_price(initial_method, discounted_subtotal) if discounted_subtotal is not None else None
     if request.method == "POST":
         if not form.is_valid():
             pass
@@ -134,12 +140,40 @@ def checkout(request):
         "form": form, "cart_items": cart_items, "subtotal": subtotal,
         "promo_code": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
         "promo_notice": promo_notice, "promo_error": promo_error,
+        "estimated_total": estimated_total,
         "free_shipping_threshold": str(FREE_SHIPPING_THRESHOLD),
         "standard_shipping": str(SHIPPING_PRICES["standard"]),
         "express_shipping": str(SHIPPING_PRICES["express"]),
         "stripe_configured": stripe_configured(), "cart_error": cart_error,
         "free_shipping": discounted_subtotal is not None and discounted_subtotal >= FREE_SHIPPING_THRESHOLD,
     })
+
+
+@require_GET
+def shipping_quote(request):
+    """Tarifs indicatifs issus du panier et des règles serveur, jamais du sous-total client."""
+    country = request.GET.get("country", "")[:3]
+    postal_code = request.GET.get("postal_code", "").strip()[:21]
+    if country not in dict(COUNTRIES) or not postal_code or len(postal_code) > 20:
+        return JsonResponse({"error": "Renseignez un pays et un code postal valides."}, status=400)
+    try:
+        _, _, subtotal = validated_cart(request)
+        promo_code = request.session.get("checkout_promo_code", "")
+        _, discount = apply_promo_code(promo_code, subtotal)
+    except CheckoutProblem as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    discounted = max(Decimal("0.00"), subtotal - discount)
+    form = CheckoutForm(subtotal=discounted)
+    options = []
+    for method, label in form.fields["shipping_method"].choices:
+        fee = shipping_price(method, discounted)
+        options.append({
+            "method": method, "label": label, "amount": f"{fee:.2f}",
+            "total": f"{discounted + fee:.2f}",
+        })
+    response = JsonResponse({"options": options, "discounted_subtotal": f"{discounted:.2f}"})
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 @require_GET

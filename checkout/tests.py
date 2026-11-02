@@ -12,7 +12,7 @@ from product.models import Category, Product, ProductMedia, ProductOffer, Produc
 from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEvent, Refund, OrderEvent
 from shop.views import CART_SESSION_KEY
 from .forms import CheckoutForm
-from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
 
 class CheckoutIntegrationTests(TestCase):
@@ -28,6 +28,51 @@ class CheckoutIntegrationTests(TestCase):
         return self.client.post(reverse("shop:cart_mutation"), data=json.dumps({
             "action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1,
         }), content_type="application/json")
+
+    def test_empty_cart_redirects_to_catalog_with_message(self):
+        response = self.client.get(reverse("checkout:checkout"), follow=True)
+        self.assertRedirects(response, reverse("shop:catalog"))
+        self.assertContains(response, "Votre panier est vide")
+
+    def test_shipping_quote_uses_server_cart_and_recalculates_after_promo(self):
+        self.add_to_cart()
+        url = reverse("checkout:shipping_quote")
+        response = self.client.get(url, {"country": "FR", "postal_code": "75001", "subtotal": "0.01"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["options"][0]["method"], "free")
+        self.assertEqual(response.json()["options"][0]["total"], "89.90")
+        promo = PromoCode.objects.get(code="BIENVENUE")
+        promo.is_active = True
+        promo.save(update_fields=["is_active"])
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": promo.code})
+        response = self.client.get(url, {"country": "BE", "postal_code": "1000"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([option["method"] for option in response.json()["options"]], ["standard", "express"])
+        self.assertEqual(response.json()["discounted_subtotal"], "76.41")
+        self.assertEqual(response.json()["options"][0]["total"], "81.31")
+        self.assertEqual(self.client.get(url, {"country": "ZZ", "postal_code": "1000"}).status_code, 400)
+
+    def test_identity_billing_and_terms_are_validated_and_stored(self):
+        self.add_to_cart()
+        data = {
+            "first_name": "Camille", "last_name": "Martin", "email": "camille@example.test",
+            "address_line1": "1 rue du Test", "postal_code": "75001", "city": "Paris",
+            "country": "FR", "shipping_method": "free", "billing_address_line1": "2 rue de la Paix",
+            "billing_postal_code": "69001", "billing_city": "Lyon", "billing_country": "FR",
+        }
+        form = CheckoutForm(data, subtotal=Decimal("89.90"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("accept_terms", form.errors)
+        data["accept_terms"] = "on"
+        form = CheckoutForm(data, subtotal=Decimal("89.90"))
+        self.assertTrue(form.is_valid(), form.errors)
+        request = SimpleNamespace(session=self.client.session, user=SimpleNamespace(is_authenticated=False))
+        order, reused = create_order_and_reserve(request, form, uuid.uuid4())
+        self.assertFalse(reused)
+        self.assertEqual(order.full_name, "Camille Martin")
+        self.assertFalse(order.billing_same_as_shipping)
+        self.assertEqual(order.billing_address_line1, "2 rue de la Paix")
+        self.assertEqual(order.billing_city, "Lyon")
 
     def test_commercial_message_and_shipping_config_match_across_pages(self):
         from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES

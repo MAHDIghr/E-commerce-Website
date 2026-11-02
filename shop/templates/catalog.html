@@ -13,6 +13,7 @@
 
 <section class="shop-head">
     <div class="container">
+        {% for message in messages %}<p class="shop-search-summary" role="status">{{ message }}</p>{% endfor %}
         <nav class="breadcrumb" aria-label="Fil d'Ariane">
             <a href="{% url 'home:home' %}" data-shop-i18n="bc_home">Accueil</a>
             <span aria-hidden="true">/</span>
