@@ -223,6 +223,10 @@ class CatalogViewTests(TestCase):
         with self.assertRaises(ValidationError):
             self.variant.full_clean()
 
+    def test_unknown_slug_returns_404(self):
+        response = self.client.get(reverse("product:detail", kwargs={"slug": "slug-inconnu"}))
+        self.assertEqual(response.status_code, 404)
+
     def test_product_page_only_shows_approved_reviews(self):
         Review.objects.create(
             product=self.product, author_name="Avis publié", rating=5,
