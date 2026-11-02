@@ -56,15 +56,19 @@ function renderRecentlyViewed() {
         return;
     }
 
-    grid.innerHTML = "";
+    grid.replaceChildren();
 
     recent.forEach((product) => {
+        if (!product || typeof product.id !== "string" || !/^[a-z0-9-]+$/.test(product.id) ||
+            typeof product.name !== "string" || typeof product.image !== "string" ||
+            !/^https:\/\/images\.unsplash\.com\/photo-[a-zA-Z0-9-]+\?/.test(product.image) ||
+            !Number.isFinite(product.price)) return;
         const article = document.createElement("article");
         article.className = "product-card";
 
         const link = document.createElement("a");
         link.className = "product-image";
-        link.href = "#";
+        link.href = section.dataset.productUrl.replace("placeholder", encodeURIComponent(product.id));
 
         const img = document.createElement("img");
         img.src = product.image;
@@ -454,6 +458,7 @@ if (newsletterForm) {
 
         cards.forEach((card, index) => {
             const offset = getOffset(index);
+            card.querySelector(".card__link").tabIndex = offset === 0 ? 0 : -1;
             const absoluteOffset = Math.abs(offset);
 
             let shouldJump = false;
@@ -574,6 +579,7 @@ if (newsletterForm) {
 
     function startAutoPlay() {
         stopAutoPlay();
+        if (prefersReducedMotion() || carousel.contains(document.activeElement)) return;
         autoPlayTimer = setInterval(() => {
             nextSlide();
         }, AUTO_PLAY_DELAY);
@@ -597,6 +603,8 @@ if (newsletterForm) {
     carousel.addEventListener("mouseleave", () => {
         startAutoPlay();
     });
+    carousel.addEventListener("focusin", stopAutoPlay);
+    carousel.addEventListener("focusout", () => window.setTimeout(startAutoPlay, 0));
 
     /* Navigation clavier : n'agit que si le focus n'est pas dans un champ
        de saisie, pour ne pas gêner la recherche ou la newsletter. */
@@ -612,6 +620,7 @@ if (newsletterForm) {
     let dragStartX = 0;
     let dragCurrentX = 0;
     let dragDifference = 0;
+    let swiped = false;
 
     function startDrag(clientX) {
         isDragging = true;
@@ -639,6 +648,8 @@ if (newsletterForm) {
         const minimumSwipeDistance = 60;
 
         if (Math.abs(dragDifference) >= minimumSwipeDistance) {
+            swiped = true;
+            window.setTimeout(() => { swiped = false; }, 400);
             if (dragDifference < 0) {
                 nextSlide();
             } else {
@@ -650,7 +661,6 @@ if (newsletterForm) {
     }
 
     carousel.addEventListener("mousedown", (event) => {
-        event.preventDefault();
         startDrag(event.clientX);
     });
 
@@ -683,6 +693,11 @@ if (newsletterForm) {
     carousel.addEventListener("touchend", () => {
         endDrag();
     });
+
+    /* Un glissement déplace le carrousel sans suivre le lien sous le doigt. */
+    carousel.addEventListener("click", (event) => {
+        if (swiped) { event.preventDefault(); swiped = false; }
+    }, true);
 
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
