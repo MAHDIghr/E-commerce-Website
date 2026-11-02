@@ -1,6 +1,6 @@
 <div class="cart-backdrop" id="cart-backdrop"></div>
 
-<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier">
+<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Panier" inert>
     <div class="cart-drawer__header">
         <h2 data-i18n="cart_title">Votre panier</h2>
         <button type="button" class="cart-drawer__close" data-action="close-cart" aria-label="Fermer le panier">
@@ -38,6 +38,7 @@
             <span data-i18n="cart_subtotal">Sous-total</span>
             <span id="cart-subtotal">0,00 €</span>
         </div>
-        <a href="#" class="button button-primary button-block" data-i18n="cart_checkout">Commander</a>
+        <a href="{% url 'checkout:checkout' %}" class="button button-primary button-block" data-i18n="cart_checkout">Commander</a>
+        <button type="button" class="button button-outline button-block cart-drawer__continue" data-action="continue-shopping" data-i18n="cart_continue">Continuer mes achats</button>
     </div>
 </aside>
