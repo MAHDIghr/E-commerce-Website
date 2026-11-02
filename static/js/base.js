@@ -130,6 +130,7 @@ const cartTrigger = document.querySelector('[data-action="open-cart"]');
 const cartDrawer = document.querySelector("#cart-drawer");
 const cartBackdrop = document.querySelector("#cart-backdrop");
 const cartClose = document.querySelector('[data-action="close-cart"]');
+const cartContinue = document.querySelector('[data-action="continue-shopping"]');
 const cartItemsContainer = document.querySelector("#cart-items");
 const cartEmptyState = document.querySelector("#cart-empty");
 const cartFooter = document.querySelector("#cart-footer");
@@ -332,22 +333,40 @@ function removeFromCart(id) {
     refreshCartUI();
 }
 
+let cartReturnFocus = null;
 function openCart() {
     if (!cartDrawer) return;
+    cartReturnFocus = document.activeElement;
+    cartDrawer.inert = false;
     cartDrawer.classList.add("is-open");
     cartBackdrop && cartBackdrop.classList.add("is-open");
     cartDrawer.setAttribute("aria-hidden", "false");
+    cartClose && cartClose.focus();
 }
 
 function closeCart() {
-    if (!cartDrawer) return;
+    if (!cartDrawer || !cartDrawer.classList.contains("is-open")) return;
     cartDrawer.classList.remove("is-open");
     cartBackdrop && cartBackdrop.classList.remove("is-open");
     cartDrawer.setAttribute("aria-hidden", "true");
+    cartDrawer.inert = true;
+    if (cartReturnFocus && cartReturnFocus.isConnected) cartReturnFocus.focus();
+    cartReturnFocus = null;
 }
+
+cartDrawer && cartDrawer.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const focusable = [...cartDrawer.querySelectorAll('a[href], button:not([disabled])')]
+        .filter((item) => item.getClientRects().length);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
 
 if (cartTrigger) cartTrigger.addEventListener("click", openCart);
 if (cartClose) cartClose.addEventListener("click", closeCart);
+if (cartContinue) cartContinue.addEventListener("click", closeCart);
 if (cartBackdrop) cartBackdrop.addEventListener("click", closeCart);
 
 document.addEventListener("keydown", (event) => {
@@ -398,6 +417,7 @@ const translations = {
         cart_empty_text: "Parcourez nos collections pour trouver votre prochain sac.",
         cart_subtotal: "Sous-total",
         cart_checkout: "Commander",
+        cart_continue: "Continuer mes achats",
         hero_eyebrow: "Nouvelle collection",
         hero_title: "L'élégance\ns'accessoirise.",
         hero_desc: "Des sacs et accessoires façonnés pour accompagner chaque femme, avec exigence et raffinement.",
@@ -486,6 +506,7 @@ const translations = {
         cart_empty_text: "Browse our collections to find your next bag.",
         cart_subtotal: "Subtotal",
         cart_checkout: "Checkout",
+        cart_continue: "Continue shopping",
         hero_eyebrow: "New collection",
         hero_title: "Elegance,\naccessorised.",
         hero_desc: "Bags and accessories crafted to accompany every woman, with care and refinement.",
