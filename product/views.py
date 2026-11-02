@@ -1,7 +1,25 @@
 """Page produit — FRONT-END ONLY. Toutes les données ci-dessous sont FICTIVES.
 Remplacer build_product() par Product/ProductVariant/ProductMedia/ProductOffer/
 Review/RelatedProduct : le template ne dépend que de la forme du dict `product`."""
+from django.http import Http404
 from django.shortcuts import render
+
+
+# Catalogue fictif : les slugs correspondent aux liens du catalogue JS.
+DEMO_PRODUCTS = {
+    "sac-cuir-camel": ("Sac cabas cuir camel", 129.90, "1590874103328-eac38a683ce7"),
+    "sac-bandouliere-noir": ("Sac bandoulière noir matelassé", 89.90, "1548863227-3af567fc3b27"),
+    "portefeuille-beige": ("Portefeuille compact beige", 45.00, "1591344395067-98c9a56b1a1a"),
+    "foulard-soie": ("Foulard imprimé en soie", 39.90, "1601924994987-69e26d50dc26"),
+    "sac-main-creme": ("Sac à main structuré crème", 149.00, "1548036328-c9fa89d128fa"),
+    "mini-bandouliere-rouge": ("Mini sac bandoulière rouge", 74.90, "1591561954557-26941169b49e"),
+    "portefeuille-noir": ("Portefeuille zippé noir", 49.00, "1553062407-98eeb64c6a62"),
+    "tote-toile": ("Tote bag toile et cuir", 59.90, "1584917865442-de89df76afd3"),
+    "ceinture-cuir": ("Ceinture cuir camel", 34.90, "1594223274512-ad4803739b7c"),
+    "pochette-soiree": ("Pochette de soirée verte", 64.00, "1607344645866-009c320c5ab8"),
+    "porte-cartes-noir": ("Porte-cartes cuir noir", 24.90, "1591344395067-98c9a56b1a1a"),
+    "bandouliere-camel": ("Sac bandoulière camel", 99.00, "1548863227-3af567fc3b27"),
+}
 
 
 def eur(v):
@@ -81,14 +99,36 @@ def build_product():
             ("Que contiennent les offres ?", "Basic : le sac. Essential+ : sac et portefeuille. Complete Pack : sac, portefeuille et porte-cartes."),
             ("Quelle offre choisir ?", "Basic si vous n'avez besoin que du sac ; Complete Pack pour tout assortir avec la livraison offerte."),
         ],
-        "related": [("Portefeuille compact beige", "45,00 €", "1591344395067-98c9a56b1a1a"),
-                    ("Sac bandoulière noir", "89,90 €", "1548863227-3af567fc3b27"),
-                    ("Foulard en soie", "39,90 €", "1601924994987-69e26d50dc26"),
-                    ("Sac à main crème", "149,00 €", "1548036328-c9fa89d128fa")],
+        "related": [],
     }
 
 
 def detail(request, slug):
+    if slug != "sac-cabas-camel" and slug not in DEMO_PRODUCTS:
+        raise Http404("Produit inconnu")
     product = build_product()
     product["slug"] = slug
+    product["related"] = [
+        {"slug": key, "name": name, "price": eur(price), "image": img(photo_id, 500)}
+        for key in ("portefeuille-beige", "sac-bandouliere-noir", "foulard-soie", "sac-main-creme", "sac-cuir-camel")
+        if key != slug
+        for name, price, photo_id in (DEMO_PRODUCTS[key],)
+    ][:4]
+    if slug in DEMO_PRODUCTS:
+        name, price, photo_id = DEMO_PRODUCTS[slug]
+        basic = offer("basic", "Article seul", name, price, price, "Livraison calculée à l'étape suivante", featured=True)
+        product.update(
+            name=name, media=[media("image", photo_id, name)],
+            offers=[basic], selected=basic,
+        )
+        if slug != "sac-cuir-camel":
+            product.update(
+                tagline="Fiche de démonstration : caractéristiques à compléter.",
+                colors=[{"id": "standard", "label": "Standard", "hex": "#d8c3a5"}],
+                rating=None, reviews_count=0, reviews=[], details_available=False,
+            )
+        else:
+            product["details_available"] = True
+    else:
+        product["details_available"] = True
     return render(request, "product.html", {"product": product})
