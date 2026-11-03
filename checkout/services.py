@@ -10,7 +10,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
-from config.commercial import CURRENCY, FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
+from config.commercial import CURRENCY, FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES, public_information, SALES_UNAVAILABLE
 
 from product.models import ProductVariant
 from shop.views import _cart_key_parts, _cart_state
@@ -118,6 +118,8 @@ def _snapshot_components(details):
 
 def create_order_and_reserve(request, form, checkout_key):
     """Crée l'instantané et réserve les stocks avec mises à jour conditionnelles atomiques."""
+    if not public_information()["sales_ready"]:
+        raise CheckoutProblem(SALES_UNAVAILABLE)
     with transaction.atomic():
         existing = Order.objects.select_for_update().filter(checkout_key=checkout_key).first()
         if existing:
@@ -204,6 +206,8 @@ def release_reserved_stock(order):
 
 def create_stripe_session(order, request=None):
     """Crée une session hébergée depuis l'instantané immuable de la commande."""
+    if not public_information()["sales_ready"]:
+        raise CheckoutProblem(SALES_UNAVAILABLE)
     if not stripe_configured():
         raise CheckoutProblem("Le paiement en ligne n’est pas configuré. Aucun paiement ne sera simulé.")
     secret_key = os.environ["STRIPE_SECRET_KEY"].strip()

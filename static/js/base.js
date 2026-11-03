@@ -806,9 +806,9 @@ const translations = {
         hero_cta_primary: "Découvrir la collection",
         hero_cta_secondary: "Voir les sacs",
         trust_ship: "",
-        trust_return: "Retours gratuits sous 30 jours",
-        trust_secure: "Paiement 100% sécurisé",
-        trust_support: "Service client 7j/7",
+        trust_return: "Retours et rétractation",
+        trust_secure: "Paiement via Stripe",
+        trust_support: "Contact",
         categories_eyebrow: "Explorer",
         categories_title: "Nos catégories",
         categories_desc: "Une sélection pensée pour chaque usage, du quotidien aux grandes occasions.",
@@ -828,14 +828,14 @@ const translations = {
         promo_3: "Nouvelle collection disponible dès maintenant",
         banner_eyebrow: "Savoir-faire",
         banner_title: "Des pièces choisies\navec exigence.",
-        banner_desc: "Cuirs sélectionnés, finitions soignées : chaque sac est pensé pour durer et s'accorder avec votre quotidien.",
+        banner_desc: "Découvrez les sacs et accessoires de notre collection. Consultez chaque fiche pour les caractéristiques du produit.",
         banner_cta: "En savoir plus",
         recent_eyebrow: "Votre historique",
         recent_title: "Vus récemment",
         testimonials_eyebrow: "Avis clients",
         testimonials_title: "Elles nous font confiance",
         instagram_eyebrow: "Communauté",
-        instagram_title: "Suivez-nous @maboutique",
+        instagram_title: "La collection en images",
         newsletter_eyebrow: "Newsletter",
         newsletter_title: "Restez informée",
         newsletter_desc: "Inscrivez-vous pour recevoir nos nouveautés, nos offres exclusives et nos conseils styling.",
@@ -859,9 +859,9 @@ const translations = {
         welcome_cta: "Découvrir la collection",
         welcome_copy: "Copier le code",
         perk_ship: "",
-        perk_ret: "Retours gratuits 30 jours",
+        perk_ret: "Retours et rétractation",
         perk_pay: "Paiement sécurisé",
-        perk_help: "Service client 7j/7",
+        perk_help: "Contact",
         footer_news_title: "",
         footer_news_desc: "Rejoignez la newsletter : nouveautés, offres privées et conseils style.",
         footer_news_ok: "Vérifiez votre boîte de réception pour confirmer votre inscription.",
@@ -890,9 +890,9 @@ const translations = {
         hero_cta_primary: "Discover the collection",
         hero_cta_secondary: "Shop bags",
         trust_ship: "",
-        trust_return: "Free returns within 30 days",
-        trust_secure: "100% secure payment",
-        trust_support: "Customer support 7/7",
+        trust_return: "Returns and withdrawal",
+        trust_secure: "Payment via Stripe",
+        trust_support: "Contact",
         categories_eyebrow: "Explore",
         categories_title: "Our categories",
         categories_desc: "A selection designed for every occasion, from everyday to evening.",
@@ -912,14 +912,14 @@ const translations = {
         promo_3: "New collection available now",
         banner_eyebrow: "Craftsmanship",
         banner_title: "Pieces chosen\nwith care.",
-        banner_desc: "Selected leathers, careful finishes: every bag is designed to last and to fit seamlessly into your everyday life.",
+        banner_desc: "Explore our bags and accessories. See each product page for its specifications.",
         banner_cta: "Learn more",
         recent_eyebrow: "Your history",
         recent_title: "Recently viewed",
         testimonials_eyebrow: "Reviews",
         testimonials_title: "Loved by our customers",
         instagram_eyebrow: "Community",
-        instagram_title: "Follow us @maboutique",
+        instagram_title: "Collection in pictures",
         newsletter_eyebrow: "Newsletter",
         newsletter_title: "Stay in the loop",
         newsletter_desc: "Sign up to receive new arrivals, exclusive offers and styling tips.",
@@ -943,9 +943,9 @@ const translations = {
         welcome_cta: "Discover the collection",
         welcome_copy: "Copy code",
         perk_ship: "",
-        perk_ret: "Free returns, 30 days",
+        perk_ret: "Returns and withdrawal",
         perk_pay: "Secure payment",
-        perk_help: "Customer support 7/7",
+        perk_help: "Contact",
         footer_news_title: "",
         footer_news_desc: "Sign up for updates, offers and styling tips.",
         footer_news_ok: "Check your inbox to confirm your subscription.",
@@ -961,9 +961,11 @@ const shippingThresholdLabel = formatPrice(FREE_SHIPPING_THRESHOLD);
 const welcome = commercialConfig.welcome;
 for (const [language, dict] of Object.entries(translations)) {
     const english = language === "en";
-    const shippingText = english ? `Free shipping from ${shippingThresholdLabel}` : `Livraison offerte dès ${shippingThresholdLabel}`;
+    const shippingText = commercialConfig.sales_ready
+        ? (english ? `Free shipping from ${shippingThresholdLabel} after discounts` : commercialConfig.shipping_message)
+        : commercialConfig.sales_unavailable;
     dict.trust_ship = dict.perk_ship = shippingText;
-    dict.promo_1 = english ? `${shippingText} of purchases` : `${shippingText} d'achat`;
+    dict.promo_1 = shippingText;
     if (welcome) {
         const promoText = english
             ? `${welcome.percent}% off with code ${welcome.code} from ${formatPrice(Number(welcome.minimum))}`

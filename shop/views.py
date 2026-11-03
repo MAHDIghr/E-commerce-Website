@@ -16,7 +16,7 @@ from product.models import (
     Category, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant, Review,
 )
 from product.selectors import product_card_data, published_products
-from config.commercial import FREE_SHIPPING_THRESHOLD
+from config.commercial import FREE_SHIPPING_THRESHOLD, shipping_message
 
 
 CART_SESSION_KEY = "shop_cart_v1"
@@ -468,7 +468,7 @@ def offer_options(request, slug):
             "id": offer.pk,
             "title": offer.title,
             "badge": offer.get_badge_display(),
-            "delivery_label": offer.get_display_delivery_label_display(),
+            "delivery_label": shipping_message(),
             "featured": offer.is_featured,
             "price": f"{offer.price:.2f}",
             "reference_total": f"{offer.reference_price:.2f}" if offer.reference_price else f"{offer.price:.2f}",

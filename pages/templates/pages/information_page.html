@@ -1,21 +1,24 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ page.title }} | My Line Collection{% endblock %}
-{% block meta_description %}{{ page.title }} de My Line Collection. Informations à compléter avant publication définitive.{% endblock %}
-{% block extra_head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block meta_description %}{{ page.title }} de My Line Collection.{% endblock %}
+{% block extra_head %}{% if not information_available %}<meta name="robots" content="noindex, nofollow">{% endif %}{% endblock %}
 {% block body_class %}page-information{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'pages/pages.css' %}">{% endblock %}
 {% block content %}
 <article class="information-page container" aria-labelledby="information-title">
   <div class="information-page__panel">
     <h1 id="information-title">{{ page.title }}</h1>
-    <p class="information-page__notice" role="status"><strong>Page à finaliser.</strong> Les champs entre crochets doivent être renseignés et vérifiés avant l’ouverture de la boutique.</p>
+    {% if not information_available %}
+    <p class="information-page__notice" role="status">Ces informations ne sont pas disponibles actuellement. {{ commercial.sales_unavailable }}</p>
+    {% endif %}
     {% for heading, paragraphs in page.sections %}
     <section aria-labelledby="information-section-{{ forloop.counter }}">
       <h2 id="information-section-{{ forloop.counter }}">{{ heading }}</h2>
       {% for paragraph in paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
     </section>
     {% endfor %}
+    <p><a class="information-page__back" href="{% url 'checkout:tracking_lookup' %}">Suivre une commande existante</a></p>
     <a class="information-page__back" href="{% url 'home:home' %}">Retour à l’accueil</a>
   </div>
 </article>

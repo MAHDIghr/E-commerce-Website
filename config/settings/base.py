@@ -164,3 +164,7 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
 CSRF_COOKIE_SAMESITE = "Lax"
+
+# Contenus et approbation explicite de l’exploitant (voir docs/commercial-information-review.md).
+# Le paiement reste fermé si le dossier est absent, incomplet ou non approuvé.
+COMMERCIAL_INFORMATION = {}

@@ -45,8 +45,8 @@
             newTag: "Nouveau",
             add: (n) => `Ajouter ${n} au panier`, wish: "Ajouter aux favoris", reviews: "avis",
             clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Stock ≤ 5",
-            ra_ship: "", ra_ret: "Retours gratuits 30 jours",
-            ra_ret_s: "Sans condition", ra_pay: "Paiement sécurisé", ra_pay_s: "SSL & 3D Secure",
+            ra_ship: "", ra_ret: "Retours et rétractation",
+            ra_ret_s: "Consultez les modalités", ra_pay: "Paiement sécurisé", ra_pay_s: "SSL & 3D Secure",
             item: (n) => (n > 1 ? "articles" : "article"),
             shipLeft: (r) => `Plus que ${r} avant remise pour la livraison offerte`, shipOk: "Seuil atteint avant remise ; confirmation à la commande",
         },
@@ -64,16 +64,15 @@
             newTag: "New",
             add: (n) => `Add ${n} to cart`, wish: "Add to wishlist", reviews: "reviews",
             clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Stock ≤ 5",
-            ra_ship: "", ra_ret: "Free returns, 30 days",
-            ra_ret_s: "No questions asked", ra_pay: "Secure payment", ra_pay_s: "SSL & 3D Secure",
+            ra_ship: "", ra_ret: "Returns and withdrawal",
+            ra_ret_s: "See the conditions", ra_pay: "Secure payment", ra_pay_s: "SSL & 3D Secure",
             item: (n) => (n > 1 ? "items" : "item"),
             shipLeft: (r) => `${r} before discounts for free shipping`, shipOk: "Threshold reached before discounts; confirmed at checkout",
         },
     };
-    T.fr.ra_ship = `Livraison offerte dès ${formatPrice(shippingThreshold)}`;
-    T.en.ra_ship = `Free shipping from ${formatPrice(shippingThreshold)}`;
-    T.fr.subtitle = `Sacs et accessoires en cuir, choisis pour durer. ${T.fr.ra_ship}, retours gratuits sous 30 jours.`;
-    T.en.subtitle = `Leather bags and accessories, chosen to last. ${T.en.ra_ship}, free returns within 30 days.`;
+    T.fr.ra_ship = T.en.ra_ship = commercial.shipping_message;
+    T.fr.subtitle = "Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.";
+    T.en.subtitle = "Explore our bags and accessories. See each product page for its specifications.";
     let lang = document.documentElement.lang === "en" ? "en" : "fr";
     const t = () => T[lang];
 
@@ -478,7 +477,9 @@
         $("cart-bar-count").textContent = String(count);
         $("cart-bar-label").textContent = t().item(count);
         $("cart-bar-total").textContent = formatPrice(total);
-        $("cart-bar-ship").textContent = total >= FREE_SHIPPING ? t().shipOk : t().shipLeft(formatPrice(FREE_SHIPPING - total));
+        $("cart-bar-ship").textContent = commercial.sales_ready
+            ? (total >= FREE_SHIPPING ? t().shipOk : t().shipLeft(formatPrice(FREE_SHIPPING - total)))
+            : commercial.sales_unavailable;
     }
     bar.querySelector("button").addEventListener("click", openCart);
     document.addEventListener("cart:updated", updateCartBar);

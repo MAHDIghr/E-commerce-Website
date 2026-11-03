@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from product.models import Category, Product, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant
@@ -15,6 +15,10 @@ from .forms import CheckoutForm
 from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price
 
 
+from pages.test_commercial_information import approved_information
+
+
+@override_settings(COMMERCIAL_INFORMATION=approved_information())
 class CheckoutIntegrationTests(TestCase):
     def setUp(self):
         category = Category.objects.create(name="Sacs", slug="sacs")

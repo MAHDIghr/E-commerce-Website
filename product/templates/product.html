@@ -93,9 +93,7 @@
           <span class="visually-hidden">Ajouter au panier</span>
         </button>
       </div>
-      <ul class="trust">
-        <li>Paiement sécurisé</li><li><a href="{% url 'pages:returns' %}">Retours et rétractation</a></li><li><a href="{% url 'pages:contact' %}">Service client</a></li><li><a href="{% url 'pages:delivery' %}">Conditions de livraison</a></li>
-      </ul>
+      {% include "partials/_commercial_information.html" %}
     </section>
   </div>
 </div>
@@ -171,7 +169,7 @@
 
 <section class="final"><div class="p-wrap">
   <h2>Prêt à l'adopter ?</h2>
-  <p>Retours gratuits sous 30 jours.</p>
+  <p><a href="{% url 'pages:returns' %}">Consulter les modalités de retour et de rétractation</a></p>
   <button type="button" class="button button-primary js-buy" id="cta-final">Acheter</button>
 </div></section>
 {% endblock %}

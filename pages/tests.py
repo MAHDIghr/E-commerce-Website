@@ -5,12 +5,13 @@ from django.urls import reverse
 class InformationPagesTests(TestCase):
     NAMES = ("legal", "terms", "privacy", "returns", "delivery", "contact", "faq", "about")
 
-    def test_all_pages_render_with_placeholders_and_named_links(self):
+    def test_all_pages_render_without_working_text_and_with_named_links(self):
         for name in self.NAMES:
             with self.subTest(page=name):
                 response = self.client.get(reverse(f"pages:{name}"))
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, "[À COMPLÉTER :")
+                self.assertNotContains(response, "[À COMPLÉTER")
+                self.assertContains(response, "La prise de commande est momentanément indisponible.")
                 self.assertContains(response, 'name="robots" content="noindex, nofollow"')
                 self.assertContains(response, reverse("pages:legal"))
                 self.assertContains(response, reverse("pages:terms"))

@@ -14,6 +14,7 @@
     <a class="checkout-back" href="{% url 'shop:cart_page' %}">← Retour au panier</a>
     <ol class="checkout-steps" aria-label="Étapes de commande"><li class="is-current">1 <span>Livraison</span></li><li>2 <span>Paiement sécurisé</span></li><li>3 <span>Confirmation</span></li></ol>
   </div>
+  {% include "partials/_commercial_information.html" %}
   {% if cart_error %}<div class="checkout-alert" role="alert">{{ cart_error }}</div>{% endif %}
   {% if not cart_items %}<div class="checkout-empty"><h2>Votre panier est vide ou doit être vérifié.</h2><p>Retournez à la boutique pour mettre à jour votre sélection.</p><a class="button button-primary" href="{% url 'shop:catalog' %}">Continuer mes achats</a></div>
   {% else %}
@@ -48,7 +49,7 @@
         <p id="shipping-status" role="status">Renseignez votre pays et votre code postal pour confirmer les modes disponibles.</p>
           <div class="checkout-shipping" id="shipping-options">
             {% for value, label in form.shipping_method.field.choices %}
-            <label class="shipping-choice" for="shipping-{{ value }}"><span><input type="radio" name="shipping_method" id="shipping-{{ value }}" value="{{ value }}" {% if form.shipping_method.value == value %}checked{% endif %} required><span><strong>{{ label }}</strong><small>{% if value == "standard" %}Suivi standard{% else %}Traitement prioritaire{% endif %}</small></span></span></label>
+            <label class="shipping-choice" for="shipping-{{ value }}"><span><input type="radio" name="shipping_method" id="shipping-{{ value }}" value="{{ value }}" {% if form.shipping_method.value == value %}checked{% endif %} required><span><strong>{{ label }}</strong></span></span></label>
             {% endfor %}
           </div>
         {% for error in form.shipping_method.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
@@ -57,7 +58,8 @@
         <label class="checkout-check"><input type="checkbox" name="accept_terms" {% if form.accept_terms.value %}checked{% endif %} required> J’ai lu et j’accepte les <a href="{% url 'pages:terms' %}" target="_blank" rel="noopener noreferrer">conditions générales de vente</a>.</label>
         {% for error in form.accept_terms.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
         <p class="checkout-secure-note"><span aria-hidden="true">⌑</span> Le paiement sera effectué sur la page hébergée de Stripe. Les données de carte ne transitent pas par cette boutique.</p>
-        <button class="button button-primary checkout-pay-button" type="submit" id="checkout-submit"><span class="checkout-pay-label">Commander avec obligation de paiement</span><span class="checkout-spinner" aria-hidden="true"></span></button>
+        <button class="button button-primary checkout-pay-button" type="submit" id="checkout-submit"{% if not commercial.sales_ready %} disabled aria-describedby="sales-unavailable"{% endif %}><span class="checkout-pay-label">Commander avec obligation de paiement</span><span class="checkout-spinner" aria-hidden="true"></span></button>
+        {% if not commercial.sales_ready %}<p class="checkout-config-note" id="sales-unavailable">{{ commercial.sales_unavailable }} Aucun paiement ne sera simulé.</p>{% endif %}
         {% if not stripe_configured %}<p class="checkout-config-note">Paiement indisponible tant que les variables Stripe ne sont pas configurées. Aucun paiement ne sera simulé.</p>{% endif %}
       </div>
     </form>

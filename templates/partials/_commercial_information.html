@@ -1,0 +1,9 @@
+<div class="commercial-information">
+    <p>{% if commercial.sales_ready %}{{ commercial.shipping_message }}{% if commercial.delivery_days.standard %} Livraison standard : {{ commercial.delivery_days.standard }}.{% endif %}{% else %}{{ commercial.sales_unavailable }}{% endif %}</p>
+    <nav aria-label="Informations avant commande">
+        <a href="{% url 'pages:delivery' %}">Livraison</a>
+        <a href="{% url 'pages:returns' %}">Retours et rétractation</a>
+        <a href="{% url 'pages:terms' %}">CGV</a>
+        <a href="{% url 'pages:contact' %}">Contact</a>
+    </nav>
+</div>

@@ -1356,3 +1356,6 @@ body.community-modal-open { overflow: hidden; }
 .newsletter-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .newsletter-form :focus-visible { outline: 2px solid var(--color-accent-dark); outline-offset: 3px; }
 @media (max-width: 480px) { .newsletter-fields { flex-direction: column; } .newsletter-fields .button { width: 100%; } }
+
+/* Le bloc commercial partagé reste lisible sur le fond sombre du hero. */
+.hero-trust .commercial-information { color: #fff; }

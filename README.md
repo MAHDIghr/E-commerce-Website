@@ -1066,3 +1066,7 @@ Ouvrir http://127.0.0.1:8000/gestion/connexion/, puis se connecter avec le compt
 ### Évolutions prévues, hors périmètre de cette version
 
 Les graphiques, les statistiques de ventes, les marges, les exports, les journaux d'activité et un éditeur visuel complet de composition des offres sont des évolutions distinctes. Aucun chiffre de vente fictif n'est affiché dans cette première version.
+
+## Informations commerciales et ouverture du paiement
+
+Les informations avant vente utilisent un composant partagé et la configuration Django `COMMERCIAL_INFORMATION` ; le dossier de validation et le contrat détaillé sont dans [docs/commercial-information-review.md](docs/commercial-information-review.md). Les anciennes trames ne sont plus servies au public. Sans contenu complet approuvé et confirmation des règles de livraison configurées, les nouvelles prises de commande sont bloquées côté serveur ; le suivi et les webhooks des commandes existantes restent actifs. Les promesses non confirmées de retours gratuits, de disponibilité 7j/7 et de matière commune ont été retirées.
