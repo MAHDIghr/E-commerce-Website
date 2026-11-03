@@ -69,6 +69,8 @@ legend{padding:0;margin-bottom:.6rem;font-size:.88rem;font-weight:600}
 .is-done{background:var(--color-success)!important}
 .trust{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem;margin:1rem 0 0;font-size:.8rem;color:var(--color-ink-soft)}
 .trust li::before{content:"✓ ";color:var(--color-success);font-weight:700}
+.trust a{color:inherit;text-decoration:underline;text-underline-offset:2px;display:inline-flex;align-items:center;min-height:44px}
+.trust a:focus-visible{outline:2px solid var(--color-accent);outline-offset:3px}
 
 /* Sections */
 .p-sec{padding-block:clamp(2.75rem,8vw,5rem)}

@@ -54,7 +54,7 @@
         {% for error in form.shipping_method.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
       </section>
       <div class="checkout-submit">
-        <label class="checkout-check"><input type="checkbox" name="accept_terms" {% if form.accept_terms.value %}checked{% endif %} required> J’ai lu et j’accepte les <a href="{% url 'home:terms' %}" target="_blank" rel="noopener noreferrer">conditions générales de vente</a>.</label>
+        <label class="checkout-check"><input type="checkbox" name="accept_terms" {% if form.accept_terms.value %}checked{% endif %} required> J’ai lu et j’accepte les <a href="{% url 'pages:terms' %}" target="_blank" rel="noopener noreferrer">conditions générales de vente</a>.</label>
         {% for error in form.accept_terms.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
         <p class="checkout-secure-note"><span aria-hidden="true">⌑</span> Le paiement sera effectué sur la page hébergée de Stripe. Les données de carte ne transitent pas par cette boutique.</p>
         <button class="button button-primary checkout-pay-button" type="submit" id="checkout-submit"><span class="checkout-pay-label">Commander avec obligation de paiement</span><span class="checkout-spinner" aria-hidden="true"></span></button>

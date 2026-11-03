@@ -18,7 +18,7 @@
                     <path d="M3 12a9 9 0 1 0 3-6.7"></path>
                     <polyline points="3 4 3 9 8 9"></polyline>
                 </svg>
-                <span data-i18n="perk_ret">Retours gratuits 30 jours</span>
+                <span><a href="{% url 'pages:returns' %}">Retours et rétractation</a></span>
             </li>
             <li>
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -31,7 +31,7 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20l1-5.4A8.5 8.5 0 1 1 21 11.5z"></path>
                 </svg>
-                <span data-i18n="perk_help">Service client 7j/7</span>
+                <span><a href="{% url 'pages:contact' %}">Contacter le service client</a></span>
             </li>
         </ul>
     </div>
@@ -51,7 +51,7 @@
                     <input id="footer-news-email" name="email" type="email" placeholder="Votre adresse e-mail" autocomplete="email" maxlength="254" required>
                     <button type="submit" class="footer-news__btn">S’inscrire</button>
                 </div>
-                <label class="footer-news__consent"><input type="checkbox" name="consent" value="yes" required> <span>J’accepte de recevoir les nouveautés et les offres par e-mail. Désinscription à tout moment. <a href="{% url 'home:privacy' %}">Politique de confidentialité</a>.</span></label>
+                <label class="footer-news__consent"><input type="checkbox" name="consent" value="yes" required> <span>J’accepte de recevoir les nouveautés et les offres par e-mail. Désinscription à tout moment. <a href="{% url 'pages:privacy' %}">Politique de confidentialité</a>.</span></label>
             </form>
             <p class="footer-news__msg" id="footer-news-msg" role="status" aria-live="polite"></p>
             <a class="footer-news__link" href="{% url 'shop:catalog' %}">Découvrir la collection</a>
@@ -63,6 +63,12 @@
                 <img src="{% static 'images/whiteMainLogo.svg' %}" alt="My Line Collection" class="logo__image">
             </a>
             <p data-i18n="footer_tagline">Sacs et accessoires pensés pour l'élégance au quotidien.</p>
+            <address class="footer-contact">
+                <span>[À COMPLÉTER : adresse postale]</span>
+                <span>[À COMPLÉTER : adresse e-mail]</span>
+                <span>[À COMPLÉTER : téléphone]</span>
+                <a href="{% url 'pages:contact' %}">Coordonnées et contact</a>
+            </address>
        </div>
 
         <!-- Colonnes de liens : accordéons sur mobile, ouvertes sur desktop -->
@@ -101,10 +107,11 @@
                         <span class="footer-track-link__arrow" aria-hidden="true">→</span>
                     </a>
                 </li>
-                <li><a href="{% url 'home:delivery' %}" data-i18n="footer_shipping">Livraison</a></li>
-                <li><a href="{% url 'home:returns' %}" data-i18n="footer_returns">Retours</a></li>
-                <li><a href="{% url 'home:faq' %}" data-i18n="footer_faq">FAQ</a></li>
-                <li><a href="{% url 'home:contact' %}" data-i18n="footer_contact">Contact</a></li>
+                <li><a href="{% url 'pages:delivery' %}" data-i18n="footer_shipping">Livraison</a></li>
+                <li><a href="{% url 'pages:returns' %}" data-i18n="footer_returns">Retours</a></li>
+                <li><a href="{% url 'pages:faq' %}" data-i18n="footer_faq">FAQ</a></li>
+                <li><a href="{% url 'pages:contact' %}" data-i18n="footer_contact">Contact</a></li>
+                <li><a href="{% url 'pages:about' %}">À propos</a></li>
             </ul>
         </details>
     </div>
@@ -115,9 +122,10 @@
                 <li>Visa</li><li>Mastercard</li><li>PayPal</li>
             </ul>
             <ul class="footer-legal">
-                <li><a href="{% url 'home:legal' %}" data-i18n="footer_legal_mentions">Mentions légales</a></li>
-                <li><a href="{% url 'home:privacy' %}" data-i18n="footer_privacy">Politique de confidentialité</a></li>
-                <li><a href="{% url 'home:terms' %}" data-i18n="footer_terms">CGV</a></li>
+                <li><a href="{% url 'pages:legal' %}" data-i18n="footer_legal_mentions">Mentions légales</a></li>
+                <li><a href="{% url 'pages:privacy' %}" data-i18n="footer_privacy">Politique de confidentialité</a></li>
+                <li><a href="{% url 'pages:terms' %}" data-i18n="footer_terms">CGV</a></li>
+                <li><a class="footer-cookie-disabled" role="link" aria-disabled="true">Gérer mes cookies (indisponible)</a></li>
             </ul>
             <p class="footer-copy">© 2026 My Line Collection. <span data-i18n="footer_rights">Tous droits réservés.</span></p>
         </div>

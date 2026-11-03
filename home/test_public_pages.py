@@ -12,19 +12,19 @@ class PublicInformationPagesTests(TestCase):
 
     def test_public_read_pages_reject_post(self):
         self.assertEqual(self.client.post(reverse("home:home")).status_code, 405)
-        self.assertEqual(self.client.post(reverse("home:faq")).status_code, 405)
+        self.assertEqual(self.client.post(reverse("pages:faq")).status_code, 405)
 
     def test_help_pages_are_available(self):
         for name in ("delivery", "returns", "faq", "contact"):
             with self.subTest(page=name):
-                response = self.client.get(reverse(f"home:{name}"))
+                response = self.client.get(reverse(f"pages:{name}"))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "My Line Collection")
 
     def test_legal_pages_are_marked_as_drafts_and_not_indexable(self):
         for name in ("legal", "privacy", "terms"):
             with self.subTest(page=name):
-                response = self.client.get(reverse(f"home:{name}"))
+                response = self.client.get(reverse(f"pages:{name}"))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'name="robots" content="noindex, nofollow"')
                 self.assertContains(response, "Page à finaliser")

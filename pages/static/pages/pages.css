@@ -1,0 +1,8 @@
+.information-page { padding-block: clamp(2rem, 6vw, 5rem); }
+.information-page__panel { max-width: 860px; margin-inline: auto; padding: clamp(1.25rem, 4vw, 2.5rem); border: 1px solid #e9e4dc; border-radius: 18px; background: #fff; overflow-wrap: anywhere; }
+.information-page h1 { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.12; margin: .5rem 0 1rem; }
+.information-page h2 { font-size: 1.2rem; margin: 2rem 0 .5rem; }
+.information-page p { line-height: 1.7; color: #625d56; font-size: max(.875rem, 12px); }
+.information-page__notice { padding: 1rem; border: 1px solid #d9a441; background: #fff8e8; border-radius: 10px; }
+.information-page__back { display: inline-flex; align-items: center; min-height: 44px; margin-top: 1.5rem; text-decoration: underline; }
+.information-page__back:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }

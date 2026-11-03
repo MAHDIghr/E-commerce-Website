@@ -25,6 +25,7 @@ urlpatterns = [
     path('robots.txt', home_views.robots_txt, name='robots'),
     path('admin/', admin.site.urls),
     path("", include("home.urls")),
+    path("informations/", include("pages.urls")),
     path("boutique/", include("shop.urls")),
     path("produit/", include("product.urls")),
     path("checkout/", include("checkout.urls")),
