@@ -347,6 +347,7 @@ function applyCartPayload(payload) {
 async function refreshCartUI() { try { applyCartPayload(await cartRequest(cartApiUrl)); } catch (e) { showCartStatus(e.message || "Le panier est momentanément indisponible.", true); } }
 function mutateCart(payload) {
     /* Sérialise les mutations pour éviter les pertes d'état lors de clics rapprochés. */
+    document.dispatchEvent(new CustomEvent("cart:changing"));
     const operation = cartMutationQueue.then(async () => {
         await cartReady;
         showCartStatus("");
@@ -358,7 +359,7 @@ function mutateCart(payload) {
     return operation.catch((error) => {
         showCartStatus(error.message || "Le panier n'a pas pu être mis à jour.", true);
         throw error;
-    });
+    }).finally(() => document.dispatchEvent(new CustomEvent("cart:settled")));
 }
 async function addToCart(product, options = {}) {
     try {

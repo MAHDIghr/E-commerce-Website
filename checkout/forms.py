@@ -58,3 +58,9 @@ class CheckoutForm(forms.Form):
                 if not cleaned.get(field):
                     self.add_error(field, "Ce champ est requis pour une adresse de facturation distincte.")
         return cleaned
+
+
+class ShippingQuoteForm(forms.Form):
+    """Seules la destination et la forme du code postal sont nécessaires au devis."""
+    country = forms.ChoiceField(label="Pays", choices=COUNTRIES)
+    postal_code = forms.CharField(label="Code postal", max_length=20)

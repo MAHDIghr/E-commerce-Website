@@ -1073,4 +1073,11 @@ Les informations avant vente utilisent un composant partagé et la configuration
 
 ## Contrat des promotions au checkout
 
-Le contexte du template utilise `promo` pour l’objet appliqué ; `promo_code` dans le POST et `checkout_promo_code` en session restent des chaînes. Le serveur calcule remise, sous-total remisé, frais et total ; le code appliqué reste affiché et retirable. Les résultats sont annoncés dans un statut accessible, avec des refus distincts pour code invalide, expiré ou non applicable. Voir [docs/promo-contract-report.md](docs/promo-contract-report.md) pour les fichiers modifiés, les tests réellement exécutés, les limites de recette visuelle et les commandes locales. La conservation des coordonnées lors de la redirection promo reste un lot séparé.
+Le contexte du template utilise `promo` pour l’objet appliqué ; `promo_code` dans le POST et `checkout_promo_code` en session restent des chaînes. Le serveur calcule remise, sous-total remisé, frais et total ; le code appliqué reste affiché et retirable. Les résultats sont annoncés dans un statut accessible, avec des refus distincts pour code invalide, expiré ou non applicable. Voir [docs/promo-contract-report.md](docs/promo-contract-report.md) pour les fichiers modifiés, les tests réellement exécutés, les limites de recette visuelle et les commandes locales. La conservation des coordonnées et l’invalidation des devis sont décrites dans la section suivante.
+
+
+## Préservation du checkout et actualisation des devis
+
+Le checkout actualise son résumé par POST CSRF vers la même vue avec `X-Checkout-Update: 1`. Le formulaire de coordonnées reste dans le DOM ; les données ne sont pas copiées dans localStorage, sessionStorage ou un brouillon de session. Le fallback sans JavaScript réaffiche les champs soumis avec une action promo. Les modifications de destination, de promo ou de panier invalident immédiatement options et totaux ; une erreur réseau conserve la saisie et permet une reprise. Les prix restent calculés et revalidés côté serveur.
+
+Voir [docs/checkout-preservation-report.md](docs/checkout-preservation-report.md) pour le contrat, les fichiers modifiés, les tests exécutés et les vérifications navigateur restantes. Tests serveur : `python manage.py test checkout.test_preservation --settings=config.settings.development`. Les simulations DOM utilisent uniquement une installation temporaire de jsdom pour les tests, documentée dans ce rapport ; aucune dépendance de production ajoutée.

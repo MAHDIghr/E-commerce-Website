@@ -1,0 +1,34 @@
+{% load l10n %}
+      <details id="checkout-summary-details" open><summary><span id="summary-title">Afficher le résumé ({{ cart_items|length }} article{{ cart_items|length|pluralize }})</span><strong id="summary-amount">{% if shipping_pending %}À recalculer{% else %}{{ estimated_total|floatformat:2 }} € TTC{% endif %}</strong></summary><div class="checkout-summary__body">
+      <div class="checkout-summary__items">
+        {% for item in cart_items %}
+        <article class="checkout-item">
+          <div class="checkout-item__image">{% if item.image %}<img src="{{ item.image }}" alt="" loading="lazy">{% else %}<span aria-hidden="true">ML</span>{% endif %}<b>{{ item.quantity }}</b></div>
+          <div class="checkout-item__details"><strong>{{ item.name }}</strong><span>{{ item.variant_name }}</span>{% for component in item.components %}<small>Inclus : {{ component.name }}{% if component.variant_name %} · {{ component.variant_name }}{% endif %} — offert</small>{% endfor %}</div>
+          <strong class="checkout-item__price">{{ item.line_total }} €</strong>
+        </article>
+        {% endfor %}
+      </div>
+      <details class="checkout-promo"{% if promo or promo_notice or promo_error %} open{% endif %}><summary>Ajouter un code promo</summary><div>
+        <div class="checkout-promo__heading"><span aria-hidden="true">✦</span><div><h3>Un code promo ?</h3><p>{% if commercial.welcome %}{{ commercial.welcome.message }}{% else %}Saisissez un code valide avant de passer au paiement.{% endif %}</p></div></div>
+        <div id="checkout-promo-status" role="status" aria-live="polite" aria-atomic="true">
+          {% if promo_notice %}<p class="checkout-promo__notice">{{ promo_notice }}</p>{% endif %}
+          {% if promo_error %}<p class="checkout-promo__notice checkout-promo__notice--error">{{ promo_error }}</p>{% endif %}
+        </div>
+        <div class="checkout-promo__form">
+
+          <label class="visually-hidden" for="checkout-promo-code">Code promo</label>
+          <input id="checkout-promo-code" aria-describedby="checkout-promo-status"{% if promo_error %} aria-invalid="true"{% endif %} name="promo_code" form="checkout-form" type="text" maxlength="32" autocomplete="off" autocapitalize="characters" placeholder="{% if commercial.welcome %}Ex. {{ commercial.welcome.code }}{% else %}Code promo{% endif %}" value="{{ promo.code|default:'' }}">
+          <button type="submit" form="checkout-form" name="promo_action" value="apply" formnovalidate class="button button-outline">Appliquer</button>
+        </div>
+        {% if promo %}<div class="checkout-promo__applied"><span><strong>{{ promo.code }}</strong> · Code appliqué</span><button type="submit" form="checkout-form" name="promo_action" value="remove" formnovalidate class="checkout-promo__remove">Retirer</button></div>{% endif %}
+      </div></details>
+      <dl class="checkout-totals">
+        <div><dt>Sous-total</dt><dd>{% if cart_error %}À vérifier{% else %}{{ subtotal|floatformat:2 }} €{% endif %}</dd></div>
+        {% if promo %}<div class="checkout-totals__discount"><dt>Remise ({{ promo.code }})</dt><dd>−{{ promo_discount|floatformat:2 }} €</dd></div>
+        <div><dt>Sous-total après remise</dt><dd>{{ discounted_subtotal|floatformat:2 }} €</dd></div>{% endif %}
+        <div><dt>Livraison</dt><dd id="shipping-preview">{% if shipping_pending %}À recalculer{% elif free_shipping %}Offerte{% else %}{{ estimated_shipping|floatformat:2 }} €{% endif %}</dd></div>
+        <div class="checkout-totals__total"><dt id="checkout-total-label">Total estimé TTC, livraison incluse</dt><dd id="checkout-total-preview">{% if shipping_pending %}À recalculer{% else %}{{ estimated_total|floatformat:2 }} €{% endif %}</dd></div>
+      </dl>
+      <p class="checkout-summary__footnote">Montant TTC. Le montant définitif est recalculé par le serveur. La commande reste en attente jusqu’à confirmation sécurisée de Stripe.</p>
+      </div></details>

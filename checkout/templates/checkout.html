@@ -19,9 +19,13 @@
   {% if not cart_items %}<div class="checkout-empty"><h2>Votre panier est vide ou doit être vérifié.</h2><p>Retournez à la boutique pour mettre à jour votre sélection.</p><a class="button button-primary" href="{% url 'shop:catalog' %}">Continuer mes achats</a></div>
   {% else %}
   <div class="checkout-layout">
-    <form method="post" class="checkout-form" id="checkout-form" novalidate data-quote-url="{% url 'checkout:shipping_quote' %}" data-free-shipping="{{ free_shipping|yesno:'true,false' }}">
-      {% csrf_token %}
-      {% if form.non_field_errors %}<div class="checkout-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <form method="post" class="checkout-form" id="checkout-form" novalidate data-update-url="{% url 'checkout:checkout' %}" data-free-shipping="{{ free_shipping|yesno:'true,false' }}">
+      {% csrf_token %}<input type="hidden" name="checkout_fields_present" value="1">
+      <div id="checkout-errors" class="checkout-alert" role="alert" tabindex="-1"{% if not form.errors %} hidden{% endif %}>
+        <h2>Vérifiez votre commande</h2>
+        <ul>{% for field in form %}{% for error in field.errors %}<li data-server-error data-field-error="{{ field.name }}"><a href="{% if field.name == 'shipping_method' %}#shipping-options{% else %}#{{ field.id_for_label }}{% endif %}">{{ field.label }} : {{ error }}</a></li>{% endfor %}{% endfor %}
+        {% for error in form.non_field_errors %}<li data-server-error>{{ error }}</li>{% endfor %}</ul>
+      </div>
       <section class="checkout-card">
         <div class="checkout-card__heading"><span>01</span><div><h2>Coordonnées</h2><p>Pour le suivi et la confirmation de votre commande.</p></div></div>
         <div class="checkout-fields">
@@ -29,7 +33,7 @@
             {% if field.name != "shipping_method" and field.name != "billing_same_as_shipping" and field.name != "billing_address_line1" and field.name != "billing_postal_code" and field.name != "billing_city" and field.name != "billing_country" and field.name != "accept_terms" %}
             <div class="checkout-field {% if field.name == 'address_line1' %}checkout-field--wide{% endif %}">
               <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
-              {% for error in field.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
+              {% if field.errors %}<p class="checkout-field__error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</p>{% endif %}
             </div>
             {% endif %}
           {% endfor %}
@@ -37,66 +41,38 @@
       </section>
       <section class="checkout-card" aria-labelledby="billing-title">
         <div class="checkout-card__heading"><span>02</span><div><h2 id="billing-title">Facturation</h2><p>Indiquez une autre adresse si elle diffère de la livraison.</p></div></div>
-        <label class="checkout-check"><input type="checkbox" name="billing_same_as_shipping" id="id_billing_same_as_shipping" {% if form.billing_same_as_shipping.value or not form.is_bound %}checked{% endif %}> {{ form.billing_same_as_shipping.label }}</label>
-        <div class="checkout-fields" id="billing-fields"{% if form.billing_same_as_shipping.value or not form.is_bound %} hidden{% endif %}>
+        <label class="checkout-check"><input type="checkbox" name="billing_same_as_shipping" id="id_billing_same_as_shipping" {% if form.billing_same_as_shipping.value %}checked{% endif %}> {{ form.billing_same_as_shipping.label }}</label>
+        <div class="checkout-fields" id="billing-fields"{% if form.billing_same_as_shipping.value %} hidden{% endif %}>
           {% for field in form %}{% if field.name == "billing_address_line1" or field.name == "billing_postal_code" or field.name == "billing_city" or field.name == "billing_country" %}
-          <div class="checkout-field{% if field.name == 'billing_address_line1' %} checkout-field--wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}</div>
+          <div class="checkout-field{% if field.name == 'billing_address_line1' %} checkout-field--wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<p class="checkout-field__error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</p>{% endif %}</div>
           {% endif %}{% endfor %}
         </div>
       </section>
-      <section class="checkout-card">
+      <section class="checkout-card" id="shipping-card">
         <div class="checkout-card__heading"><span>03</span><div><h2>Livraison</h2><p>Modes et frais confirmés à la commande, après remise éventuelle.</p></div></div>
-        <p id="shipping-status" role="status">Renseignez votre pays et votre code postal pour confirmer les modes disponibles.</p>
-          <div class="checkout-shipping" id="shipping-options">
+        <p id="shipping-status" role="status" aria-live="polite">Renseignez votre pays et votre code postal pour confirmer les modes disponibles.</p>
+          <fieldset class="checkout-shipping" id="shipping-options" tabindex="-1"><legend class="visually-hidden">Mode de livraison</legend>
             {% for value, label in form.shipping_method.field.choices %}
-            <label class="shipping-choice" for="shipping-{{ value }}"><span><input type="radio" name="shipping_method" id="shipping-{{ value }}" value="{{ value }}" {% if form.shipping_method.value == value %}checked{% endif %} required><span><strong>{{ label }}</strong></span></span></label>
+            <label class="shipping-choice" for="shipping-{{ value }}"><span><input type="radio" name="shipping_method" id="shipping-{{ value }}" value="{{ value }}" {% if form.shipping_method.value == value %}checked{% endif %} required aria-describedby="id_shipping_method_error"><span><strong>{{ label }}</strong></span></span></label>
             {% endfor %}
-          </div>
-        {% for error in form.shipping_method.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
+          </fieldset>
+        <p id="id_shipping_method_error" class="checkout-field__error"{% if not form.shipping_method.errors %} hidden{% endif %}>{% for error in form.shipping_method.errors %}{{ error }}{% endfor %}</p>
       </section>
       <div class="checkout-submit">
-        <label class="checkout-check"><input type="checkbox" name="accept_terms" {% if form.accept_terms.value %}checked{% endif %} required> J’ai lu et j’accepte les <a href="{% url 'pages:terms' %}" target="_blank" rel="noopener noreferrer">conditions générales de vente</a>.</label>
-        {% for error in form.accept_terms.errors %}<p class="checkout-field__error">{{ error }}</p>{% endfor %}
+        <label class="checkout-check"><input type="checkbox" name="accept_terms" id="id_accept_terms" aria-describedby="id_accept_terms_error" {% if form.accept_terms.value %}checked{% endif %} required> J’ai lu et j’accepte les <a href="{% url 'pages:terms' %}" target="_blank" rel="noopener noreferrer">conditions générales de vente</a>.</label>
+        <p id="id_accept_terms_error" class="checkout-field__error"{% if not form.accept_terms.errors %} hidden{% endif %}>{% for error in form.accept_terms.errors %}{{ error }}{% endfor %}</p>
         <p class="checkout-secure-note"><span aria-hidden="true">⌑</span> Le paiement sera effectué sur la page hébergée de Stripe. Les données de carte ne transitent pas par cette boutique.</p>
-        <button class="button button-primary checkout-pay-button" type="submit" id="checkout-submit"{% if not commercial.sales_ready %} disabled aria-describedby="sales-unavailable"{% endif %}><span class="checkout-pay-label">Commander avec obligation de paiement</span><span class="checkout-spinner" aria-hidden="true"></span></button>
+        <button class="button button-primary checkout-pay-button" type="submit" data-server-disabled="{% if not commercial.sales_ready or not stripe_configured %}true{% else %}false{% endif %}" id="checkout-submit"{% if not commercial.sales_ready %} disabled aria-describedby="sales-unavailable"{% endif %}><span class="checkout-pay-label">Commander avec obligation de paiement</span><span class="checkout-spinner" aria-hidden="true"></span></button>
         {% if not commercial.sales_ready %}<p class="checkout-config-note" id="sales-unavailable">{{ commercial.sales_unavailable }} Aucun paiement ne sera simulé.</p>{% endif %}
         {% if not stripe_configured %}<p class="checkout-config-note">Paiement indisponible tant que les variables Stripe ne sont pas configurées. Aucun paiement ne sera simulé.</p>{% endif %}
       </div>
     </form>
     <aside class="checkout-summary" aria-labelledby="summary-title">
-      <details id="checkout-summary-details" open><summary><span id="summary-title">Afficher le résumé ({{ cart_items|length }} article{{ cart_items|length|pluralize }})</span><strong id="summary-amount">{{ estimated_total|floatformat:2 }} € TTC</strong></summary><div class="checkout-summary__body">
-      <div class="checkout-summary__items">
-        {% for item in cart_items %}
-        <article class="checkout-item">
-          <div class="checkout-item__image">{% if item.image %}<img src="{{ item.image }}" alt="" loading="lazy">{% else %}<span aria-hidden="true">ML</span>{% endif %}<b>{{ item.quantity }}</b></div>
-          <div class="checkout-item__details"><strong>{{ item.name }}</strong><span>{{ item.variant_name }}</span>{% for component in item.components %}<small>Inclus : {{ component.name }}{% if component.variant_name %} · {{ component.variant_name }}{% endif %} — offert</small>{% endfor %}</div>
-          <strong class="checkout-item__price">{{ item.line_total }} €</strong>
-        </article>
-        {% endfor %}
+      <p id="checkout-update-status" role="status" aria-live="polite" tabindex="-1"></p>
+      <button type="button" id="checkout-retry" class="checkout-back" hidden>Réessayer le calcul</button>
+      <div id="checkout-summary-content">
+      {% include "checkout/_summary.html" %}
       </div>
-      <details class="checkout-promo"{% if promo or promo_notice or promo_error %} open{% endif %}><summary>Ajouter un code promo</summary><div>
-        <div class="checkout-promo__heading"><span aria-hidden="true">✦</span><div><h3>Un code promo ?</h3><p>{% if commercial.welcome %}{{ commercial.welcome.message }}{% else %}Saisissez un code valide avant de passer au paiement.{% endif %}</p></div></div>
-        <div id="checkout-promo-status" role="status" aria-live="polite" aria-atomic="true">
-          {% if promo_notice %}<p class="checkout-promo__notice">{{ promo_notice }}</p>{% endif %}
-          {% if promo_error %}<p class="checkout-promo__notice checkout-promo__notice--error">{{ promo_error }}</p>{% endif %}
-        </div>
-        <form method="post" class="checkout-promo__form">
-          {% csrf_token %}<input type="hidden" name="promo_action" value="apply">
-          <label class="visually-hidden" for="checkout-promo-code">Code promo</label>
-          <input id="checkout-promo-code" name="promo_code" type="text" maxlength="32" autocomplete="off" autocapitalize="characters" placeholder="{% if commercial.welcome %}Ex. {{ commercial.welcome.code }}{% else %}Code promo{% endif %}" value="{{ promo.code|default:'' }}" required>
-          <button type="submit" class="button button-outline">Appliquer</button>
-        </form>
-        {% if promo %}<div class="checkout-promo__applied"><span><strong>{{ promo.code }}</strong> · Code appliqué</span><form method="post"><input type="hidden" name="promo_action" value="remove">{% csrf_token %}<button type="submit" class="checkout-promo__remove">Retirer</button></form></div>{% endif %}
-      </div></details>
-      <dl class="checkout-totals">
-        <div><dt>Sous-total</dt><dd>{{ subtotal|floatformat:2 }} €</dd></div>
-        {% if promo %}<div class="checkout-totals__discount"><dt>Remise ({{ promo.code }})</dt><dd>−{{ promo_discount|floatformat:2 }} €</dd></div>
-        <div><dt>Sous-total après remise</dt><dd>{{ discounted_subtotal|floatformat:2 }} €</dd></div>{% endif %}
-        <div><dt>Livraison</dt><dd id="shipping-preview">{% if free_shipping %}Offerte{% else %}{{ estimated_shipping|floatformat:2 }} €{% endif %}</dd></div>
-        <div class="checkout-totals__total"><dt id="checkout-total-label">Total estimé TTC, livraison incluse</dt><dd id="checkout-total-preview">{{ estimated_total|floatformat:2 }} €</dd></div>
-      </dl>
-      <p class="checkout-summary__footnote">Montant TTC. Le montant définitif est recalculé par le serveur. La commande reste en attente jusqu’à confirmation sécurisée de Stripe.</p>
-      </div></details>
     </aside>
   </div>
   {% endif %}
