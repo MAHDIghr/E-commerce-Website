@@ -16,7 +16,9 @@
     function placeSummary() {
         if (mobile.matches) {
             layout.insertBefore(summary, form);
-            details.open = false;
+            // Une promotion appliquée ou un résultat ne doit pas être masqué sur mobile.
+            const promoDetails = document.querySelector(".checkout-promo");
+            details.open = Boolean(promoDetails && promoDetails.open);
         } else {
             layout.append(summary);
             details.open = true;

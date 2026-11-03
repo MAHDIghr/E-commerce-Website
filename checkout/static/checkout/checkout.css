@@ -27,3 +27,8 @@
 }
 .checkout-eyebrow, .checkout-steps, .checkout-item__image b { font-size: .75rem; }
 @media (max-width: 520px) { .checkout-steps { font-size: .75rem; } }
+/* Le contrôle de retrait doit rester utilisable avec un code long et au tactile. */
+.checkout-promo__applied { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; overflow-wrap: anywhere; }
+.checkout-promo__applied > span { min-width: 0; }
+.checkout-promo__remove { display: inline-flex; align-items: center; min-height: 44px; padding: .5rem .75rem; text-decoration: underline; }
+.checkout-totals__discount dt { min-width: 0; overflow-wrap: anywhere; }

@@ -76,8 +76,10 @@
       </div>
       <details class="checkout-promo"{% if promo or promo_notice or promo_error %} open{% endif %}><summary>Ajouter un code promo</summary><div>
         <div class="checkout-promo__heading"><span aria-hidden="true">✦</span><div><h3>Un code promo ?</h3><p>{% if commercial.welcome %}{{ commercial.welcome.message }}{% else %}Saisissez un code valide avant de passer au paiement.{% endif %}</p></div></div>
-        {% if promo_notice %}<p class="checkout-promo__notice" role="status">{{ promo_notice }}</p>{% endif %}
-        {% if promo_error %}<p class="checkout-promo__notice checkout-promo__notice--error" role="status">{{ promo_error }}</p>{% endif %}
+        <div id="checkout-promo-status" role="status" aria-live="polite" aria-atomic="true">
+          {% if promo_notice %}<p class="checkout-promo__notice">{{ promo_notice }}</p>{% endif %}
+          {% if promo_error %}<p class="checkout-promo__notice checkout-promo__notice--error">{{ promo_error }}</p>{% endif %}
+        </div>
         <form method="post" class="checkout-promo__form">
           {% csrf_token %}<input type="hidden" name="promo_action" value="apply">
           <label class="visually-hidden" for="checkout-promo-code">Code promo</label>
@@ -88,8 +90,9 @@
       </div></details>
       <dl class="checkout-totals">
         <div><dt>Sous-total</dt><dd>{{ subtotal|floatformat:2 }} €</dd></div>
-        {% if promo_discount %}<div class="checkout-totals__discount"><dt>Remise ({{ promo.code }})</dt><dd>−{{ promo_discount|floatformat:2 }} €</dd></div>{% endif %}
-        <div><dt>Livraison</dt><dd id="shipping-preview">{% if free_shipping %}Offerte{% else %}Calculée selon le mode choisi{% endif %}</dd></div>
+        {% if promo %}<div class="checkout-totals__discount"><dt>Remise ({{ promo.code }})</dt><dd>−{{ promo_discount|floatformat:2 }} €</dd></div>
+        <div><dt>Sous-total après remise</dt><dd>{{ discounted_subtotal|floatformat:2 }} €</dd></div>{% endif %}
+        <div><dt>Livraison</dt><dd id="shipping-preview">{% if free_shipping %}Offerte{% else %}{{ estimated_shipping|floatformat:2 }} €{% endif %}</dd></div>
         <div class="checkout-totals__total"><dt id="checkout-total-label">Total estimé TTC, livraison incluse</dt><dd id="checkout-total-preview">{{ estimated_total|floatformat:2 }} €</dd></div>
       </dl>
       <p class="checkout-summary__footnote">Montant TTC. Le montant définitif est recalculé par le serveur. La commande reste en attente jusqu’à confirmation sécurisée de Stripe.</p>

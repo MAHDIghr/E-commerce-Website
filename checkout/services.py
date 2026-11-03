@@ -50,13 +50,17 @@ def apply_promo_code(code, subtotal, email="", *, lock=False):
         return None, Decimal("0.00")
     if len(normalized) > 32 or not normalized.isascii():
         raise CheckoutProblem("Ce code promo n’est pas valide.")
-    promo_query = PromoCode.objects.filter(code=normalized, is_active=True)
+    promo_query = PromoCode.objects.filter(code=normalized)
     if lock:
         promo_query = promo_query.select_for_update()
     promo = promo_query.first()
     now = timezone.now()
-    if not promo or (promo.starts_at and promo.starts_at > now) or (promo.ends_at and promo.ends_at <= now):
-        raise CheckoutProblem("Ce code promo est invalide ou n’est plus disponible.")
+    if not promo:
+        raise CheckoutProblem("Ce code promo n’est pas valide.")
+    if promo.ends_at and promo.ends_at <= now:
+        raise CheckoutProblem("Ce code promo a expiré.")
+    if not promo.is_active or (promo.starts_at and promo.starts_at > now):
+        raise CheckoutProblem("Cette promotion n’est pas applicable actuellement.")
     if subtotal < promo.minimum_subtotal:
         raise CheckoutProblem(f"Ce code nécessite un sous-total d’au moins {promo.minimum_subtotal:.2f} €.")
     if promo.once_per_email and email and Order.objects.filter(

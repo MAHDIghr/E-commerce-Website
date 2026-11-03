@@ -49,34 +49,45 @@ def checkout(request):
 
     if request.method == "POST" and request.POST.get("promo_action") in {"apply", "remove"}:
         action = request.POST.get("promo_action")
+        request.session.pop("checkout_promo_notice", None)
+        request.session.pop("checkout_promo_error", None)
         if action == "remove":
             request.session.pop("checkout_promo_code", None)
             request.session.pop("checkout_attempt_key", None)
             request.session["checkout_promo_notice"] = "Code promo retiré."
         elif cart_error:
-            request.session["checkout_promo_notice"] = cart_error
+            request.session["checkout_promo_error"] = cart_error
         else:
             try:
                 promo, _discount = apply_promo_code(request.POST.get("promo_code", ""), subtotal)
+                if promo is None:
+                    raise CheckoutProblem("Saisissez un code promo.")
                 request.session["checkout_promo_code"] = promo.code
                 request.session.pop("checkout_attempt_key", None)
                 request.session["checkout_promo_notice"] = f"Code {promo.code} appliqué. La remise sera recalculée avant le paiement."
             except CheckoutProblem as exc:
-                request.session["checkout_promo_notice"] = str(exc)
+                request.session["checkout_promo_error"] = str(exc)
         return redirect("checkout:checkout")
 
     promo_notice = request.session.pop("checkout_promo_notice", "")
-    promo, promo_discount, promo_error = None, Decimal("0.00"), ""
+    promo_error = request.session.pop("checkout_promo_error", "")
+    promo, promo_discount = None, Decimal("0.00")
     if subtotal is not None and request.session.get("checkout_promo_code"):
         try:
             promo, promo_discount = apply_promo_code(request.session["checkout_promo_code"], subtotal)
         except CheckoutProblem as exc:
             promo_error = str(exc)
+            promo_notice = ""
             request.session.pop("checkout_promo_code", None)
+            request.session.pop("checkout_attempt_key", None)
     discounted_subtotal = max(Decimal("0.00"), subtotal - promo_discount) if subtotal is not None else None
     form = CheckoutForm(request.POST or None, subtotal=discounted_subtotal)
     initial_method = "free" if discounted_subtotal is not None and discounted_subtotal >= FREE_SHIPPING_THRESHOLD else "standard"
-    estimated_total = discounted_subtotal + shipping_price(initial_method, discounted_subtotal) if discounted_subtotal is not None else None
+    selected_method = form["shipping_method"].value()
+    if selected_method not in dict(form.fields["shipping_method"].choices):
+        selected_method = initial_method
+    estimated_shipping = shipping_price(selected_method, discounted_subtotal) if discounted_subtotal is not None else None
+    estimated_total = discounted_subtotal + estimated_shipping if discounted_subtotal is not None else None
     if request.method == "POST":
         if not form.is_valid():
             pass
@@ -140,9 +151,9 @@ def checkout(request):
                 form.add_error(None, "Impossible de reprendre cette session de paiement. Réessayez dans quelques instants.")
     return render(request, "checkout.html", {
         "form": form, "cart_items": cart_items, "subtotal": subtotal,
-        "promo_code": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
+        "promo": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
         "promo_notice": promo_notice, "promo_error": promo_error,
-        "estimated_total": estimated_total,
+        "estimated_total": estimated_total, "estimated_shipping": estimated_shipping,
         "free_shipping_threshold": str(FREE_SHIPPING_THRESHOLD),
         "standard_shipping": str(SHIPPING_PRICES["standard"]),
         "express_shipping": str(SHIPPING_PRICES["express"]),

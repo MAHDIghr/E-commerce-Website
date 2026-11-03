@@ -33,6 +33,145 @@ class CheckoutIntegrationTests(TestCase):
             "action": "add", "variant_id": self.variant.pk, "offer_id": self.offer.pk, "quantity": 1,
         }), content_type="application/json")
 
+    def test_applied_promo_is_rendered_with_remove_control_and_server_totals(self):
+        self.add_to_cart()
+        PromoCode.objects.create(code="CONTRAT20", discount_type=PromoCode.PERCENT,
+                                 value=Decimal("20.00"), is_active=True)
+        response = self.client.post(reverse("checkout:checkout"),
+                                    {"promo_action": "apply", "promo_code": "contrat20"}, follow=True)
+        self.assertContains(response, 'value="CONTRAT20"')
+        self.assertContains(response, '<strong>CONTRAT20</strong>', html=True)
+        self.assertContains(response, 'name="promo_action" value="remove"')
+        self.assertContains(response, 'Retirer</button>')
+        self.assertContains(response, 'Remise (CONTRAT20)')
+        self.assertContains(response, '−17,98 €')
+        self.assertContains(response, '71,92 €')
+        self.assertContains(response, '76,82 €')
+        self.assertContains(response, 'role="status" aria-live="polite" aria-atomic="true"')
+        quote = self.client.get(reverse("checkout:shipping_quote"),
+                                {"country": "FR", "postal_code": "75001", "subtotal": "0.01"})
+        self.assertEqual(quote.json()["discounted_subtotal"], "71.92")
+        self.assertEqual([option["total"] for option in quote.json()["options"]], ["76.82", "81.82"])
+
+    def make_contract_promo(self, **overrides):
+        values = {"code": "CONTRAT20", "discount_type": PromoCode.PERCENT,
+                  "value": Decimal("20.00"), "is_active": True}
+        values.update(overrides)
+        return PromoCode.objects.create(**values)
+
+    def test_removing_promo_renders_free_shipping_and_invalidates_payment_attempt(self):
+        self.add_to_cart()
+        promo = self.make_contract_promo()
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": promo.code})
+        session = self.client.session
+        session["checkout_attempt_key"] = str(uuid.uuid4())
+        session.save()
+        response = self.client.post(reverse("checkout:checkout"), {"promo_action": "remove"}, follow=True)
+        self.assertContains(response, "Code promo retiré.")
+        self.assertContains(response, '<dd id="shipping-preview">Offerte</dd>', html=True)
+        self.assertContains(response, '<dd id="checkout-total-preview">89,90 €</dd>', html=True)
+        self.assertNotContains(response, 'name="promo_action" value="remove"')
+        self.assertNotContains(response, "Remise (CONTRAT20)")
+        self.assertNotContains(response, "Sous-total après remise")
+        self.assertNotIn("checkout_promo_code", self.client.session)
+        self.assertNotIn("checkout_attempt_key", self.client.session)
+        quote = self.client.get(reverse("checkout:shipping_quote"), {"country": "FR", "postal_code": "75001"})
+        self.assertEqual(quote.json()["options"], [{"method": "free", "label": "Livraison offerte — 0,00 €", "amount": "0.00", "total": "89.90"}])
+        self.variant.refresh_from_db()
+        self.assertEqual(self.variant.stock_quantity, 4)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_promo_rejections_render_distinct_accessible_errors(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        self.add_to_cart()
+        self.make_contract_promo(code="EXPIRE", ends_at=timezone.now() - timedelta(seconds=1))
+        self.make_contract_promo(code="FUTUR", starts_at=timezone.now() + timedelta(days=1))
+        self.make_contract_promo(code="INACTIF", is_active=False)
+        self.make_contract_promo(code="MINIMUM", minimum_subtotal=Decimal("100.00"))
+        self.make_contract_promo(code="ZERO", maximum_discount=Decimal("0.00"))
+        cases = [
+            ("INCONNU", "Ce code promo n’est pas valide."),
+            ("EXPIRE", "Ce code promo a expiré."),
+            ("FUTUR", "Cette promotion n’est pas applicable actuellement."),
+            ("INACTIF", "Cette promotion n’est pas applicable actuellement."),
+            ("MINIMUM", "Ce code nécessite un sous-total d’au moins 100.00 €."),
+            ("ZERO", "Ce code ne peut pas être appliqué à cette commande."),
+            ("", "Saisissez un code promo."),
+        ]
+        for code, message in cases:
+            with self.subTest(code=code):
+                response = self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": code}, follow=True)
+                self.assertContains(response, '<div id="checkout-promo-status" role="status" aria-live="polite" aria-atomic="true">')
+                self.assertContains(response, f'<p class="checkout-promo__notice checkout-promo__notice--error">{message}</p>', html=True)
+                self.assertNotContains(response, 'name="promo_action" value="remove"')
+                self.assertNotContains(response, "Code appliqué")
+                self.assertNotIn("checkout_promo_code", self.client.session)
+
+    def test_invalid_replacement_keeps_valid_promo_visible_without_echoing_raw_input(self):
+        self.add_to_cart()
+        promo = self.make_contract_promo()
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": promo.code})
+        response = self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": '<script>alert("x")</script>'}, follow=True)
+        self.assertContains(response, 'value="CONTRAT20"')
+        self.assertContains(response, 'name="promo_action" value="remove"')
+        self.assertContains(response, "−17,98 €")
+        self.assertContains(response, "Ce code promo n’est pas valide.")
+        self.assertNotContains(response, 'alert("x")')
+        self.assertEqual(self.client.session["checkout_promo_code"], promo.code)
+        refreshed = self.client.get(reverse("checkout:checkout"))
+        self.assertContains(refreshed, '<details class="checkout-promo" open>')
+        self.assertContains(refreshed, 'value="CONTRAT20"')
+        self.assertContains(refreshed, 'name="promo_action" value="remove"')
+
+    def test_expired_applied_code_is_removed_on_revalidation_with_shipping_recalculated(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        self.add_to_cart()
+        promo = self.make_contract_promo()
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": promo.code})
+        promo.ends_at = timezone.now() - timedelta(seconds=1)
+        promo.save(update_fields=["ends_at"])
+        session = self.client.session
+        session["checkout_attempt_key"] = str(uuid.uuid4())
+        session.save()
+        response = self.client.get(reverse("checkout:checkout"))
+        self.assertContains(response, "Ce code promo a expiré.")
+        self.assertNotContains(response, "appliqué. La remise")
+        self.assertNotContains(response, 'name="promo_action" value="remove"')
+        self.assertContains(response, '<dd id="shipping-preview">Offerte</dd>', html=True)
+        self.assertContains(response, '<dd id="checkout-total-preview">89,90 €</dd>', html=True)
+        self.assertNotIn("checkout_promo_code", self.client.session)
+        self.assertNotIn("checkout_attempt_key", self.client.session)
+
+    def test_bound_express_choice_renders_server_total_without_browser_price(self):
+        self.add_to_cart()
+        promo = self.make_contract_promo()
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": promo.code})
+        response = self.client.post(reverse("checkout:checkout"), {"shipping_method": "express", "total": "0.01", "discount": "89.90"})
+        self.assertContains(response, '<dd id="shipping-preview">9,90 €</dd>', html=True)
+        self.assertContains(response, '<dd id="checkout-total-preview">81,82 €</dd>', html=True)
+        self.assertContains(response, "−17,98 €")
+        self.assertContains(response, "71,92 €")
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_remove_promo_requires_csrf_and_does_not_reserve_stock(self):
+        self.add_to_cart()
+        promo = self.make_contract_promo()
+        self.client.post(reverse("checkout:checkout"), {"promo_action": "apply", "promo_code": promo.code})
+        strict = Client(enforce_csrf_checks=True)
+        strict.cookies = self.client.cookies
+        page = strict.get(reverse("checkout:checkout"))
+        self.assertEqual(strict.post(reverse("checkout:checkout"), {"promo_action": "remove"}).status_code, 403)
+        self.assertEqual(strict.session["checkout_promo_code"], promo.code)
+        token = re.search(rb'name="csrfmiddlewaretoken" value="([^\"]+)"', page.content).group(1).decode()
+        response = strict.post(reverse("checkout:checkout"), {"promo_action": "remove", "csrfmiddlewaretoken": token}, follow=True)
+        self.assertContains(response, "Code promo retiré.")
+        self.assertNotIn("checkout_promo_code", strict.session)
+        self.variant.refresh_from_db()
+        self.assertEqual(self.variant.stock_quantity, 4)
+        self.assertEqual(Order.objects.count(), 0)
+
     def test_empty_cart_redirects_to_catalog_with_message(self):
         response = self.client.get(reverse("checkout:checkout"), follow=True)
         self.assertRedirects(response, reverse("shop:catalog"))

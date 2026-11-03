@@ -1070,3 +1070,7 @@ Les graphiques, les statistiques de ventes, les marges, les exports, les journau
 ## Informations commerciales et ouverture du paiement
 
 Les informations avant vente utilisent un composant partagé et la configuration Django `COMMERCIAL_INFORMATION` ; le dossier de validation et le contrat détaillé sont dans [docs/commercial-information-review.md](docs/commercial-information-review.md). Les anciennes trames ne sont plus servies au public. Sans contenu complet approuvé et confirmation des règles de livraison configurées, les nouvelles prises de commande sont bloquées côté serveur ; le suivi et les webhooks des commandes existantes restent actifs. Les promesses non confirmées de retours gratuits, de disponibilité 7j/7 et de matière commune ont été retirées.
+
+## Contrat des promotions au checkout
+
+Le contexte du template utilise `promo` pour l’objet appliqué ; `promo_code` dans le POST et `checkout_promo_code` en session restent des chaînes. Le serveur calcule remise, sous-total remisé, frais et total ; le code appliqué reste affiché et retirable. Les résultats sont annoncés dans un statut accessible, avec des refus distincts pour code invalide, expiré ou non applicable. Voir [docs/promo-contract-report.md](docs/promo-contract-report.md) pour les fichiers modifiés, les tests réellement exécutés, les limites de recette visuelle et les commandes locales. La conservation des coordonnées lors de la redirection promo reste un lot séparé.
