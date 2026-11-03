@@ -132,8 +132,7 @@
     background-color: #fff; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em;
 }
 .tag--sale { background-color: var(--color-accent-dark); color: #fff; }
-.tag--best { background-color: var(--color-ink); color: #fff; }
-.tag--stock { color: #a63d28; }
+.tag--stock { background-color: #fff; color: var(--color-ink); }
 
 .pcard__wish {
     position: absolute; top: 0.4rem; right: 0.4rem;

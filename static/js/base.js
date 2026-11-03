@@ -858,8 +858,6 @@ const translations = {
         welcome_desc: "",
         welcome_cta: "Découvrir la collection",
         welcome_copy: "Copier le code",
-        social_proof_stock: "produit(s) restant(s)",
-        social_proof_watching: "regardent ce produit",
         perk_ship: "",
         perk_ret: "Retours gratuits 30 jours",
         perk_pay: "Paiement sécurisé",
@@ -944,8 +942,6 @@ const translations = {
         welcome_desc: "",
         welcome_cta: "Discover the collection",
         welcome_copy: "Copy code",
-        social_proof_stock: "left in stock",
-        social_proof_watching: "watching this item",
         perk_ship: "",
         perk_ret: "Free returns, 30 days",
         perk_pay: "Secure payment",
@@ -978,20 +974,11 @@ for (const [language, dict] of Object.entries(translations)) {
     }
 }
 
-function renderProductSocialProof(dict) {
-    document.querySelectorAll("[data-watchers]").forEach((node) => {
-        const count = node.dataset.watchers;
-        node.textContent = `👀 ${count} ${dict.social_proof_watching}`;
-    });
-}
-
 function applyLanguage(lang) {
     const dict = translations[lang] || translations.fr;
 
     document.documentElement.lang = lang;
     document.documentElement.dataset.lang = lang;
-
-    renderProductSocialProof(dict);
 
     document.querySelectorAll("[data-i18n]").forEach((node) => {
         const key = node.dataset.i18n;

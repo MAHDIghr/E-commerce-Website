@@ -241,10 +241,11 @@ def _product_reference_price(product):
         ).distinct()
         essential = offers.filter(badge=ProductOffer.BADGE_ESSENTIAL).order_by("position", "pk").first()
         offer = essential or offers.order_by("-is_featured", "position", "pk").first()
+    # Aucun montant barré sans prix de référence réel enregistré sur l'offre.
     return (
         offer.reference_price
         if offer and offer.reference_price is not None and offer.reference_price > offer.price
-        else offer.price if offer else None
+        else None
     )
 
 

@@ -35,16 +35,16 @@
             bc_home: "Accueil", bc_shop: "Boutique", title: "Notre boutique",
             subtitle: "",
             filters: "Filtres", f_category: "Catégorie", f_price: "Prix (€)", f_color: "Couleur", f_more: "Autres",
-            f_sale: "En promotion", f_lowstock: "Derniers exemplaires", unavailable: "Indisponible", reset: "Réinitialiser", show: "Voir",
+            f_sale: "En promotion", f_lowstock: "Stock ≤ 5", unavailable: "Indisponible", reset: "Réinitialiser", show: "Voir",
             sort_label: "Trier par", empty_title: "Aucun produit ne correspond",
             empty_text: "Essayez d'élargir vos critères ou de retirer un filtre.", load_more: "Voir plus de produits",
             cat_handbags: "Sacs à main", cat_shoulder: "Sacs bandoulière", cat_wallets: "Portefeuilles", cat_accessories: "Accessoires",
             all: "Tout voir", results: (n) => `${n} produit${n > 1 ? "s" : ""}`,
             shown: (a, b) => `${a} sur ${b} produits affichés`,
             sort: { pop: "Pertinence", new: "Nouveautés", best: "Meilleures notes", asc: "Prix croissant", desc: "Prix décroissant" },
-            newTag: "Nouveau", bestTag: "Meilleure vente", left: (n) => `Plus que ${n}`,
+            newTag: "Nouveau",
             add: (n) => `Ajouter ${n} au panier`, wish: "Ajouter aux favoris", reviews: "avis",
-            clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Derniers exemplaires",
+            clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Stock ≤ 5",
             ra_ship: "", ra_ret: "Retours gratuits 30 jours",
             ra_ret_s: "Sans condition", ra_pay: "Paiement sécurisé", ra_pay_s: "SSL & 3D Secure",
             item: (n) => (n > 1 ? "articles" : "article"),
@@ -54,16 +54,16 @@
             bc_home: "Home", bc_shop: "Shop", title: "Our shop",
             subtitle: "",
             filters: "Filters", f_category: "Category", f_price: "Price (€)", f_color: "Colour", f_more: "More",
-            f_sale: "On sale", f_lowstock: "Last few left", unavailable: "Unavailable", reset: "Reset", show: "Show",
+            f_sale: "On sale", f_lowstock: "Stock ≤ 5", unavailable: "Unavailable", reset: "Reset", show: "Show",
             sort_label: "Sort by", empty_title: "No products match",
             empty_text: "Try widening your criteria or removing a filter.", load_more: "Show more products",
             cat_handbags: "Handbags", cat_shoulder: "Shoulder bags", cat_wallets: "Wallets", cat_accessories: "Accessories",
             all: "All", results: (n) => `${n} product${n > 1 ? "s" : ""}`,
             shown: (a, b) => `${a} of ${b} products shown`,
             sort: { pop: "Featured", new: "New in", best: "Top rated", asc: "Price: low to high", desc: "Price: high to low" },
-            newTag: "New", bestTag: "Best seller", left: (n) => `Only ${n} left`,
+            newTag: "New",
             add: (n) => `Add ${n} to cart`, wish: "Add to wishlist", reviews: "reviews",
-            clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Last few left",
+            clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Stock ≤ 5",
             ra_ship: "", ra_ret: "Free returns, 30 days",
             ra_ret_s: "No questions asked", ra_pay: "Secure payment", ra_pay_s: "SSL & 3D Secure",
             item: (n) => (n > 1 ? "items" : "item"),
@@ -186,10 +186,10 @@
         media.appendChild(img);
 
         const tags = el("div", "pcard__tags");
-        if (p.old) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
+        // Un ancien prix ne doit être fourni que s'il est vérifié et supérieur au prix actuel.
+        if (p.old && p.old > p.price) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
         else if (p.isNew) tags.appendChild(el("span", "tag", t().newTag));
-        if (p.best) tags.appendChild(el("span", "tag tag--best", t().bestTag));
-        if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", t().left(p.stock)));
+        if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", `Stock : ${p.stock}`));
         media.appendChild(tags);
 
         const wish = el("button", "pcard__wish");
@@ -239,16 +239,18 @@
         h3.appendChild(link);
         body.appendChild(h3);
 
-        const rating = el("p", "rating");
-        const full = Math.round(p.rating);
-        rating.appendChild(el("span", "rating__stars", "★".repeat(full) + "☆".repeat(5 - full)));
-        rating.appendChild(el("span", "", `${p.rating.toFixed(1)} (${p.reviews})`));
-        rating.setAttribute("aria-label", `${p.rating} / 5, ${p.reviews} ${t().reviews}`);
-        body.appendChild(rating);
+        if (p.reviews > 0) {
+            const rating = el("p", "rating");
+            const full = Math.round(p.rating);
+            rating.appendChild(el("span", "rating__stars", "★".repeat(full) + "☆".repeat(5 - full)));
+            rating.appendChild(el("span", "", `${p.rating.toFixed(1)} (${p.reviews})`));
+            rating.setAttribute("aria-label", `${p.rating} / 5, ${p.reviews} ${t().reviews}`);
+            body.appendChild(rating);
+        }
 
         const price = el("p", "price");
         price.appendChild(el("span", "", formatPrice(p.price)));
-        if (p.old) {
+        if (p.old && p.old > p.price) {
             price.appendChild(el("del", "", formatPrice(p.old)));
         }
         body.appendChild(price);

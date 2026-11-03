@@ -219,8 +219,7 @@
         const status = $("#variant-stock-status");
         if (stock <= 0) status.textContent = "Indisponible pour le moment.";
         else if (!available) status.textContent = "Stock insuffisant pour cette offre.";
-        else if (stock <= 5) status.textContent = `Plus que ${stock} en stock.`;
-        else status.textContent = "En stock.";
+        else status.textContent = `Stock disponible : ${stock} exemplaire${stock > 1 ? "s" : ""}.`;
     };
 
     $$("input[name=offer]").forEach((i) => i.addEventListener("change", () => {

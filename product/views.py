@@ -139,7 +139,7 @@ def detail(request, slug):
                     "variant_name": item.variant.color_name or "",
                     "image": accessory_image,
                     "quantity": item.quantity,
-                    "original_price": float(standalone_offer.reference_price if standalone_offer.reference_price is not None and standalone_offer.reference_price > standalone_offer.price else standalone_offer.price) if standalone_offer else None,
+                    "original_price": float(standalone_offer.reference_price) if standalone_offer and standalone_offer.reference_price is not None and standalone_offer.reference_price > standalone_offer.price else None,
                     "available": item.variant.stock_quantity >= item.quantity,
                     "available_quantity": item.variant.stock_quantity // item.quantity,
                 })
@@ -153,6 +153,7 @@ def detail(request, slug):
         ):
             continue
         # Aucun prix n'est stocké sur les variantes : une offre porte son propre prix.
+        # Le prix de référence doit représenter un ancien prix réel, vérifié avant publication.
         old_price = offer_obj.reference_price
         if old_price is not None and old_price <= offer_obj.price:
             old_price = None

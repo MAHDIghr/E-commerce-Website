@@ -16,6 +16,16 @@
 
 {% block content %}
 
+{% if flash_campaign %}
+<aside class="flash-campaign" id="flash-campaign" data-ends-at="{{ flash_campaign.ends_at_iso }}" data-status-url="{% url 'home:flash_campaign_status' promo_id=flash_campaign.id %}" aria-label="Promotion en cours">
+    <div class="container flash-campaign__inner">
+        <p>−{{ flash_campaign.percent }} % avec le code <strong>{{ flash_campaign.code }}</strong>{% if flash_campaign.minimum %} dès {{ flash_campaign.minimum|floatformat:2 }} € d'achat{% endif %}{% if flash_campaign.maximum %}, remise plafonnée à {{ flash_campaign.maximum|floatformat:2 }} €{% endif %}{% if flash_campaign.once_per_email %}, une fois par adresse e-mail{% endif %}.</p>
+        <p>Fin prévue le <time datetime="{{ flash_campaign.ends_at_iso }}">{{ flash_campaign.ends_at|date:"d/m/Y à H:i" }}</time><span class="flash-campaign__timer" data-flash-countdown aria-hidden="true"></span></p>
+        <a href="{% url 'shop:catalog' %}">Voir la collection</a>
+    </div>
+</aside>
+{% endif %}
+
     <!-- ============================================================
          HERO — effet WOW à l'ouverture
          ============================================================ -->
@@ -221,9 +231,7 @@
                     <a href="{% url 'product:detail' product.slug %}" class="product-image" aria-label="Voir {{ product.display_name }}">
                         <div class="product-badge-stack">
                             {% if product.display_discount_percent %}<span class="product-badge product-badge--sale">-{{ product.display_discount_percent }} %</span>{% elif product.is_new %}<span class="product-badge">Nouveau</span>{% endif %}
-                            {% if variant.stock_quantity > 0 and variant.stock_quantity <= 5 %}
-                            <span class="product-badge product-badge--stock">Plus que {{ variant.stock_quantity }} en stock</span>
-                            {% endif %}
+                            {% if variant.stock_quantity > 0 and variant.stock_quantity <= 5 %}<span class="product-badge product-badge--stock">Stock : {{ variant.stock_quantity }}</span>{% endif %}
                         </div>
                         {% if variant.image_src %}<img src="{{ variant.image_src }}" alt="{{ variant.image_alt }}" loading="lazy" decoding="async">{% elif media %}{% if media.image %}<img src="{{ media.image.url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% elif media.source_url %}<img src="{{ media.source_url }}" alt="{{ media.alt_text|default:product.name }}" loading="lazy" decoding="async">{% endif %}{% endif %}
                     </a>
@@ -237,6 +245,7 @@
                         <p class="product-category">{{ product.category.name }}</p>
                         <div class="product-buy">
                             <p class="product-price">
+                                {# Le prix de référence doit être réel, vérifié et supérieur au prix actuel. #}
                                 {% if product.display_reference_price %}<del>{{ product.display_reference_price|floatformat:2 }} €</del>{% endif %}
                                 {{ product.display_price|floatformat:2 }} €
                             </p>

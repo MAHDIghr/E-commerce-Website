@@ -8,6 +8,7 @@ app_name = "home"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("campagne/<int:promo_id>/statut/", views.flash_campaign_status, name="flash_campaign_status"),
     path("livraison/", views.information_page, {"page": "delivery"}, name="delivery"),
     path("retours/", views.information_page, {"page": "returns"}, name="returns"),
     path("faq/", views.information_page, {"page": "faq"}, name="faq"),

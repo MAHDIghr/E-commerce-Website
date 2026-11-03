@@ -37,8 +37,8 @@ class StripeWebhookEventAdmin(admin.ModelAdmin):
 
 @admin.register(PromoCode)
 class PromoCodeAdmin(admin.ModelAdmin):
-    list_display = ("code", "discount_type", "value", "minimum_subtotal", "maximum_discount", "is_active", "starts_at", "ends_at")
-    list_filter = ("is_active", "discount_type", "once_per_email")
+    list_display = ("code", "discount_type", "value", "minimum_subtotal", "maximum_discount", "is_active", "is_flash_campaign", "starts_at", "ends_at")
+    list_filter = ("is_active", "is_flash_campaign", "discount_type", "once_per_email")
     search_fields = ("code",)
     list_editable = ("is_active",)
     ordering = ("code",)

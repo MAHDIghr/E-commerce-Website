@@ -78,9 +78,10 @@ def product_card_data(queryset):
             "name": product.display_name_for(variant),
             "cat": product.category.slug,
             "price": float(offer.price),
+            # Prix de référence : affichage uniquement s'il est renseigné et vérifié.
             "old": (
                 float(essential_offer.reference_price)
-                if essential_offer and essential_offer.reference_price is not None
+                if essential_offer and essential_offer.reference_price is not None and essential_offer.reference_price > offer.price
                 else None
             ),
             "offerId": offer.pk,
@@ -92,7 +93,6 @@ def product_card_data(queryset):
             "stock": int(variant.stock_quantity),
             "isNew": bool(product.is_new),
             "pop": 0,
-            "best": bool(product.is_best_seller),
             "img": variant.image_src or ((media.image.url if media and media.image else media.source_url) if media else ""),
         })
     return products

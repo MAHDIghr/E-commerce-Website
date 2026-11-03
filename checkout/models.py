@@ -18,6 +18,10 @@ class PromoCode(models.Model):
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
+    is_flash_campaign = models.BooleanField(
+        default=False, db_index=True,
+        help_text="Affiche un compte à rebours sur l'accueil uniquement entre les dates de début et de fin. Le code cesse d'être accepté à la fin.",
+    )
     once_per_email = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -40,6 +44,10 @@ class PromoCode(models.Model):
             raise ValidationError({"maximum_discount": "Le plafond ne peut pas être négatif."})
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
             raise ValidationError({"ends_at": "La fin doit être postérieure au début."})
+        if self.is_flash_campaign and (not self.starts_at or not self.ends_at):
+            raise ValidationError({"ends_at": "Une campagne flash nécessite une date de début et une date de fin."})
+        if self.is_flash_campaign and self.discount_type != self.PERCENT:
+            raise ValidationError({"discount_type": "Une campagne flash affichée sur l'accueil doit être une réduction en pourcentage."})
 
     def __str__(self):
         return self.code

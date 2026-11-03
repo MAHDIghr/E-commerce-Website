@@ -11,7 +11,7 @@ from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import F, Prefetch
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,10 +20,29 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from product.models import Category, ProductMedia, ProductOffer, ProductVariant, Review
 from .models import NewsletterSubscription, SignatureSelection
 from product.selectors import published_products
+from checkout.models import PromoCode
 
 
 @require_GET
 def home(request):
+    now = timezone.now()
+    flash_promo = PromoCode.objects.filter(
+        is_flash_campaign=True, is_active=True, starts_at__lte=now, ends_at__gt=now,
+        discount_type=PromoCode.PERCENT, value__gt=0, value__lte=100,
+    ).order_by("ends_at", "pk").first()
+    flash_campaign = None
+    if flash_promo:
+        percent = f"{flash_promo.value:.2f}".rstrip("0").rstrip(".")
+        flash_campaign = {
+            "id": flash_promo.pk,
+            "code": flash_promo.code,
+            "ends_at": flash_promo.ends_at,
+            "ends_at_iso": flash_promo.ends_at.isoformat(),
+            "percent": percent,
+            "minimum": flash_promo.minimum_subtotal,
+            "maximum": flash_promo.maximum_discount,
+            "once_per_email": flash_promo.once_per_email,
+        }
     categories = list(Category.objects.filter(is_active=True).order_by("position", "name"))
     handbags_category = next((category for category in categories if
         category.slug in {"handbags", "sacs-a-main", "sacs-main"} or
@@ -66,9 +85,24 @@ def home(request):
         "signature_selections": signature_selections,
         "new_products": new_products,
         "featured_reviews": featured_reviews,
+        "flash_campaign": flash_campaign,
         "newsletter_notice": request.session.pop("newsletter_notice", ""),
         "newsletter_error": request.session.pop("newsletter_error", ""),
     })
+
+
+@require_GET
+def flash_campaign_status(request, promo_id):
+    """Permet de retirer rapidement un bandeau si l'admin désactive son code."""
+    now = timezone.now()
+    active = PromoCode.objects.filter(
+        pk=promo_id, is_flash_campaign=True, is_active=True,
+        starts_at__lte=now, ends_at__gt=now,
+        discount_type=PromoCode.PERCENT, value__gt=0, value__lte=100,
+    ).exists()
+    response = JsonResponse({"active": active})
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 INFO_PAGES = {

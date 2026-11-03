@@ -52,10 +52,11 @@
       <p class="buy__line">{{ product.brand_line }}</p>
       <h1 id="p-title">{{ product.name }}</h1>
       <p class="buy__tag">{{ product.tagline }}</p>
-      <a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">{{ product.rating_stars }}</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>
+      {% if product.reviews_count %}<a class="buy__rating" href="#avis"><span class="stars" role="img" aria-label="Note de {{ product.rating }} sur 5">{{ product.rating_stars }}</span> {{ product.rating }} · {{ product.reviews_count }} avis</a>{% endif %}
 
       <p class="price">
         <strong id="price-now">{{ product.selected.price_label }}</strong>
+        {# Le prix de référence doit être réel et supérieur au prix actuel. #}
         <del id="price-old"{% if not product.selected.old_label %} hidden{% endif %}><span class="visually-hidden">Prix avant remise </span>{{ product.selected.old_label }}</del>
         <span class="price__off" id="price-off"{% if not product.selected.off %} hidden{% endif %}>{% if product.selected.off %}-{{ product.selected.off }} %{% endif %}</span>
       </p>
@@ -78,7 +79,7 @@
           <span class="offer__card">
             <span class="offer__dot" aria-hidden="true"></span>
             <span class="offer__body"><strong>{{ o.title }}</strong><span>{{ o.items }}</span><em>{{ o.ship }}</em></span>
-            <span class="offer__price"><strong>{{ o.price_label }}</strong><del>{{ o.old_label }}</del></span>
+            <span class="offer__price"><strong>{{ o.price_label }}</strong>{% if o.old_label %}<del>{{ o.old_label }}</del>{% endif %}</span>
           </span>
           <span class="offer__badge">{{ o.badge }}</span>
         </label>

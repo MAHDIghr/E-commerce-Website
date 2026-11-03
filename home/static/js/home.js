@@ -4,6 +4,45 @@
    Nécessite base.js chargé avant (readStorage, writeStorage, formatPrice,
    prefersReducedMotion, isTouchDevice, isFinePointer). */
 
+/* Date limite contrôlée par PromoCode côté serveur ; aucune échéance locale recréée. */
+(() => {
+    const banner = document.querySelector("#flash-campaign");
+    if (!banner) return;
+    const countdown = banner.querySelector("[data-flash-countdown]");
+    const deadline = Date.parse(banner.dataset.endsAt);
+    let timer;
+    let statusTimer;
+    function hide() {
+        banner.hidden = true;
+        window.clearInterval(timer);
+        window.clearInterval(statusTimer);
+    }
+    function tick() {
+        const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        if (!Number.isFinite(seconds) || seconds === 0) { hide(); return; }
+        const hours = String(Math.floor(seconds / 3600)).padStart(2, "0");
+        const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+        const rest = String(seconds % 60).padStart(2, "0");
+        countdown.textContent = hours + ":" + minutes + ":" + rest;
+    }
+    async function verifyStatus() {
+        try {
+            const response = await fetch(banner.dataset.statusUrl, { credentials: "same-origin", cache: "no-store" });
+            const result = await response.json();
+            if (!response.ok || !result.active) hide();
+        } catch (error) {
+            hide();
+        }
+    }
+    tick();
+    if (!banner.hidden) {
+        timer = window.setInterval(tick, 1000);
+        statusTimer = window.setInterval(verifyStatus, 60000);
+        verifyStatus();
+        document.addEventListener("visibilitychange", () => { if (!document.hidden && !banner.hidden) { tick(); verifyStatus(); } });
+    }
+})();
+
 /* ==========================================================================
    Favoris locaux persistés dans le navigateur
    ========================================================================== */

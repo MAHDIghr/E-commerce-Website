@@ -171,6 +171,12 @@ class CatalogViewTests(TestCase):
         self.assertEqual(structured["offers"]["availability"], "https://schema.org/InStock")
         self.assertEqual(structured["image"], ["https://cdn.example.test/cabas.webp"])
 
+    def test_no_reference_price_or_review_is_not_presented_as_social_proof(self):
+        response = self.client.get(reverse("product:detail", kwargs={"slug": self.product.slug}))
+        self.assertNotContains(response, 'class="buy__rating"')
+        self.assertNotContains(response, '<del></del>')
+        self.assertContains(response, 'id="price-old" hidden')
+
     def test_color_photos_and_names_match_home_catalog_detail_and_cart(self):
         self.variant.image_url = "https://cdn.example.test/camel.webp"
         self.variant.image_alt = "Cabas en cuir camel de face"
