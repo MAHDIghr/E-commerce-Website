@@ -40,3 +40,18 @@
 [aria-invalid="true"] { border-color: #873e30; }
 
 #checkout-errors, #shipping-options, #id_accept_terms, .checkout-field input, .checkout-field select { scroll-margin-top: calc(var(--header-height) + var(--promo-height) + 1rem); }
+
+@media (max-width: 600px) {
+    .checkout-layout > *, .checkout-item > *, .shipping-choice > span { min-width: 0; }
+    .checkout-item { grid-template-columns: 54px minmax(0,1fr); }
+    .checkout-item__price { grid-column: 2; white-space: normal; }
+    .checkout-item__details, .checkout-item__price, .checkout-field label, .checkout-card__heading p, .checkout-summary__footnote { font-size: .875rem; line-height: 1.5; }
+    .checkout-item__details, .checkout-totals dd, .shipping-choice, .checkout-check { overflow-wrap: anywhere; }
+    .checkout-check { align-items: flex-start; flex-wrap: wrap; }
+    .checkout-check input { flex: 0 0 auto; }
+    .checkout-promo__form { flex-wrap: wrap; }
+    .checkout-totals div { flex-wrap: wrap; }
+    .checkout-field input, .checkout-field select { font-size: 1rem; }
+    .checkout-summary #checkout-summary-details > summary { flex-wrap: wrap; }
+    .checkout-summary #checkout-summary-details > summary strong { white-space: normal; overflow-wrap: anywhere; }
+}

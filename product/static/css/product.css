@@ -246,3 +246,18 @@ body.page-product .site-footer{padding-bottom:4.5rem}
 @media (min-width: 900px) {
     .buy__actions .cta-icon { flex-basis: 58px; width: 58px; min-width: 58px; min-height: 58px; }
 }
+
+/* Les offres et montants longs peuvent se répartir sans réduire le texte. */
+.buy h1, .offer__body, .offer__price, .price, .trust { overflow-wrap: anywhere; }
+.swatches { flex-wrap: wrap; }
+.offer__card { grid-template-columns: auto minmax(0,1fr) minmax(0,auto); }
+@media (max-width: 600px) {
+    .offer__card { grid-template-columns: 22px minmax(0,1fr); }
+    .offer__price { grid-column: 2; justify-items: start; }
+    .offer__body, .offer__price del, .offer__badge, .trust, .sbar span { font-size: .875rem; line-height: 1.5; }
+    .offer__badge { position: static; display: inline-block; margin-bottom: .35rem; }
+    .sbar { position: static; transform: none; flex-wrap: wrap; padding-bottom: max(1rem,env(safe-area-inset-bottom,0px)); }
+    .sbar p, .sbar .button { min-width: 0; overflow-wrap: anywhere; }
+    .sbar .button { max-width: 100%; }
+    .buy__actions .cta { white-space: normal; }
+}

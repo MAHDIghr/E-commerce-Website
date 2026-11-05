@@ -997,32 +997,6 @@
     .hero-trust__item:nth-child(n+3) { border-top: 1px solid rgb(255 255 255 / 12%); }
 }
 @media (max-width: 760px) { .hero-content { padding-block: 3.5rem 2rem; } }
-@media (max-width: 600px) {
-    /* Four trust benefits in one extra-compact row on phones. */
-    .hero-trust__inner { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .hero-trust__item {
-        min-width: 0;
-        flex-direction: column;
-        justify-content: flex-start;
-        text-align: center;
-        gap: 0.2rem;
-        padding: 0.35rem 0.05rem;
-    }
-    .hero-trust__item:nth-child(n+3) { border-top: 0; }
-    .hero-trust__icon { width: 20px; height: 20px; }
-    .hero-trust__icon .icon { width: 11px; height: 11px; }
-    .hero-trust__item strong {
-        font-size: clamp(0.42rem, 1.8vw, 0.56rem);
-        line-height: 1.15;
-        overflow-wrap: anywhere;
-    }
-    .hero-trust__item span:not(.hero-trust__icon) {
-        font-size: clamp(0.38rem, 1.55vw, 0.48rem);
-        line-height: 1.15;
-        overflow-wrap: anywhere;
-    }
-}
-
 /* --- Espacement entre sections réduit --- */
 .section { padding-block: 5rem; }
 .section-header { margin-bottom: 3rem; }
@@ -1082,39 +1056,14 @@
    MOBILE REFINEMENT — hero trust + newsletter
    ========================================================================== */
 @media (max-width: 900px) {
-    .hero-trust__inner { grid-template-columns: repeat(4,minmax(0,1fr)); }
-    .hero-trust__item {
-        min-width: 0;
-        flex-direction: column;
-        justify-content: center;
-        gap: .18rem;
-        padding: .42rem .12rem;
-        text-align: center;
-    }
-    .hero-trust__item + .hero-trust__item { border-left: 1px solid var(--color-line); }
-    .hero-trust__item:nth-child(n+3) { border-top: 0; }
-    .hero-trust__icon { width: 23px; height: 23px; }
-    .hero-trust__icon .icon { width: 12px; height: 12px; }
-    .hero-trust__item strong {
-        max-width: 100%;
-        font-size: clamp(.46rem,1.35vw,.59rem);
-        line-height: 1.05;
-        white-space: normal;
-    }
-    .hero-trust__item span:not(.hero-trust__icon) {
-        max-width: 100%;
-        margin-top: 0;
-        font-size: clamp(.39rem,1.1vw,.5rem);
-        line-height: 1;
-        white-space: normal;
-    }
+    .hero-trust__inner { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .hero-trust__item { min-width: 0; padding: 1rem; gap: .75rem; align-items: flex-start; }
+    .hero-trust__item strong, .hero-trust__item span:not(.hero-trust__icon) { font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+    .hero-trust__item:nth-child(odd) { border-left: 0; }
+    .hero-trust__item:nth-child(n+3) { border-top: 1px solid rgb(255 255 255 / 20%); }
 }
-@media (max-width: 600px) {
-    .hero-trust__item { padding-inline: .05rem; }
-    .hero-trust__icon { width: 20px; height: 20px; }
-    .hero-trust__item strong { font-size: clamp(.43rem,1.5vw,.55rem); }
-    .hero-trust__item span:not(.hero-trust__icon) { font-size: clamp(.37rem,1.2vw,.46rem); }
-}
+@media (max-width: 359px) { .hero-trust__inner { grid-template-columns: 1fr; } }
+
 
 
 

@@ -320,3 +320,14 @@ body.page-shop.has-cart-bar .site-footer { padding-bottom: 4.5rem; }
     .toolbar__sort { width: 100%; }
     .toolbar__sort select { width: 100%; min-height: 44px; }
 }
+
+@media (max-width: 600px) {
+    .pcard__name, .pcard__price, .cart-bar__total { overflow-wrap: anywhere; white-space: normal; }
+    .pcard__name, .pcard__price, .reassure p, .reassure span { font-size: .875rem; line-height: 1.5; }
+    .toolbar { position: static; }
+    .cart-bar { position: static; transform: none; }
+    .cart-bar__btn { flex-wrap: wrap; padding: 1rem; }
+    .cart-bar__ship { flex-basis: 100%; font-size: .875rem; }
+    body.page-shop.has-cart-bar .site-footer { padding-bottom: 0; }
+}
+@media (max-width: 359px) { .pgrid { grid-template-columns: minmax(0,1fr); } }

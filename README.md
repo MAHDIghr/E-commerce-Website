@@ -1092,3 +1092,7 @@ La liste candidate `CHECKOUT_SHIPPING_COUNTRIES` (FR, BE, LU, DE, ES, IT, NL, PT
 La migration `product.0009` met à jour uniquement l’aide du champ livraison, sans modifier les valeurs des offres. Revoir les offres existantes marquées gratuites avant réouverture : ce choix a désormais un effet financier. Sans configuration de paiement cohérente, l’avis « Paiement temporairement indisponible » précède les coordonnées et le bouton est désactivé, même sans JavaScript. La présence d’une configuration ne prouve pas la disponibilité distante de Stripe.
 
 Voir [docs/shipping-payment-report.md](docs/shipping-payment-report.md) pour les décisions, le diff, les commandes exécutées et les vérifications restant à faire, notamment la matrice et Stripe en préproduction.
+
+## Lisibilité mobile — lot 5
+
+Les anciens styles de réassurance à 6–9 px ont été supprimés. Le bloc commercial partagé reste à 1 rem ; les informations utiles des offres et du checkout utilisent au moins .875 rem sur téléphone. L’en-tête conserve langue, recherche, panier et menu sur deux rangées sous 600 px. Les barres d’achat produit/catalogue passent dans le flux sous 600 px pour ne pas couvrir le formulaire avec le clavier. Voir [docs/mobile-readability-report.md](docs/mobile-readability-report.md) pour les contrôles exécutés et la recette visuelle restante.
