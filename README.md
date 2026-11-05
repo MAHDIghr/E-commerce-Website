@@ -1134,3 +1134,7 @@ Une rétractation ne dépend plus d'une justification détaillée. L'accusé dur
 Verdict **NO-GO** : voir [docs/prelaunch-qa-report.md](docs/prelaunch-qa-report.md). La suite actuelle de 225 tests serveur passe ; le lancement navigateur échoue faute de Chromium. Aucune capture, session Stripe test réelle ou mesure Lighthouse/CWV n'est validée.
 
 La CI conserve les tests/migrations et propose un job navigateur manuel via workflow_dispatch/browser_qa. Le harnais `python manage.py test qa.browser_runner --settings=config.settings.development` utilise uniquement le serveur local et des fixtures de test ; il ne crée aucune session Stripe. Les preuves éventuelles sont conservées en artifact, sans déploiement. Les scénarios et blocs non exécutés restent explicitement ouverts.
+
+## Mesure interne après stabilisation — lot 14
+
+`python manage.py conversion_report --start <ISO-avec-fuseau> --end <ISO-avec-fuseau> --settings=config.settings.development` produit uniquement des agrégats internes issus des premières confirmations Stripe existantes, sans exporter identifiant ou contact. Période début inclus/fin exclue, devises séparées, demandes de retour et remboursements distincts. Aucune collecte navigateur ni prestataire analytics ajouté ; conversion par appareil/visiteur et abandons restent indisponibles. Les événements, dénominateurs et décisions de consentement/conservation sont décrits dans [docs/conversion-measurement-report.md](docs/conversion-measurement-report.md). Le NO-GO reste actif ; aucune expérimentation commerciale déployée.
