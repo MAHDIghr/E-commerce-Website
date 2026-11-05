@@ -322,23 +322,24 @@ renderRecentlyViewed();
     const codeEl = backdrop.querySelector("#welcome-code");
 
     const DISMISS_KEY = "welcome_modal_dismissed_until";
-    const dismissedUntil = parseInt(readStorage(DISMISS_KEY, 0), 10);
 
-    if (dismissedUntil && dismissedUntil > Date.now()) return;
+    backdrop.inert = true;
 
     function openModal() {
+        if (!ShopOverlays.open(backdrop, {focus: closeButton, close: () => { backdrop.classList.remove("is-open"); writeStorage(DISMISS_KEY, Date.now() + 7 * 86400000); }})) return;
         backdrop.classList.add("is-open");
         backdrop.setAttribute("aria-hidden", "false");
     }
 
     function closeModal(daysBeforeShowingAgain) {
+        if (!ShopOverlays.close(backdrop)) return;
         backdrop.classList.remove("is-open");
         backdrop.setAttribute("aria-hidden", "true");
         const until = Date.now() + daysBeforeShowingAgain * 24 * 60 * 60 * 1000;
         writeStorage(DISMISS_KEY, until);
     }
 
-    window.setTimeout(openModal, 4000);
+    document.querySelector('[data-action="open-welcome"]')?.addEventListener("click", openModal);
 
     if (closeButton) closeButton.addEventListener("click", () => closeModal(7));
     backdrop.addEventListener("click", (event) => {

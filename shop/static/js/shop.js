@@ -439,28 +439,32 @@
     const drawer = $("filters");
     const backdrop = $("filters-backdrop");
     const mobileMQ = window.matchMedia("(max-width: 959px)");
-    let lastFocus = null;
 
     function openFilters() {
-        lastFocus = document.activeElement;
+        if (!mobileMQ.matches || !ShopOverlays.open(drawer, {close: () => {
+            drawer.classList.remove("is-open"); backdrop.classList.remove("is-open");
+            document.querySelectorAll('[data-action="open-filters"]').forEach(b => b.setAttribute("aria-expanded", "false"));
+        }})) return;
         drawer.classList.add("is-open"); backdrop.classList.add("is-open");
         drawer.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
         const first = drawer.querySelector("input, button");
         if (first) first.focus();
     }
     function closeFilters() {
+        ShopOverlays.close(drawer);
         drawer.classList.remove("is-open"); backdrop.classList.remove("is-open");
+        drawer.inert = mobileMQ.matches;
         drawer.setAttribute("aria-hidden", String(mobileMQ.matches));
-        document.body.style.overflow = "";
-        if (lastFocus && mobileMQ.matches) lastFocus.focus();
     }
     document.querySelectorAll('[data-action="open-filters"]').forEach((b) => b.addEventListener("click", openFilters));
     document.querySelectorAll('[data-action="close-filters"]').forEach((b) => b.addEventListener("click", closeFilters));
     backdrop.addEventListener("click", closeFilters);
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drawer.classList.contains("is-open")) closeFilters(); });
+
     mobileMQ.addEventListener("change", () => { drawer.setAttribute("aria-hidden", String(mobileMQ.matches)); if (!mobileMQ.matches) closeFilters(); });
     drawer.setAttribute("aria-hidden", String(mobileMQ.matches));
+    drawer.inert = mobileMQ.matches;
+    function filterRole() { if (mobileMQ.matches) { drawer.setAttribute("role", "dialog"); drawer.setAttribute("aria-modal", "true"); drawer.setAttribute("aria-label", "Filtres"); } else { drawer.removeAttribute("role"); drawer.removeAttribute("aria-modal"); drawer.inert = false; } }
+    mobileMQ.addEventListener("change", filterRole); filterRole();
 
     /* ---------- Barre panier collante (mobile) ---------- */
     const bar = $("cart-bar");

@@ -391,8 +391,9 @@
 {% block after_main %}
 
 {% if commercial.welcome %}<!-- POP-UP DE BIENVENUE -->
+<button type="button" class="button button-secondary" data-action="open-welcome" aria-controls="welcome-modal-backdrop" aria-expanded="false">Voir l’offre de bienvenue</button>
 <div class="welcome-modal-backdrop" id="welcome-modal-backdrop" aria-hidden="true">
-    <div class="welcome-modal" role="dialog" aria-labelledby="welcome-modal-title">
+    <div class="welcome-modal" aria-modal="true" tabindex="-1" role="dialog" aria-labelledby="welcome-modal-title">
         <button type="button" class="welcome-modal__close" data-action="close-welcome" aria-label="Fermer">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -406,7 +407,7 @@
             <code id="welcome-code">{{ commercial.welcome.code }}</code>
             <button type="button" class="welcome-modal__copy" data-action="copy-code" data-i18n="welcome_copy">Copier le code</button>
         </div>
-        <a href="#nouveautes" class="button button-primary button-block" data-i18n="welcome_cta">Découvrir la collection</a>
+        <a href="{% url 'shop:catalog' %}" class="button button-primary button-block" data-i18n="welcome_cta">Découvrir la collection</a>
     </div>
 </div>
 {% endif %}

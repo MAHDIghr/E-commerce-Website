@@ -1096,3 +1096,7 @@ Voir [docs/shipping-payment-report.md](docs/shipping-payment-report.md) pour les
 ## Lisibilité mobile — lot 5
 
 Les anciens styles de réassurance à 6–9 px ont été supprimés. Le bloc commercial partagé reste à 1 rem ; les informations utiles des offres et du checkout utilisent au moins .875 rem sur téléphone. L’en-tête conserve langue, recherche, panier et menu sur deux rangées sous 600 px. Les barres d’achat produit/catalogue passent dans le flux sous 600 px pour ne pas couvrir le formulaire avec le clavier. Voir [docs/mobile-readability-report.md](docs/mobile-readability-report.md) pour les contrôles exécutés et la recette visuelle restante.
+
+## Clavier et surcouches — lot 6
+
+`static/js/overlays.js`, chargé avant les scripts de page, gère une seule modale personnalisée active : confinement du focus, Échap, arrière-plan inert et restauration du déclencheur. Recherche, panier, filtres mobiles, bienvenue et communauté l’utilisent. Les dialogs natifs de choix d’offre et lightbox conservent leur fonctionnement. La bienvenue s’ouvre désormais uniquement sur demande explicite et son lien mène au catalogue. Le menu reste une navigation non modale. Voir [docs/keyboard-overlays-report.md](docs/keyboard-overlays-report.md).

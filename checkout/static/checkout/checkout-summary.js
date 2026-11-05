@@ -132,6 +132,7 @@
         document.querySelector("#shipping-preview").textContent = Number(option.amount) === 0 ? "Offerte" : money(option.amount);
         document.querySelector("#checkout-total-preview").textContent = money(option.total);
         document.querySelector("#summary-amount").textContent = money(option.total) + " TTC";
+        status.textContent = "Total estimé : " + money(option.total) + ".";
     }
 
     function renderOptions(data, previous) {
@@ -199,7 +200,7 @@
                 if (data.quote_valid && data.options.length) {
                     renderOptions(data, previous);
                     shippingStatus.textContent = "Estimation actualisée pour la destination et le panier actuels.";
-                    status.textContent = "Votre commande a été actualisée.";
+                    status.textContent = "Votre commande a été actualisée. Total estimé : " + document.querySelector("#checkout-total-preview").textContent + ".";
                     showError(data.cart_error || data.promo_error || "", data.errors);
                 } else {
                     invalidate("Renseignez une destination valide et vérifiez votre panier avant de payer.");
