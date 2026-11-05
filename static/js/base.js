@@ -1020,23 +1020,11 @@ function applyLanguage(lang) {
     document.dispatchEvent(new CustomEvent("languagechange", { detail: { lang } }));
 }
 
-function detectDefaultLanguage() {
-    const stored = readStorage(LANG_KEY, null);
-    if (stored === "fr" || stored === "en") return stored;
-    return navigator.language && navigator.language.toLowerCase().startsWith("en") ? "en" : "fr";
-}
-
-let currentLang = detectDefaultLanguage();
-applyLanguage(currentLang);
-
+// Le français est la langue serveur actuelle. Ne jamais produire une page mixte
+// selon le navigateur ou une ancienne préférence locale.
+let currentLang = document.documentElement.lang === "en" ? "en" : "fr";
 const langSwitch = document.querySelector("#lang-switch");
-if (langSwitch) {
-    langSwitch.addEventListener("click", () => {
-        currentLang = currentLang === "fr" ? "en" : "fr";
-        writeStorage(LANG_KEY, currentLang);
-        applyLanguage(currentLang);
-    });
-}
+if (langSwitch) langSwitch.addEventListener("click", () => { window.location.assign("/en/"); });
 
 
 /* ==========================================================================

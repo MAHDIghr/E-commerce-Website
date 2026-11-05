@@ -264,6 +264,17 @@ def detail(request, slug):
     context_product["seo_title"] = context_product["seo_title"] or product.name
     context_product["seo_description"] = product.seo_description or product.short_description or product.name
     context_product["category"] = product.category.name
+    # La disponibilité de partage inclut les composants obligatoires de l'offre.
+    from shop.views import _line_details
+    from .models import ProductOfferItem
+    offer_components = {int(item["id"]): list(ProductOfferItem.objects.filter(
+        offer_id=int(item["id"]), use_selected_variant=False).values_list("pk", flat=True)) for item in offers}
+    share_available = any(
+        details and details["available"]
+        for color in context_product["colors"] if color["stock"] > 0
+        for offer in offers
+        for details in [_line_details(int(color["id"]), int(offer["id"]), 1, offer_components[int(offer["id"])])]
+    )
     structured_data = {
         "@context": "https://schema.org",
         "@type": "Product",
@@ -282,7 +293,7 @@ def detail(request, slug):
             "lowPrice": min(item["price"] for item in offers),
             "highPrice": max(item["price"] for item in offers),
             "offerCount": len(offers),
-            "availability": "https://schema.org/InStock" if any(item["stock"] > 0 for item in context_product["colors"]) else "https://schema.org/OutOfStock",
+            "availability": "https://schema.org/InStock" if share_available else "https://schema.org/OutOfStock",
             "url": request.build_absolute_uri(reverse("product:detail", kwargs={"slug": product.slug})),
         },
     }
@@ -294,6 +305,9 @@ def detail(request, slug):
             "bestRating": 5,
             "worstRating": 1,
         }
+    image_urls = structured_data["image"]
+    context_product["share_image"] = image_urls[0] if image_urls else ""
+    context_product["share_url"] = structured_data["url"]
     context_product["structured_data_json"] = json.dumps(
         structured_data, ensure_ascii=False, separators=(",", ":")
     ).replace("<", "\\u003C").replace(">", "\\u003E").replace("&", "\\u0026")

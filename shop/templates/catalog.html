@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static l10n %}
 
-{% block title %}Boutique | My Line Collection — Sacs & Accessoires{% endblock %}
-{% block meta_description %}Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.{% endblock %}
+{% block title %}{{ seo.title }}{% endblock %}
+{% block meta_description %}{{ seo.description }}{% endblock %}
 {% block body_class %}page-shop{% endblock %}
 
 {% block extra_css %}
