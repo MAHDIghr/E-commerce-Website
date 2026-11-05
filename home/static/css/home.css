@@ -587,8 +587,8 @@
    ========================================================================== */
 
 .reveal {
-    opacity: 0;
-    transform: translateY(32px);
+    opacity: 1;
+    transform: none;
     transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1), transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
     transition-delay: var(--reveal-delay, 0ms);
     will-change: opacity, transform;
@@ -1308,3 +1308,6 @@ body.community-modal-open { overflow: hidden; }
 
 /* Le bloc commercial partagé reste lisible sur le fond sombre du hero. */
 .hero-trust .commercial-information { color: #fff; }
+
+/* Animation facultative : ne masque jamais le contenu, même si le script échoue. */
+.reveal.reveal-ready { transition: transform 800ms ease; }

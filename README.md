@@ -1100,3 +1100,9 @@ Les anciens styles de réassurance à 6–9 px ont été supprimés. Le bloc com
 ## Clavier et surcouches — lot 6
 
 `static/js/overlays.js`, chargé avant les scripts de page, gère une seule modale personnalisée active : confinement du focus, Échap, arrière-plan inert et restauration du déclencheur. Recherche, panier, filtres mobiles, bienvenue et communauté l’utilisent. Les dialogs natifs de choix d’offre et lightbox conservent leur fonctionnement. La bienvenue s’ouvre désormais uniquement sur demande explicite et son lien mène au catalogue. Le menu reste une navigation non modale. Voir [docs/keyboard-overlays-report.md](docs/keyboard-overlays-report.md).
+
+## Catalogue utilisable sans JavaScript — lot 7
+
+Le catalogue rend ses cartes avec `shop/_product_card.html` dès la réponse Django. Les filtres `q`, `cat`, `color`, `min`, `max`, `sale`, `low` et `sort` utilisent un formulaire GET ; `page` navigue par huit produits. Les prix d’offre, variantes publiques et tris sont sélectionnés en base avant pagination. Les paramètres supplémentaires sont conservés dans le formulaire et les liens de page. Le JSON de compatibilité se limite à la page courante ; le navigateur ne reconstruit plus la grille.
+
+Les favoris et l’ajout rapide sont activés seulement lorsque leurs gestionnaires JavaScript sont disponibles. Les liens de fiche restent utilisables ; sans JavaScript la fiche indique explicitement que l’ajout au panier et le paiement nécessitent son activation. Les `.reveal` de l’accueil sont visibles par défaut et ne dépendent plus d’un observateur pour apparaître. Voir [docs/catalog-no-js-report.md](docs/catalog-no-js-report.md).

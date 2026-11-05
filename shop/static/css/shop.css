@@ -331,3 +331,12 @@ body.page-shop.has-cart-bar .site-footer { padding-bottom: 4.5rem; }
     body.page-shop.has-cart-bar .site-footer { padding-bottom: 0; }
 }
 @media (max-width: 359px) { .pgrid { grid-template-columns: minmax(0,1fr); } }
+
+.catalog-filters { display: grid; gap: 1rem; align-content: start; min-width: 0; }
+.catalog-filters fieldset { min-width: 0; border: 0; }
+.catalog-filters input:not([type=checkbox]), .catalog-filters select { display: block; width: 100%; min-width: 0; min-height: 44px; font: inherit; }
+.catalog-filters .check { min-height: 44px; }
+.catalog-pagination { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-block: 2rem; }
+.catalog-pagination a { display: inline-flex; align-items: center; min-height: 44px; }
+.catalog-add, .catalog-wish { min-height: 44px; min-width: 44px; border: 1px solid var(--color-line); padding: .5rem; }
+.catalog-add[hidden], .catalog-wish[hidden] { display: none; }

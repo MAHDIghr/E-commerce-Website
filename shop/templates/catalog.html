@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}Boutique | My Line Collection — Sacs & Accessoires{% endblock %}
 {% block meta_description %}Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.{% endblock %}
@@ -23,104 +23,31 @@
         {% if search_query %}<p class="shop-search-summary">Résultats pour <strong>« {{ search_query }} »</strong> <a href="{% url 'shop:catalog' %}">Effacer la recherche</a></p>{% endif %}
         <p class="shop-head__desc" data-shop-i18n="subtitle">Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.</p>
 
-        <ul class="category-pills" id="category-pills" aria-label="Catégories"></ul>
+
     </div>
 </section>
 
 <div class="container shop-layout">
-
-    <!-- ===== Filtres : colonne sur desktop, tiroir sur mobile ===== -->
-    <div class="filters-backdrop" id="filters-backdrop"></div>
-    <aside class="filters" id="filters" aria-label="Filtres" aria-hidden="true">
-        <div class="filters__header">
-            <h2 data-shop-i18n="filters">Filtres</h2>
-            <button type="button" class="icon-btn" data-action="close-filters" aria-label="Fermer les filtres">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="6" y1="18" x2="18" y2="6"></line></svg>
-            </button>
-        </div>
-
-        <div class="filters__body">
-            <fieldset class="filter-group">
-                <legend data-shop-i18n="f_category">Catégorie</legend>
-{% for category in categories %}
-                <label class="check"><input type="checkbox" name="cat" value="{{ category.slug }}"><span>{{ category.name }}</span></label>
-                {% empty %}
-                <p>Aucune catégorie disponible.</p>
-                {% endfor %}
-            </fieldset>
-
-            <fieldset class="filter-group">
-                <legend data-shop-i18n="f_price">Prix (€)</legend>
-                <div class="price-range">
-                    <input type="number" id="price-min" inputmode="numeric" min="0" max="500" placeholder="Min" aria-label="Prix minimum">
-                    <span aria-hidden="true">–</span>
-                    <input type="number" id="price-max" inputmode="numeric" min="0" max="500" placeholder="Max" aria-label="Prix maximum">
-                </div>
-                <div class="price-quick">
-                    <button type="button" data-price="0-50">&lt; 50 €</button>
-                    <button type="button" data-price="50-100">50–100 €</button>
-                    <button type="button" data-price="100-">&gt; 100 €</button>
-                </div>
-            </fieldset>
-
-            <fieldset class="filter-group">
-                <legend data-shop-i18n="f_color">Couleur</legend>
-                <div class="swatch-list" id="color-filters"></div>
-            </fieldset>
-
-            <fieldset class="filter-group">
-                <legend data-shop-i18n="f_more">Autres</legend>
-                <label class="check"><input type="checkbox" id="filter-sale"><span data-shop-i18n="f_sale">En promotion</span></label>
-                <label class="check"><input type="checkbox" id="filter-stock"><span data-shop-i18n="f_lowstock">Stock ≤ 5</span></label>
-            </fieldset>
-        </div>
-
-        <div class="filters__footer">
-            <button type="button" class="button button-outline" id="filters-reset" data-shop-i18n="reset">Réinitialiser</button>
-            <button type="button" class="button button-primary" id="filters-apply" data-action="close-filters">
-                <span data-shop-i18n="show">Voir</span>&nbsp;<span id="filters-count">0</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- ===== Résultats ===== -->
-    <section class="results" aria-labelledby="results-title">
-        <h2 id="results-title" class="visually-hidden">Produits</h2>
-
-        <div class="toolbar">
-            <button type="button" class="toolbar__filters" data-action="open-filters">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="9" cy="7" r="2.2" fill="var(--color-surface)"></circle><circle cx="15" cy="17" r="2.2" fill="var(--color-surface)"></circle></svg>
-                <span data-shop-i18n="filters">Filtres</span>
-                <span class="toolbar__badge" id="filters-badge" hidden>0</span>
-            </button>
-
-            <p class="toolbar__count" id="results-count" role="status" aria-live="polite"></p>
-
-            <label class="toolbar__sort">
-                <span class="visually-hidden" data-shop-i18n="sort_label">Trier par</span>
-                <select id="sort" name="sort"></select>
-            </label>
-        </div>
-
-        <div class="chips" id="active-chips" aria-label="Filtres actifs"></div>
-
-        <div class="pgrid" id="product-grid" aria-busy="true" data-product-url="{% url 'product:detail' slug='__product_slug__' %}" data-offers-url="{% url 'shop:offer_options' slug='__product_slug__' %}"></div>
-        {{ catalog_data|json_script:"catalog-data" }}
-
-        <div class="empty" id="empty-state" hidden>
-            <svg class="icon" viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <h3 data-shop-i18n="empty_title">Aucun produit ne correspond</h3>
-            <p data-shop-i18n="empty_text">Essayez d'élargir vos critères ou de retirer un filtre.</p>
-            <button type="button" class="button button-primary" id="empty-reset" data-shop-i18n="reset">Réinitialiser</button>
-        </div>
-
-        <div class="more" id="more-wrap" hidden>
-            <p class="more__progress" id="more-progress"></p>
-            <div class="more__bar"><span id="more-fill"></span></div>
-            <button type="button" class="button button-outline" id="load-more" data-shop-i18n="load_more">Voir plus de produits</button>
-        </div>
-    </section>
-</div>
+<form method="get" action="{% url 'shop:catalog' %}" class="catalog-filters" aria-label="Filtres du catalogue">
+{% for key, value in preserved_params %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+<label>Rechercher <input type="search" name="q" value="{{ search_query }}"></label>
+<fieldset><legend>Catégories</legend>{% for category in categories %}<label class="check"><input type="checkbox" name="cat" value="{{ category.slug }}"{% if category.slug in selected_cats %} checked{% endif %}>{{ category.name }}</label>{% endfor %}</fieldset>
+<fieldset><legend>Couleurs</legend>{% for color in color_options %}<label class="check"><input type="checkbox" name="color" value="{{ color.color_slug }}"{% if color.color_slug in selected_colors %} checked{% endif %}>{{ color.color_name }}</label>{% endfor %}</fieldset>
+<label>Prix minimum (€) <input type="number" name="min" min="0" step="0.01" value="{{ minimum|unlocalize|default_if_none:'' }}"></label>
+<label>Prix maximum (€) <input type="number" name="max" min="0" step="0.01" value="{{ maximum|unlocalize|default_if_none:'' }}"></label>
+<label class="check"><input type="checkbox" name="sale" value="1"{% if sale %} checked{% endif %}>En promotion</label>
+<label class="check"><input type="checkbox" name="low" value="1"{% if low %} checked{% endif %}>Stock disponible ≤ 5</label>
+<label>Trier <select name="sort"><option value="pop"{% if sort == 'pop' %} selected{% endif %}>Pertinence</option><option value="new"{% if sort == 'new' %} selected{% endif %}>Nouveautés</option><option value="asc"{% if sort == 'asc' %} selected{% endif %}>Prix croissant</option><option value="desc"{% if sort == 'desc' %} selected{% endif %}>Prix décroissant</option><option value="best"{% if sort == 'best' %} selected{% endif %}>Meilleures notes</option></select></label>
+<button class="button button-primary" type="submit">Appliquer les filtres</button>
+<a href="{% url 'shop:catalog' %}">Réinitialiser les filtres</a>
+</form>
+<section class="results" aria-labelledby="results-title">
+<h2 id="results-title">Produits — {{ page_obj.paginator.count }}</h2>
+<p>Consultez une fiche pour choisir une offre. L’ajout au panier et le paiement nécessitent actuellement JavaScript ; aucune commande n’est créée par un simple lien.</p>
+<div class="pgrid" id="product-grid">{% for card in cards %}{% include "shop/_product_card.html" %}{% empty %}<p>Aucun produit ne correspond à ces critères.</p>{% endfor %}</div>
+{{ catalog_data|json_script:"catalog-data" }}
+<nav class="catalog-pagination" aria-label="Pages du catalogue">{% if previous_url %}<a href="{{ previous_url }}">Page précédente</a>{% endif %}<span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>{% if next_url %}<a href="{{ next_url }}">Page suivante</a>{% endif %}</nav>
+</section></div>
 
 <!-- Réassurance -->
 <section class="reassure">

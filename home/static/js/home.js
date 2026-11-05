@@ -215,6 +215,7 @@ renderRecentlyViewed();
 
     revealTargets.forEach((el, index) => {
         el.style.setProperty("--reveal-delay", `${Math.min(index % 4, 3) * 90}ms`);
+        el.classList.add("reveal-ready");
         observer.observe(el);
     });
 })();

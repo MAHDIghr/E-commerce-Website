@@ -443,9 +443,9 @@ class CatalogViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            reverse("product:detail", kwargs={"slug": "__product_slug__"}),
+            reverse("product:detail", kwargs={"slug": self.product.slug}),
         )
-        # Les liens des cartes sont créés côté navigateur à partir de ces données.
+        # Les liens des cartes sont présents dans le HTML initial.
         self.assertContains(response, '"id": "cabas-camel"')
 
     def test_home_new_products_are_filtered_by_is_new(self):

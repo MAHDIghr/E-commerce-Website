@@ -1,518 +1,62 @@
 "use strict";
-
-/* ==========================================================================
-   Catalogue — dépend de base.js (readStorage, writeStorage, formatPrice,
-   addToCart, getCart, openCart, playAddedFeedback).
-   Les produits, catégories, variantes et couleurs sont chargés depuis Django.
-   ========================================================================== */
-
-(function initCatalog() {
-
-    const grid = document.getElementById("product-grid");
-    if (!grid) return;
-
-    /* Modèle d’URL produit généré par Django ; le slug est remplacé au moment de créer chaque carte. */
-    const PRODUCT_URL_TEMPLATE = grid.dataset.productUrl || "#";
-    const productUrl = (slug) => PRODUCT_URL_TEMPLATE.replace("__product_slug__", encodeURIComponent(slug));
-
-    /* Données rendues par Django via json_script. */
-    const catalogDataNode = document.getElementById("catalog-data");
-    const commercial = JSON.parse(document.querySelector("#commercial-config").textContent);
-    const catalogData = catalogDataNode ? JSON.parse(catalogDataNode.textContent) : { products: [], categories: [], colors: {} };
-    const PRODUCTS = Array.isArray(catalogData.products) ? catalogData.products : [];
-    const CATEGORIES = Array.isArray(catalogData.categories) ? catalogData.categories : [];
-    const COLORS = Object.fromEntries(Object.entries(catalogData.colors || {}).map(([slug, details]) => [slug, details.hex]));
-    const COLOR_NAMES = Object.fromEntries(Object.entries(catalogData.colors || {}).map(([slug, details]) => [slug, details.name || slug]));
-    const categoryLabel = (slug) => CATEGORIES.find((category) => category.slug === slug)?.name || t()["cat_" + slug] || slug;
-    const PAGE_SIZE = 8;
-    const LOW_STOCK = 5;
-    const WISH_KEY = "wishlist_v1";
-
-    /* ---------- Textes FR / EN ---------- */
-    const T = {
-        fr: {
-            bc_home: "Accueil", bc_shop: "Boutique", title: "Notre boutique",
-            subtitle: "",
-            filters: "Filtres", f_category: "Catégorie", f_price: "Prix (€)", f_color: "Couleur", f_more: "Autres",
-            f_sale: "En promotion", f_lowstock: "Stock ≤ 5", unavailable: "Indisponible", reset: "Réinitialiser", show: "Voir",
-            sort_label: "Trier par", empty_title: "Aucun produit ne correspond",
-            empty_text: "Essayez d'élargir vos critères ou de retirer un filtre.", load_more: "Voir plus de produits",
-            cat_handbags: "Sacs à main", cat_shoulder: "Sacs bandoulière", cat_wallets: "Portefeuilles", cat_accessories: "Accessoires",
-            all: "Tout voir", results: (n) => `${n} produit${n > 1 ? "s" : ""}`,
-            shown: (a, b) => `${a} sur ${b} produits affichés`,
-            sort: { pop: "Pertinence", new: "Nouveautés", best: "Meilleures notes", asc: "Prix croissant", desc: "Prix décroissant" },
-            newTag: "Nouveau",
-            add: (n) => `Ajouter ${n} au panier`, wish: "Ajouter aux favoris", reviews: "avis",
-            clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Stock ≤ 5",
-            ra_ship: "", ra_ret: "Retours et rétractation",
-            ra_ret_s: "Consultez les modalités", ra_pay: "Paiement sécurisé", ra_pay_s: "Stripe Checkout",
-            item: (n) => (n > 1 ? "articles" : "article"),
-            shipInfo: "Livraison confirmée au checkout",
-        },
-        en: {
-            bc_home: "Home", bc_shop: "Shop", title: "Our shop",
-            subtitle: "",
-            filters: "Filters", f_category: "Category", f_price: "Price (€)", f_color: "Colour", f_more: "More",
-            f_sale: "On sale", f_lowstock: "Stock ≤ 5", unavailable: "Unavailable", reset: "Reset", show: "Show",
-            sort_label: "Sort by", empty_title: "No products match",
-            empty_text: "Try widening your criteria or removing a filter.", load_more: "Show more products",
-            cat_handbags: "Handbags", cat_shoulder: "Shoulder bags", cat_wallets: "Wallets", cat_accessories: "Accessories",
-            all: "All", results: (n) => `${n} product${n > 1 ? "s" : ""}`,
-            shown: (a, b) => `${a} of ${b} products shown`,
-            sort: { pop: "Featured", new: "New in", best: "Top rated", asc: "Price: low to high", desc: "Price: high to low" },
-            newTag: "New",
-            add: (n) => `Add ${n} to cart`, wish: "Add to wishlist", reviews: "reviews",
-            clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Stock ≤ 5",
-            ra_ship: "", ra_ret: "Returns and withdrawal",
-            ra_ret_s: "See the conditions", ra_pay: "Secure payment", ra_pay_s: "Stripe Checkout",
-            item: (n) => (n > 1 ? "items" : "item"),
-            shipInfo: "Delivery confirmed at checkout",
-        },
-    };
-    T.fr.ra_ship = T.en.ra_ship = commercial.shipping_message;
-    T.fr.subtitle = "Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.";
-    T.en.subtitle = "Explore our bags and accessories. See each product page for its specifications.";
-    let lang = document.documentElement.lang === "en" ? "en" : "fr";
-    const t = () => T[lang];
-
-    /* ---------- État (synchronisé avec l'URL pour un partage facile) ---------- */
-    const CATS = CATEGORIES.map((category) => category.slug);
-    const SORTS = ["pop", "new", "best", "asc", "desc"];
-
-    const state = { cats: new Set(), colors: new Set(), min: null, max: null, sale: false, low: false, sort: "pop", page: 1 };
-
-    function readUrl() {
-        const p = new URLSearchParams(window.location.search);
-        (p.get("cat") || "").split(",").filter((c) => CATS.includes(c)).forEach((c) => state.cats.add(c));
-        (p.get("color") || "").split(",").filter((c) => COLORS[c]).forEach((c) => state.colors.add(c));
-        const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) && n >= 0 && n <= 5000 ? n : null; };
-        state.min = num(p.get("min"));
-        state.max = num(p.get("max"));
-        state.sale = p.get("sale") === "1";
-        state.low = p.get("low") === "1";
-        state.sort = SORTS.includes(p.get("sort")) ? p.get("sort") : "pop";
-    }
-
-    function writeUrl() {
-        const p = new URLSearchParams();
-        const currentQuery = new URLSearchParams(window.location.search).get("q");
-        if (currentQuery) p.set("q", currentQuery);
-        if (state.cats.size) p.set("cat", [...state.cats].join(","));
-        if (state.colors.size) p.set("color", [...state.colors].join(","));
-        if (state.min !== null) p.set("min", state.min);
-        if (state.max !== null) p.set("max", state.max);
-        if (state.sale) p.set("sale", "1");
-        if (state.low) p.set("low", "1");
-        if (state.sort !== "pop") p.set("sort", state.sort);
-        const qs = p.toString();
-        window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-    }
-
-    /* ---------- Filtrage et tri ---------- */
-    function matches(product) {
-        if (state.cats.size && !state.cats.has(product.cat)) return false;
-        if (state.colors.size && !product.colors.some((c) => state.colors.has(c))) return false;
-        if (state.min !== null && product.price < state.min) return false;
-        if (state.max !== null && product.price > state.max) return false;
-        if (state.sale && !product.old) return false;
-        if (state.low && (product.stock <= 0 || product.stock > LOW_STOCK)) return false;
-        return true;
-    }
-
-    function sorted(list) {
-        const copy = [...list];
-        const by = {
-            pop: (a, b) => b.pop - a.pop,
-            new: (a, b) => Number(b.isNew) - Number(a.isNew) || b.pop - a.pop,
-            best: (a, b) => b.rating - a.rating || b.reviews - a.reviews,
-            asc: (a, b) => a.price - b.price,
-            desc: (a, b) => b.price - a.price,
-        };
-        return copy.sort(by[state.sort]);
-    }
-
-    /* ---------- Helpers DOM (textContent uniquement : pas d'injection HTML) ---------- */
-    function el(tag, className, text) {
-        const node = document.createElement(tag);
-        if (className) node.className = className;
-        if (text !== undefined) node.textContent = text;
-        return node;
-    }
-
-    function svgIcon(pathData, extra) {
-        const ns = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(ns, "svg");
-        svg.setAttribute("class", "icon");
-        svg.setAttribute("viewBox", "0 0 24 24");
-        svg.setAttribute("aria-hidden", "true");
-        pathData.forEach((d) => {
-            const path = document.createElementNS(ns, "path");
-            path.setAttribute("d", d);
-            svg.appendChild(path);
+/* Les cartes, filtres GET et pages sont rendus par Django. Aucun rerendu client. */
+(() => {
+    document.querySelectorAll(".catalog-add").forEach(button => {
+        if (typeof addProductFromCard !== "function") return;
+        button.addEventListener("click", async () => {
+            button.disabled = true;
+            try { await addProductFromCard(button); } catch (error) {
+                if (typeof showCartStatus === "function") showCartStatus("Ouvrez la fiche produit pour poursuivre ou réessayez.", true);
+            } finally { button.disabled = false; }
         });
-        if (extra) svg.setAttribute("data-kind", extra);
-        return svg;
-    }
-
-    const HEART = "M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z";
-    const PLUS = "M12 5v14M5 12h14";
-    const CHECK = "M5 12.5l4.5 4.5L19 7.5";
-    const CLOSE = "M6 6l12 12M6 18L18 6";
-
-    const storedWishlist = readStorage(WISH_KEY, []);
-    const wishlist = new Set(
-        (Array.isArray(storedWishlist) ? storedWishlist : [])
-            .filter((id) => typeof id === "string" && /^[a-z0-9-]{1,180}$/i.test(id))
-    );
-
-    /* ---------- Carte produit ---------- */
-    function buildCard(p, index) {
-        const card = el("article", "pcard");
-        card.dataset.productSlug = p.id;
-        card.dataset.variantId = String(p.variantId);
-        const grid = document.querySelector("#product-grid");
-        card.dataset.offersUrl = (grid && grid.dataset.offersUrl || "").replace("__product_slug__", encodeURIComponent(p.id));
-        card.style.setProperty("--i", String(Math.min(index, 8)));
-
-        const media = el("a", "pcard__media");
-        media.href = productUrl(p.id);
-        media.setAttribute("aria-label", p.name);
-
-        const img = document.createElement("img");
-        img.src = p.img; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
-        img.width = 700; img.height = 875;
-        media.appendChild(img);
-
-        const tags = el("div", "pcard__tags");
-        // Un ancien prix ne doit être fourni que s'il est vérifié et supérieur au prix actuel.
-        if (p.old && p.old > p.price) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
-        else if (p.isNew) tags.appendChild(el("span", "tag", t().newTag));
-        if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", `Stock : ${p.stock}`));
-        media.appendChild(tags);
-
-        const wish = el("button", "pcard__wish");
-        wish.type = "button";
-        wish.setAttribute("aria-label", t().wish);
-        wish.setAttribute("aria-pressed", String(wishlist.has(p.id)));
-        wish.appendChild(svgIcon([HEART]));
-        wish.addEventListener("click", () => {
-            const on = !wishlist.has(p.id);
-            on ? wishlist.add(p.id) : wishlist.delete(p.id);
-            wish.setAttribute("aria-pressed", String(on));
-            writeStorage(WISH_KEY, [...wishlist]);
-        });
-
-        const add = el("button", "pcard__add");
-        add.type = "button";
-        add.disabled = p.stock <= 0;
-        add.setAttribute("aria-label", p.stock <= 0 ? t().unavailable : t().add(p.name));
-        add.appendChild(svgIcon([PLUS]));
-        add.addEventListener("click", async () => {
-            if (add.disabled) return;
-            add.disabled = true;
-            const added = await addProductFromCard(add);
-            if (added) {
-                add.classList.add("is-added");
-                add.replaceChildren(svgIcon([CHECK]));
-                window.setTimeout(() => {
-                    add.classList.remove("is-added");
-                    add.replaceChildren(svgIcon([PLUS]));
-                    add.disabled = p.stock <= 0;
-                }, 1200);
-            } else {
-                add.disabled = p.stock <= 0;
-            }
-        });
-
-        const mediaWrap = el("div");
-        mediaWrap.style.position = "relative";
-        mediaWrap.append(media, wish, add);
-
-        const body = el("div", "pcard__body");
-        body.appendChild(el("p", "pcard__cat", t()[`cat_${p.cat}`]));
-
-        const h3 = el("h3", "pcard__name");
-        const link = el("a", "", p.name);
-        link.href = productUrl(p.id);
-        h3.appendChild(link);
-        body.appendChild(h3);
-
-        if (p.reviews > 0) {
-            const rating = el("p", "rating");
-            const full = Math.round(p.rating);
-            rating.appendChild(el("span", "rating__stars", "★".repeat(full) + "☆".repeat(5 - full)));
-            rating.appendChild(el("span", "", `${p.rating.toFixed(1)} (${p.reviews})`));
-            rating.setAttribute("aria-label", `${p.rating} / 5, ${p.reviews} ${t().reviews}`);
-            body.appendChild(rating);
-        }
-
-        const price = el("p", "price");
-        price.appendChild(el("span", "", formatPrice(p.price)));
-        if (p.old && p.old > p.price) {
-            price.appendChild(el("del", "", formatPrice(p.old)));
-        }
-        body.appendChild(price);
-
-        const sw = el("ul", "swatches");
-        sw.setAttribute("aria-hidden", "true");
-        p.colors.forEach((c) => {
-            const li = el("li", "swatch");
-            li.style.backgroundColor = COLORS[c];
-            sw.appendChild(li);
-        });
-        body.appendChild(sw);
-
-        card.append(mediaWrap, body);
-        return card;
-    }
-
-    /* ---------- Rendu ---------- */
-    const $ = (id) => document.getElementById(id);
-    const countEl = $("results-count");
-    const emptyEl = $("empty-state");
-    const moreWrap = $("more-wrap");
-
-    function activeFilterCount() {
-        return state.cats.size + state.colors.size + (state.min !== null || state.max !== null ? 1 : 0) + (state.sale ? 1 : 0) + (state.low ? 1 : 0);
-    }
-
-    function render({ keepPage = false } = {}) {
-        if (!keepPage) state.page = 1;
-        const all = sorted(PRODUCTS.filter(matches));
-        const visible = all.slice(0, state.page * PAGE_SIZE);
-
-        grid.classList.remove("is-ready");
-        grid.replaceChildren(...visible.map(buildCard));
-        void grid.offsetWidth;
-        grid.classList.add("is-ready");
-        grid.setAttribute("aria-busy", "false");
-
-        countEl.textContent = t().results(all.length);
-        $("filters-count").textContent = String(all.length);
-        emptyEl.hidden = all.length !== 0;
-
-        moreWrap.hidden = all.length <= visible.length;
-        $("more-progress").textContent = t().shown(visible.length, all.length);
-        $("more-fill").style.width = `${all.length ? (visible.length / all.length) * 100 : 0}%`;
-
-        const n = activeFilterCount();
-        const badge = $("filters-badge");
-        badge.hidden = n === 0;
-        badge.textContent = String(n);
-
-        renderPills();
-        renderChips();
-        writeUrl();
-    }
-
-    function renderPills() {
-        const list = $("category-pills");
-        list.replaceChildren();
-        const make = (label, value) => {
-            const li = document.createElement("li");
-            const b = el("button", "", label);
-            b.type = "button";
-            const active = value === null ? state.cats.size === 0 : state.cats.size === 1 && state.cats.has(value);
-            b.setAttribute("aria-pressed", String(active));
-            b.addEventListener("click", () => {
-                state.cats.clear();
-                if (value) state.cats.add(value);
-                syncInputs();
-                render();
-            });
-            li.appendChild(b);
-            list.appendChild(li);
-        };
-        make(t().all, null);
-        CATEGORIES.forEach((category) => make(category.name, category.slug));
-    }
-
-    function chip(label, onRemove) {
-        const c = el("span", "chip", label);
-        const b = el("button");
-        b.type = "button";
-        b.setAttribute("aria-label", `${t().remove} : ${label}`);
-        b.appendChild(svgIcon([CLOSE]));
-        b.addEventListener("click", () => { onRemove(); syncInputs(); render(); });
-        c.appendChild(b);
-        return c;
-    }
-
-    function renderChips() {
-        const box = $("active-chips");
-        box.replaceChildren();
-        state.cats.forEach((c) => box.appendChild(chip(categoryLabel(c), () => state.cats.delete(c))));
-        state.colors.forEach((c) => box.appendChild(chip(c, () => state.colors.delete(c))));
-        if (state.min !== null || state.max !== null) {
-            const label = `${state.min ?? 0} – ${state.max ?? "∞"} €`;
-            box.appendChild(chip(label, () => { state.min = null; state.max = null; }));
-        }
-        if (state.sale) box.appendChild(chip(t().sale, () => { state.sale = false; }));
-        if (state.low) box.appendChild(chip(t().lowstock, () => { state.low = false; }));
-        if (activeFilterCount() > 1) {
-            const clear = el("button", "chip chip--clear", t().clear);
-            clear.type = "button";
-            clear.addEventListener("click", resetAll);
-            box.appendChild(clear);
-        }
-    }
-
-    /* ---------- Formulaire de filtres ---------- */
-    function buildColorFilters() {
-        const box = $("color-filters");
-        box.replaceChildren();
-        Object.keys(COLORS).forEach((name) => {
-            const label = el("label", "swatch-opt");
-            const input = document.createElement("input");
-            input.type = "checkbox"; input.value = name; input.name = "color";
-            input.setAttribute("aria-label", COLOR_NAMES[name] || name);
-            const dot = el("span");
-            dot.style.backgroundColor = COLORS[name];
-            label.append(input, dot);
-            box.appendChild(label);
-        });
-    }
-
-    function buildSortOptions() {
-        const select = $("sort");
-        select.replaceChildren();
-        SORTS.forEach((key) => {
-            const opt = el("option", "", t().sort[key]);
-            opt.value = key;
-            select.appendChild(opt);
-        });
-        select.value = state.sort;
-    }
-
-    function syncInputs() {
-        document.querySelectorAll('input[name="cat"]').forEach((i) => { i.checked = state.cats.has(i.value); });
-        document.querySelectorAll('input[name="color"]').forEach((i) => { i.checked = state.colors.has(i.value); });
-        $("price-min").value = state.min ?? "";
-        $("price-max").value = state.max ?? "";
-        $("filter-sale").checked = state.sale;
-        $("filter-stock").checked = state.low;
-        $("sort").value = state.sort;
-    }
-
-    function resetAll() {
-        state.cats.clear(); state.colors.clear();
-        state.min = null; state.max = null; state.sale = false; state.low = false;
-        syncInputs();
-        render();
-    }
-
-    function toggleSet(set, value, on) { on ? set.add(value) : set.delete(value); }
-
-    document.addEventListener("change", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
-
-        if (target.name === "cat") toggleSet(state.cats, target.value, target.checked);
-        else if (target.name === "color") toggleSet(state.colors, target.value, target.checked);
-        else if (target.id === "filter-sale") state.sale = target.checked;
-        else if (target.id === "filter-stock") state.low = target.checked;
-        else if (target.id === "sort") state.sort = SORTS.includes(target.value) ? target.value : "pop";
-        else if (target.id === "price-min" || target.id === "price-max") {
-            const v = parseFloat(target.value);
-            const value = Number.isFinite(v) && v >= 0 ? v : null;
-            if (target.id === "price-min") state.min = value; else state.max = value;
-        } else return;
-
-        render();
+        button.hidden = false;
     });
-
-    document.querySelectorAll(".price-quick button").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const [min, max] = btn.dataset.price.split("-");
-            state.min = min === "" ? null : Number(min);
-            state.max = max === "" ? null : Number(max);
-            syncInputs();
-            render();
+    const saved = typeof readStorage === "function" ? readStorage("wishlist_v1", []) : [];
+    const wishes = new Set(Array.isArray(saved) ? saved : []);
+    document.querySelectorAll(".catalog-wish").forEach(button => {
+        if (typeof readStorage !== "function" || typeof writeStorage !== "function") return;
+        const slug = button.closest("[data-product-slug]").dataset.productSlug;
+        button.setAttribute("aria-pressed", String(wishes.has(slug)));
+        button.addEventListener("click", () => {
+            wishes.has(slug) ? wishes.delete(slug) : wishes.add(slug);
+            writeStorage("wishlist_v1", [...wishes]);
+            button.setAttribute("aria-pressed", String(wishes.has(slug)));
         });
+        button.hidden = false;
     });
-
-    $("filters-reset").addEventListener("click", resetAll);
-    $("empty-reset").addEventListener("click", resetAll);
-    $("load-more").addEventListener("click", () => { state.page += 1; render({ keepPage: true }); });
-
-    /* ---------- Tiroir de filtres (mobile) ---------- */
-    const drawer = $("filters");
-    const backdrop = $("filters-backdrop");
-    const mobileMQ = window.matchMedia("(max-width: 959px)");
-
-    function openFilters() {
-        if (!mobileMQ.matches || !ShopOverlays.open(drawer, {close: () => {
-            drawer.classList.remove("is-open"); backdrop.classList.remove("is-open");
-            document.querySelectorAll('[data-action="open-filters"]').forEach(b => b.setAttribute("aria-expanded", "false"));
-        }})) return;
-        drawer.classList.add("is-open"); backdrop.classList.add("is-open");
-        drawer.setAttribute("aria-hidden", "false");
-        const first = drawer.querySelector("input, button");
-        if (first) first.focus();
+    // Traduction des libellés fixes uniquement : ne reconstruit ni les cartes ni les champs.
+    const labels = {"Notre boutique":"Our shop", "Rechercher":"Search", "Catégories":"Categories", "Couleurs":"Colours",
+        "Prix minimum (€)":"Minimum price (€)", "Prix maximum (€)":"Maximum price (€)", "En promotion":"On sale",
+        "Stock disponible ≤ 5":"Available stock ≤ 5", "Trier":"Sort", "Pertinence":"Featured", "Nouveautés":"New in",
+        "Prix croissant":"Price: low to high", "Prix décroissant":"Price: high to low", "Meilleures notes":"Top rated",
+        "Appliquer les filtres":"Apply filters", "Réinitialiser les filtres":"Reset filters", "Page précédente":"Previous page",
+        "Page suivante":"Next page", "Choisir une offre":"Choose an offer", "Ajouter au panier":"Add to cart"};
+    const originals = new Map();
+    document.querySelectorAll('.catalog-filters,.catalog-pagination,.shop-head,.pcard').forEach(root => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) { const node = walker.currentNode; if (labels[node.textContent.trim()]) originals.set(node,node.textContent); }
+    });
+    function translate() {
+        const english = document.documentElement.lang === "en";
+        originals.forEach((text,node) => { node.textContent = english ? text.replace(text.trim(), labels[text.trim()]) : text; });
     }
-    function closeFilters() {
-        ShopOverlays.close(drawer);
-        drawer.classList.remove("is-open"); backdrop.classList.remove("is-open");
-        drawer.inert = mobileMQ.matches;
-        drawer.setAttribute("aria-hidden", String(mobileMQ.matches));
-    }
-    document.querySelectorAll('[data-action="open-filters"]').forEach((b) => b.addEventListener("click", openFilters));
-    document.querySelectorAll('[data-action="close-filters"]').forEach((b) => b.addEventListener("click", closeFilters));
-    backdrop.addEventListener("click", closeFilters);
-
-    mobileMQ.addEventListener("change", () => { drawer.setAttribute("aria-hidden", String(mobileMQ.matches)); if (!mobileMQ.matches) closeFilters(); });
-    drawer.setAttribute("aria-hidden", String(mobileMQ.matches));
-    drawer.inert = mobileMQ.matches;
-    function filterRole() { if (mobileMQ.matches) { drawer.setAttribute("role", "dialog"); drawer.setAttribute("aria-modal", "true"); drawer.setAttribute("aria-label", "Filtres"); } else { drawer.removeAttribute("role"); drawer.removeAttribute("aria-modal"); drawer.inert = false; } }
-    mobileMQ.addEventListener("change", filterRole); filterRole();
-
-    /* ---------- Barre panier collante (mobile) ---------- */
-    const bar = $("cart-bar");
-
-    function updateCartBar() {
-        const cart = getCart();
-        const count = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        const total = cart.reduce((sum, item) => sum + Number(item.line_total || 0), 0);
-        bar.hidden = count === 0;
+    document.addEventListener("languagechange", translate); translate();
+    const bar = document.getElementById("cart-bar");
+    if (!bar) return;
+    function update() {
+        if (typeof getCart !== "function") return;
+        const items = getCart();
+        const count = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        bar.hidden = !count;
         document.body.classList.toggle("has-cart-bar", count > 0);
-        if (count === 0) return;
-        $("cart-bar-count").textContent = String(count);
-        $("cart-bar-label").textContent = t().item(count);
-        $("cart-bar-total").textContent = formatPrice(total);
-        $("cart-bar-ship").textContent = commercial.sales_ready
-            ? t().shipInfo
-            : commercial.sales_unavailable;
+        document.getElementById("cart-bar-count").textContent = String(count);
+        document.getElementById("cart-bar-label").textContent = count > 1 ? "articles" : "article";
+        document.getElementById("cart-bar-total").textContent = formatPrice(items.reduce((sum, item) => sum + Number(item.line_total || 0), 0));
+        const commercial = JSON.parse(document.getElementById("commercial-config").textContent);
+        document.getElementById("cart-bar-ship").textContent = commercial.sales_ready ? "Livraison confirmée au checkout" : commercial.sales_unavailable;
     }
+    if (typeof openCart !== "function") return;
     bar.querySelector("button").addEventListener("click", openCart);
-    document.addEventListener("cart:updated", updateCartBar);
-
-    /* ---------- Traductions de la page ---------- */
-    function applyShopLang() {
-        lang = document.documentElement.lang === "en" ? "en" : "fr";
-        document.querySelectorAll("[data-shop-i18n]").forEach((node) => {
-            const v = t()[node.dataset.shopI18n];
-            if (typeof v === "string") node.textContent = v;
-        });
-        buildSortOptions();
-        render({ keepPage: true });
-        updateCartBar();
-    }
-    document.addEventListener("languagechange", applyShopLang);
-
-    /* ---------- Initialisation : squelettes puis produits ---------- */
-    function showSkeletons() {
-        grid.replaceChildren(...Array.from({ length: 4 }, () => {
-            const s = el("div");
-            s.append(el("div", "skel skel--img"), el("div", "skel skel--line"), el("div", "skel skel--line s"));
-            return s;
-        }));
-    }
-
-    readUrl();
-    buildColorFilters();
-    buildSortOptions();
-    syncInputs();
-    showSkeletons();
-    window.requestAnimationFrame(() => { applyShopLang(); });
-
+    document.addEventListener("cart:updated", update);
+    update();
 })();
