@@ -76,7 +76,7 @@ class CheckoutIntegrationTests(TestCase):
         self.assertNotIn("checkout_promo_code", self.client.session)
         self.assertNotIn("checkout_attempt_key", self.client.session)
         quote = self.client.get(reverse("checkout:shipping_quote"), {"country": "FR", "postal_code": "75001"})
-        self.assertEqual(quote.json()["options"], [{"method": "free", "label": "Livraison offerte — 0,00 €", "amount": "0.00", "total": "89.90"}])
+        self.assertEqual(quote.json()["options"], [{"method": "free", "label": "Standard offert — 0,00 €", "amount": "0.00", "total": "89.90"}, {"method": "express", "label": "Express — 9,90 €", "amount": "9.90", "total": "99.80"}])
         self.variant.refresh_from_db()
         self.assertEqual(self.variant.stock_quantity, 4)
         self.assertEqual(Order.objects.count(), 0)
@@ -362,7 +362,7 @@ class CheckoutIntegrationTests(TestCase):
 
     def test_free_shipping_is_automatic_at_threshold_and_paid_delivery_has_two_choices(self):
         free_form = CheckoutForm(subtotal=Decimal("80.00"))
-        self.assertEqual(list(free_form.fields["shipping_method"].choices), [("free", "Livraison offerte — 0,00 €")])
+        self.assertEqual(list(free_form.fields["shipping_method"].choices), [("free", "Standard offert — 0,00 €"), ("express", "Express — 9,90 €")])
         self.assertEqual(shipping_price("free", Decimal("80.00")), Decimal("0.00"))
         with self.assertRaises(CheckoutProblem):
             shipping_price("standard", Decimal("80.00"))
@@ -384,7 +384,7 @@ class CheckoutIntegrationTests(TestCase):
         self.assertEqual(Order.objects.count(), 0)
         self.variant.refresh_from_db()
         self.assertEqual(self.variant.stock_quantity, 4)
-        self.assertContains(response, "Aucun paiement ne sera simulé")
+        self.assertContains(response, "Paiement temporairement indisponible")
 
     def test_paid_return_clears_matching_cart_but_preserves_a_new_cart(self):
         from shop.views import CART_SESSION_KEY

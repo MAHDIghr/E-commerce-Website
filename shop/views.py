@@ -371,6 +371,7 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
         "product_slug": variant.product.slug,
         "variant_id": variant.pk,
         "offer_id": offer.pk,
+        "offer_free_shipping": offer.display_delivery_label == ProductOffer.DELIVERY_FREE,
         "name": title,
         "variant_name": variant.color_name,
         "image": image,
@@ -468,7 +469,7 @@ def offer_options(request, slug):
             "id": offer.pk,
             "title": offer.title,
             "badge": offer.get_badge_display(),
-            "delivery_label": shipping_message(),
+            "delivery_label": shipping_message(offer_free=offer.display_delivery_label == ProductOffer.DELIVERY_FREE),
             "featured": offer.is_featured,
             "price": f"{offer.price:.2f}",
             "reference_total": f"{offer.reference_price:.2f}" if offer.reference_price else f"{offer.price:.2f}",
@@ -546,13 +547,23 @@ def _cart_payload(request):
 
     subtotal = sum((Decimal(item["line_total"]) for item in items), Decimal("0.00"))
     count = sum(item["quantity"] for item in items)
+    from checkout.services import apply_promo_code, CheckoutProblem
+    discount = Decimal("0.00")
+    try:
+        _, discount = apply_promo_code(request.session.get("checkout_promo_code", ""), subtotal)
+    except CheckoutProblem:
+        pass  # Un code invalide n'accorde aucune remise ; le checkout en explique la raison.
+    shipping_subtotal = max(Decimal("0.00"), subtotal - discount)
+    offer_free = any(item["offer_free_shipping"] for item in items if item["available"])
     return {
         "items": items,
         "count": count,
         "subtotal": f"{subtotal:.2f}",
         "free_shipping_threshold": f"{FREE_SHIPPING_THRESHOLD:.2f}",
-        "amount_to_free_shipping": f"{max(FREE_SHIPPING_THRESHOLD - subtotal, Decimal('0.00')):.2f}",
-        "free_shipping_reached": subtotal >= FREE_SHIPPING_THRESHOLD,
+        "amount_to_free_shipping": f"{Decimal('0.00') if offer_free else max(FREE_SHIPPING_THRESHOLD - shipping_subtotal, Decimal('0.00')):.2f}",
+        "free_shipping_reached": offer_free or shipping_subtotal >= FREE_SHIPPING_THRESHOLD,
+        "shipping_subtotal": f"{shipping_subtotal:.2f}",
+        "offer_free_shipping": offer_free,
     }
 
 

@@ -79,13 +79,14 @@ class CommercialSalesGateTests(TestCase):
         session = self.client.session
         session[CART_SESSION_KEY] = {f"{self.variant.pk}:{self.offer.pk}": 1}
         session.save()
-        self.form = CheckoutForm({
-            "first_name": "Test", "last_name": "Client", "email": "client@example.test",
-            "address_line1": "Adresse de test", "postal_code": "75001", "city": "Paris",
-            "country": "FR", "shipping_method": "standard", "billing_same_as_shipping": "on",
-            "accept_terms": "on",
-        }, subtotal=Decimal("49.90"))
-        self.assertTrue(self.form.is_valid(), self.form.errors)
+        with override_settings(COMMERCIAL_INFORMATION=approved_information()):
+            self.form = CheckoutForm({
+                "first_name": "Test", "last_name": "Client", "email": "client@example.test",
+                "address_line1": "Adresse de test", "postal_code": "75001", "city": "Paris",
+                "country": "FR", "shipping_method": "standard", "billing_same_as_shipping": "on",
+                "accept_terms": "on",
+            }, subtotal=Decimal("49.90"))
+            self.assertTrue(self.form.is_valid(), self.form.errors)
 
     def test_direct_payment_post_and_service_calls_cannot_bypass_gate(self):
         with patch("checkout.views.create_order_and_reserve") as create, patch("checkout.services.stripe.checkout.Session.create") as stripe:

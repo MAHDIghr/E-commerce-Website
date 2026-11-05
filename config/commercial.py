@@ -23,6 +23,51 @@ DELIVERY_DAYS = {
     "standard": os.environ.get("CHECKOUT_STANDARD_DELIVERY_DAYS", "").strip(),
     "express": os.environ.get("CHECKOUT_EXPRESS_DELIVERY_DAYS", "").strip(),
 }
+COUNTRY_CHOICES = [
+    ("FR", "France"), ("BE", "Belgique"), ("LU", "Luxembourg"),
+    ("DE", "Allemagne"), ("ES", "Espagne"), ("IT", "Italie"),
+    ("NL", "Pays-Bas"), ("PT", "Portugal"), ("CH", "Suisse"), ("GB", "Royaume-Uni"),
+]
+PAYMENT_UNAVAILABLE = "Paiement temporairement indisponible"
+DESTINATION_UNAVAILABLE = "Cette destination n’est pas prise en charge. Consultez les modalités de livraison."
+
+
+def configured_countries():
+    # Liste candidate, non proposée tant que la matrice commerciale n'est pas approuvée.
+    codes = getattr(settings, "CHECKOUT_SHIPPING_COUNTRIES", ("FR", "BE", "LU", "DE", "ES", "IT", "NL", "PT"))
+    return [(code, label) for code, label in COUNTRY_CHOICES if code in codes]
+
+
+def shipping_countries():
+    return configured_countries() if public_information()["sales_ready"] else []
+
+
+def shipping_choices(subtotal, *, offer_free=False):
+    """Même grille serveur pour formulaire, devis et commande ; express toujours payant."""
+    subtotal = Decimal(str(subtotal)) if subtotal is not None else None
+    free = offer_free or (subtotal is not None and subtotal >= FREE_SHIPPING_THRESHOLD)
+    methods = [("free", "Standard offert", Decimal("0.00"))] if free else [
+        ("standard", "Standard", SHIPPING_PRICES["standard"])]
+    methods.append(("express", "Express", SHIPPING_PRICES["express"]))
+    result = []
+    for method, label, amount in methods:
+        mode = "standard" if method == "free" else method
+        label += " — " + f"{amount:.2f}".replace(".", ",") + " €"
+        description = delivery_description(mode)
+        if description:
+            label += f" — {description}"
+        result.append((method, label, amount))
+    return result
+
+
+def delivery_description(mode):
+    days = DELIVERY_DAYS.get(mode, "")
+    conditions = getattr(settings, "CHECKOUT_DELIVERY_CONDITIONS", {}).get(mode, "")
+    if public_information()["sales_ready"] and days and conditions:
+        return f"{days} ({conditions})"
+    return ""
+
+
 WELCOME_PROMO_CODE = "BIENVENUE"
 
 
@@ -36,13 +81,17 @@ REQUIRED_INFORMATION_PAGES = ("legal", "terms", "privacy", "returns", "delivery"
 
 def shipping_configuration():
     """Empreinte lisible de la configuration à faire approuver par l’exploitant."""
-    from checkout.forms import COUNTRIES
     return {
-        "countries": [code for code, _label in COUNTRIES],
+        "countries": [code for code, _label in configured_countries()],
         "currency": CURRENCY,
         "free_shipping_threshold": str(FREE_SHIPPING_THRESHOLD),
         "prices": {key: str(value) for key, value in SHIPPING_PRICES.items()},
         "delivery_days": dict(DELIVERY_DAYS),
+        "delivery_conditions": dict(getattr(settings, "CHECKOUT_DELIVERY_CONDITIONS", {})),
+        "excluded_postal_prefixes": dict(getattr(settings, "CHECKOUT_EXCLUDED_POSTAL_PREFIXES", {})),
+        "customs": getattr(settings, "CHECKOUT_CUSTOMS_INFORMATION", ""),
+        "free_shipping_scope": "standard_entire_cart_if_any_offer_free",
+        "express_above_threshold": "paid",
     }
 
 
@@ -93,10 +142,13 @@ def public_information():
     return {"sales_ready": True, "contact_email": email, "pages": cleaned}
 
 
-def shipping_message():
+def shipping_message(*, offer_free=False):
     if not public_information()["sales_ready"]:
         return SALES_UNAVAILABLE
-    return f"Livraison offerte dès {_amount(FREE_SHIPPING_THRESHOLD)} € de sous-total après remise."
+    if offer_free:
+        return "Cette offre inclut la livraison standard gratuite pour tout le panier. Express payant."
+    return (f"Livraison standard offerte dès {_amount(FREE_SHIPPING_THRESHOLD)} € de sous-total après remise "
+            "ou avec une offre incluant la livraison gratuite. Express payant.")
 
 
 def commercial_context(request):
@@ -134,6 +186,6 @@ def commercial_context(request):
         "free_shipping_threshold": str(FREE_SHIPPING_THRESHOLD),
         "standard_shipping": str(SHIPPING_PRICES["standard"]),
         "express_shipping": str(SHIPPING_PRICES["express"]),
-        "delivery_days": DELIVERY_DAYS,
+        "delivery_days": {mode: delivery_description(mode) for mode in DELIVERY_DAYS},
         "welcome": offer,
     }}

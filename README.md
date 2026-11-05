@@ -259,7 +259,7 @@ Les contraintes et validations Django sont des protections utiles, mais il faut 
 
 Une offre possède un prix affiché et des éléments associés. Le produit principal peut utiliser la variante choisie sur la fiche ; les autres éléments utilisent une variante fixe. Les validations du modèle contrôlent la cohérence de ces références.
 
-Le libellé de livraison d'une offre est éditorial : il ne calcule pas les frais de livraison réels. Le checkout recalcule les montants et frais de livraison côté serveur ; les paiements ne sont considérés comme confirmés qu'après réception d'un webhook Stripe signé.
+Une offre marquée « Livraison gratuite » accorde la livraison standard gratuite à tout le panier, même sous le seuil après remise ; l’express reste payant. Le checkout recalcule les montants et frais de livraison côté serveur ; les paiements ne sont considérés comme confirmés qu'après réception d'un webhook Stripe signé.
 
 ### Avis
 
@@ -889,7 +889,7 @@ En production, il faut aussi confirmer que l'administration et le site utilisent
 - Chaque produit doit disposer d'au moins une offre active contenant une ligne qui référence le produit principal avec **« Utiliser la variante choisie sur la fiche »** activé et sans variante fixe.
 - Trois badges au maximum sont proposés : **Essentiel**, **Medium**, **Premium**.
 - Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement. Le prix appartient uniquement à l'offre, jamais à la variante de couleur.
-- Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. Cette mention décrit l'offre ; elle ne calcule pas encore les frais réels de livraison au checkout.
+- Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. La gratuité d’une offre s’applique à la livraison standard de tout le panier, y compris sous le seuil après remise ; l’express reste payant.
 - Une offre peut inclure d'autres produits. Chaque ligne doit sélectionner le produit et, pour un produit complémentaire, une variante appartenant à ce produit.
 - Un produit sans offre active valide est exclu du catalogue public. La fiche produit ne doit pas remplacer une offre invalide par un prix de variante présenté comme une offre commerciale.
 
@@ -1081,3 +1081,14 @@ Le contexte du template utilise `promo` pour l’objet appliqué ; `promo_code` 
 Le checkout actualise son résumé par POST CSRF vers la même vue avec `X-Checkout-Update: 1`. Le formulaire de coordonnées reste dans le DOM ; les données ne sont pas copiées dans localStorage, sessionStorage ou un brouillon de session. Le fallback sans JavaScript réaffiche les champs soumis avec une action promo. Les modifications de destination, de promo ou de panier invalident immédiatement options et totaux ; une erreur réseau conserve la saisie et permet une reprise. Les prix restent calculés et revalidés côté serveur.
 
 Voir [docs/checkout-preservation-report.md](docs/checkout-preservation-report.md) pour le contrat, les fichiers modifiés, les tests exécutés et les vérifications navigateur restantes. Tests serveur : `python manage.py test checkout.test_preservation --settings=config.settings.development`. Les simulations DOM utilisent uniquement une installation temporaire de jsdom pour les tests, documentée dans ce rapport ; aucune dépendance de production ajoutée.
+
+
+## Livraison par offre et disponibilité du paiement
+
+`config.commercial.shipping_choices` fournit la grille utilisée par le formulaire, les deux devis et la commande. Le mode interne `free` signifie standard offert. Le champ existant `ProductOffer.display_delivery_label=free`, relu en base depuis les lignes validées, suffit à offrir le standard du panier mixte entier. Le tarif express configuré reste proposé au-dessus du seuil et avec une offre gratuite. Aucun prix de boutique n’a été modifié.
+
+La liste candidate `CHECKOUT_SHIPPING_COUNTRIES` (FR, BE, LU, DE, ES, IT, NL, PT par défaut) n’est proposée qu’après validation de `COMMERCIAL_INFORMATION` et de son empreinte `shipping_configuration()`. CH/GB ne sont pas activés par défaut. Les exclusions configurées par pays dans `CHECKOUT_EXCLUDED_POSTAL_PREFIXES` sont contrôlées dans les devis, le formulaire et le service de commande. Les délais ne sont affichés que s’ils sont approuvés avec `CHECKOUT_DELIVERY_CONDITIONS`. La matrice réelle n’est pas encore validée : ventes fermées, aucune destination de livraison proposée. Les tarifs actuels restent une grille commune candidate, pas une validation métier implicite.
+
+La migration `product.0009` met à jour uniquement l’aide du champ livraison, sans modifier les valeurs des offres. Revoir les offres existantes marquées gratuites avant réouverture : ce choix a désormais un effet financier. Sans configuration de paiement cohérente, l’avis « Paiement temporairement indisponible » précède les coordonnées et le bouton est désactivé, même sans JavaScript. La présence d’une configuration ne prouve pas la disponibilité distante de Stripe.
+
+Voir [docs/shipping-payment-report.md](docs/shipping-payment-report.md) pour les décisions, le diff, les commandes exécutées et les vérifications restant à faire, notamment la matrice et Stripe en préproduction.

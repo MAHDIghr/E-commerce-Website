@@ -120,3 +120,20 @@ test('Enter in the promotion field applies the code rather than submitting payme
     const event=new h.w.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true});input.dispatchEvent(event);await tick();
     assert.equal(event.defaultPrevented,true);assert.equal(action,'apply');assert.ok(h.doc.getElementById('remove'));
 });
+
+test('free standard and paid express use server totals and preserve express during refresh', async t => {
+    const h = await setup(t);
+    const options = [{method:'free',label:'Standard offert — 0,00 €',amount:'0.00',total:'39.92'},
+                     {method:'express',label:'Express — 9,90 €',amount:'9.90',total:'49.82'}];
+    h.setHandler(async () => response({...data(), options}));
+    h.changePostal('69001'); await tick(); await tick();
+    const express = h.doc.getElementById('shipping-express');
+    express.checked = true; express.dispatchEvent(new h.w.Event('change', {bubbles:true}));
+    assert.match(h.doc.getElementById('checkout-total-preview').textContent, /49,82/);
+    assert.match(h.doc.getElementById('shipping-preview').textContent, /9,90/);
+    h.changePostal('75001'); await tick(); await tick();
+    assert.equal(new URLSearchParams(h.requests.at(-1).options.body).get('shipping_method'), 'express');
+    assert.equal(h.doc.getElementById('shipping-express').checked, true);
+    assert.match(h.doc.getElementById('checkout-total-preview').textContent, /49,82/);
+    assert.equal(h.doc.getElementById('id_address_line1').value, '15 rue PRIVEE');
+});

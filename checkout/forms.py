@@ -1,13 +1,10 @@
 """Formulaire de livraison : seules les données nécessaires sont collectées."""
-from decimal import Decimal
 from django import forms
-from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
+from django.conf import settings
+from config.commercial import (COUNTRY_CHOICES, shipping_countries, shipping_choices,
+                               DESTINATION_UNAVAILABLE)
 
-COUNTRIES = [
-    ("FR", "France"), ("BE", "Belgique"), ("LU", "Luxembourg"),
-    ("DE", "Allemagne"), ("ES", "Espagne"), ("IT", "Italie"),
-    ("NL", "Pays-Bas"), ("PT", "Portugal"), ("CH", "Suisse"), ("GB", "Royaume-Uni"),
-]
+COUNTRIES = COUNTRY_CHOICES  # Pays de facturation ; la livraison utilise la liste approuvée.
 
 
 class CheckoutForm(forms.Form):
@@ -27,23 +24,22 @@ class CheckoutForm(forms.Form):
     billing_country = forms.ChoiceField(label="Pays de facturation", choices=COUNTRIES, required=False, widget=forms.Select(attrs={"autocomplete": "billing country"}))
     accept_terms = forms.BooleanField(label="J'accepte les conditions générales de vente", required=True)
 
-    def __init__(self, *args, subtotal=None, **kwargs):
+    def __init__(self, *args, subtotal=None, offer_free=False, **kwargs):
         super().__init__(*args, **kwargs)
-        standard = SHIPPING_PRICES["standard"]
-        express = SHIPPING_PRICES["express"]
-        threshold = FREE_SHIPPING_THRESHOLD
-        if subtotal is not None and Decimal(str(subtotal)) >= threshold:
-            self.fields["shipping_method"].choices = (("free", "Livraison offerte — 0,00 €"),)
-            self.fields["shipping_method"].initial = "free"
-        else:
-            self.fields["shipping_method"].choices = (
-                ("standard", f"Standard — {standard:.2f} €"),
-                ("express", f"Express — {express:.2f} €"),
-            )
-            self.fields["shipping_method"].initial = "standard"
+        self.fields["country"].choices = shipping_countries()
+        self.fields["country"].error_messages["invalid_choice"] = DESTINATION_UNAVAILABLE
+        choices = shipping_choices(subtotal, offer_free=offer_free)
+        self.fields["shipping_method"].choices = [(method, label) for method, label, amount in choices]
+        self.fields["shipping_method"].initial = choices[0][0]
 
     def clean(self):
         cleaned = super().clean()
+        if cleaned.get("country") and cleaned.get("postal_code"):
+            destination = ShippingQuoteForm(cleaned)
+            if not destination.is_valid():
+                for field, errors in destination.errors.items():
+                    for error in errors:
+                        self.add_error(field, error)
         first = " ".join(cleaned.get("first_name", "").split())
         last = " ".join(cleaned.get("last_name", "").split())
         cleaned["full_name"] = f"{first} {last}".strip()
@@ -64,3 +60,17 @@ class ShippingQuoteForm(forms.Form):
     """Seules la destination et la forme du code postal sont nécessaires au devis."""
     country = forms.ChoiceField(label="Pays", choices=COUNTRIES)
     postal_code = forms.CharField(label="Code postal", max_length=20)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["country"].choices = shipping_countries()
+        self.fields["country"].error_messages["invalid_choice"] = DESTINATION_UNAVAILABLE
+
+    def clean(self):
+        cleaned = super().clean()
+        country = cleaned.get("country")
+        postal = "".join(cleaned.get("postal_code", "").upper().split())
+        prefixes = getattr(settings, "CHECKOUT_EXCLUDED_POSTAL_PREFIXES", {}).get(country, [])
+        if postal and any(postal.startswith("".join(prefix.upper().split())) for prefix in prefixes):
+            self.add_error("postal_code", DESTINATION_UNAVAILABLE)
+        return cleaned

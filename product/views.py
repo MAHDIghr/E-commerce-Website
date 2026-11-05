@@ -174,7 +174,7 @@ def detail(request, slug):
             "old_label": _eur(old_price) if old_price else "",
             "save_label": _eur(old_price - offer_obj.price) if old_price else "",
             "off": off,
-            "ship": shipping_message(),
+            "ship": shipping_message(offer_free=offer_obj.display_delivery_label == ProductOffer.DELIVERY_FREE),
             "badge": offer_obj.get_badge_display(),
             "featured": offer_obj.is_featured,
             "includes_selected_variant": any(item.use_selected_variant for item in offer_items),

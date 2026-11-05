@@ -307,15 +307,16 @@ function buildCartItemNode(item) {
 }
 function updateShippingProgress() {
     if (!shippingFill || !shippingText) return;
-    const subtotal = Number(cartSnapshot.subtotal || 0);
+    const subtotal = Number(cartSnapshot.shipping_subtotal || 0);
     const threshold = Number(cartSnapshot.free_shipping_threshold || FREE_SHIPPING_THRESHOLD);
-    const progress = threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0;
+    const progress = cartSnapshot.free_shipping_reached ? 100 : (threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0);
     shippingFill.style.width = progress + "%";
     shippingFill.setAttribute("aria-valuemax", String(threshold));
-    shippingFill.setAttribute("aria-valuenow", String(Math.min(subtotal, threshold)));
-    shippingText.textContent = threshold > 0 && subtotal >= threshold
-        ? "Seuil atteint avant remise ; livraison confirmée à la commande."
-        : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " avant remise pour la livraison offerte";
+    shippingFill.setAttribute("aria-valuenow", String(cartSnapshot.free_shipping_reached ? threshold : Math.min(subtotal, threshold)));
+    shippingText.textContent = !commercialConfig.sales_ready ? commercialConfig.sales_unavailable
+        : cartSnapshot.free_shipping_reached
+            ? "Livraison standard offerte pour ce panier. Express payant ; destination à confirmer."
+            : "Plus que " + formatPrice(cartSnapshot.amount_to_free_shipping || 0) + " après remise pour la livraison standard offerte. Express payant.";
 }
 function renderCartDrawer() {
     if (!cartItemsContainer) return;
@@ -963,7 +964,7 @@ const welcome = commercialConfig.welcome;
 for (const [language, dict] of Object.entries(translations)) {
     const english = language === "en";
     const shippingText = commercialConfig.sales_ready
-        ? (english ? `Free shipping from ${shippingThresholdLabel} after discounts` : commercialConfig.shipping_message)
+        ? (english ? `Free standard shipping from ${shippingThresholdLabel} after discounts or with an eligible offer. Express shipping costs extra.` : commercialConfig.shipping_message)
         : commercialConfig.sales_unavailable;
     dict.trust_ship = dict.perk_ship = shippingText;
     dict.promo_1 = shippingText;

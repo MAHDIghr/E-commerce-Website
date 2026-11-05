@@ -10,7 +10,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
-from config.commercial import CURRENCY, FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES, public_information, SALES_UNAVAILABLE
+from config.commercial import CURRENCY, public_information, SALES_UNAVAILABLE, PAYMENT_UNAVAILABLE, shipping_choices
 
 from product.models import ProductVariant
 from shop.views import _cart_key_parts, _cart_state
@@ -18,7 +18,6 @@ from .models import Order, OrderLine, PaymentAttempt, PromoCode, StripeWebhookEv
 
 logger = logging.getLogger(__name__)
 CENT = Decimal("0.01")
-SHIPPING = SHIPPING_PRICES
 
 
 class CheckoutProblem(Exception):
@@ -34,9 +33,16 @@ def money(value):
 
 
 def stripe_configured():
-    return bool(os.environ.get("STRIPE_SECRET_KEY", "").strip()
+    key = os.environ.get("STRIPE_SECRET_KEY", "").strip()
+    live = os.environ.get("STRIPE_LIVE_MODE", "False").strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        base = urlparse(os.environ.get("SITE_BASE_URL", "").strip())
+    except ValueError:
+        return False
+    return bool(key.startswith("sk_live_" if live else "sk_test_")
                 and os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip()
-                and os.environ.get("SITE_BASE_URL", "").strip())
+                and base.netloc and base.scheme in ("http", "https")
+                and (settings.DEBUG or base.scheme == "https"))
 
 
 def stripe_currency():
@@ -77,14 +83,16 @@ def apply_promo_code(code, subtotal, email="", *, lock=False):
     return promo, discount
 
 
-def shipping_price(method, subtotal):
-    if subtotal >= FREE_SHIPPING_THRESHOLD:
-        if method != "free":
-            raise CheckoutProblem("La livraison est offerte pour ce montant. Rechargez le checkout puis réessayez.")
-        return Decimal("0.00")
-    if method not in SHIPPING:
-        raise CheckoutProblem("Le mode de livraison sélectionné n’est pas valide.")
-    return SHIPPING[method]
+def shipping_price(method, subtotal, *, offer_free=False):
+    for option, label, amount in shipping_choices(subtotal, offer_free=offer_free):
+        if method == option:
+            return amount
+    raise CheckoutProblem("Le mode de livraison sélectionné n’est plus disponible. Actualisez le devis.")
+
+
+def cart_has_free_shipping(lines):
+    # Les lignes viennent exclusivement de validated_cart / _line_details, jamais du POST.
+    return any(details["offer_free_shipping"] for details, quantity in lines)
 
 
 def validated_cart(request):
@@ -141,7 +149,12 @@ def create_order_and_reserve(request, form, checkout_key):
             request.session.pop("checkout_promo_code", None)
             raise
         discounted_subtotal = money(subtotal - discount)
-        shipping = shipping_price(form.cleaned_data["shipping_method"], discounted_subtotal)
+        from .forms import ShippingQuoteForm
+        destination = ShippingQuoteForm(form.cleaned_data)
+        if not destination.is_valid():
+            raise CheckoutProblem("Cette destination n’est pas prise en charge. Consultez les modalités de livraison.")
+        shipping = shipping_price(form.cleaned_data["shipping_method"], discounted_subtotal,
+                                  offer_free=cart_has_free_shipping(lines))
         total = money(discounted_subtotal + shipping)
         variant_ids = sorted(usage)
         locked = {v.pk: v for v in ProductVariant.objects.select_for_update().filter(pk__in=variant_ids).order_by("pk")}
@@ -213,16 +226,16 @@ def create_stripe_session(order, request=None):
     if not public_information()["sales_ready"]:
         raise CheckoutProblem(SALES_UNAVAILABLE)
     if not stripe_configured():
-        raise CheckoutProblem("Le paiement en ligne n’est pas configuré. Aucun paiement ne sera simulé.")
+        raise CheckoutProblem(PAYMENT_UNAVAILABLE)
     secret_key = os.environ["STRIPE_SECRET_KEY"].strip()
     live_mode = os.environ.get("STRIPE_LIVE_MODE", "False").strip().lower() in {"1", "true", "yes", "on"}
     if (live_mode and not secret_key.startswith("sk_live_")) or (not live_mode and not secret_key.startswith("sk_test_")):
-        raise CheckoutProblem("La clé Stripe ne correspond pas au mode configuré. Vérifiez la configuration hors du dépôt.")
+        raise CheckoutProblem(PAYMENT_UNAVAILABLE)
     stripe.api_key = secret_key
     base_url = os.environ["SITE_BASE_URL"].rstrip("/") + "/"
     parsed = urlparse(base_url)
     if not parsed.netloc or parsed.scheme not in ("http", "https") or (not settings.DEBUG and parsed.scheme != "https"):
-        raise CheckoutProblem("SITE_BASE_URL doit être un domaine canonique valide et utiliser HTTPS en production.")
+        raise CheckoutProblem(PAYMENT_UNAVAILABLE)
     result_path = reverse("checkout:result", kwargs={"public_id": order.public_id})
     success_url = urljoin(base_url, result_path.lstrip("/")) + "?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = urljoin(base_url, result_path.lstrip("/")) + "?cancelled=1"

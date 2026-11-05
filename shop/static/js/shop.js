@@ -18,7 +18,6 @@
     /* Données rendues par Django via json_script. */
     const catalogDataNode = document.getElementById("catalog-data");
     const commercial = JSON.parse(document.querySelector("#commercial-config").textContent);
-    const shippingThreshold = Number(commercial.free_shipping_threshold);
     const catalogData = catalogDataNode ? JSON.parse(catalogDataNode.textContent) : { products: [], categories: [], colors: {} };
     const PRODUCTS = Array.isArray(catalogData.products) ? catalogData.products : [];
     const CATEGORIES = Array.isArray(catalogData.categories) ? catalogData.categories : [];
@@ -46,9 +45,9 @@
             add: (n) => `Ajouter ${n} au panier`, wish: "Ajouter aux favoris", reviews: "avis",
             clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Stock ≤ 5",
             ra_ship: "", ra_ret: "Retours et rétractation",
-            ra_ret_s: "Consultez les modalités", ra_pay: "Paiement sécurisé", ra_pay_s: "SSL & 3D Secure",
+            ra_ret_s: "Consultez les modalités", ra_pay: "Paiement sécurisé", ra_pay_s: "Stripe Checkout",
             item: (n) => (n > 1 ? "articles" : "article"),
-            shipLeft: (r) => `Plus que ${r} avant remise pour la livraison offerte`, shipOk: "Seuil atteint avant remise ; confirmation à la commande",
+            shipInfo: "Livraison confirmée au checkout",
         },
         en: {
             bc_home: "Home", bc_shop: "Shop", title: "Our shop",
@@ -65,9 +64,9 @@
             add: (n) => `Add ${n} to cart`, wish: "Add to wishlist", reviews: "reviews",
             clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Stock ≤ 5",
             ra_ship: "", ra_ret: "Returns and withdrawal",
-            ra_ret_s: "See the conditions", ra_pay: "Secure payment", ra_pay_s: "SSL & 3D Secure",
+            ra_ret_s: "See the conditions", ra_pay: "Secure payment", ra_pay_s: "Stripe Checkout",
             item: (n) => (n > 1 ? "items" : "item"),
-            shipLeft: (r) => `${r} before discounts for free shipping`, shipOk: "Threshold reached before discounts; confirmed at checkout",
+            shipInfo: "Delivery confirmed at checkout",
         },
     };
     T.fr.ra_ship = T.en.ra_ship = commercial.shipping_message;
@@ -465,7 +464,6 @@
 
     /* ---------- Barre panier collante (mobile) ---------- */
     const bar = $("cart-bar");
-    const FREE_SHIPPING = shippingThreshold;
 
     function updateCartBar() {
         const cart = getCart();
@@ -478,7 +476,7 @@
         $("cart-bar-label").textContent = t().item(count);
         $("cart-bar-total").textContent = formatPrice(total);
         $("cart-bar-ship").textContent = commercial.sales_ready
-            ? (total >= FREE_SHIPPING ? t().shipOk : t().shipLeft(formatPrice(FREE_SHIPPING - total)))
+            ? t().shipInfo
             : commercial.sales_unavailable;
     }
     bar.querySelector("button").addEventListener("click", openCart);

@@ -60,7 +60,7 @@ class CheckoutPreservationTests(TestCase):
             self.assertNotIn(private, str(data))
             self.assertNotIn(private, str(dict(self.client.session)))
         data = self.update({"country": "FR", "postal_code": "75001", "promo_action": "remove"}).json()
-        self.assertEqual([option["total"] for option in data["options"]], ["89.90"])
+        self.assertEqual([option["total"] for option in data["options"]], ["89.90", "99.80"])
         self.assertNotIn('value="remove"', data["summary_html"])
 
     def test_async_quotes_require_destination_not_identity(self):
@@ -131,7 +131,7 @@ class CheckoutPreservationTests(TestCase):
         self.add_to_cart()
         with patch("checkout.views.create_order_and_reserve") as create:
             data = self.update().json()
-            self.assertTrue(data["quote_valid"])
+            self.assertFalse(data["quote_valid"])
             self.assertFalse(data["can_pay"])
             self.client.post(reverse("checkout:checkout"), {**self.address(), "billing_same_as_shipping": "on"})
             create.assert_not_called()
