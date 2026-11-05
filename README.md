@@ -1106,3 +1106,11 @@ Les anciens styles de réassurance à 6–9 px ont été supprimés. Le bloc com
 Le catalogue rend ses cartes avec `shop/_product_card.html` dès la réponse Django. Les filtres `q`, `cat`, `color`, `min`, `max`, `sale`, `low` et `sort` utilisent un formulaire GET ; `page` navigue par huit produits. Les prix d’offre, variantes publiques et tris sont sélectionnés en base avant pagination. Les paramètres supplémentaires sont conservés dans le formulaire et les liens de page. Le JSON de compatibilité se limite à la page courante ; le navigateur ne reconstruit plus la grille.
 
 Les favoris et l’ajout rapide sont activés seulement lorsque leurs gestionnaires JavaScript sont disponibles. Les liens de fiche restent utilisables ; sans JavaScript la fiche indique explicitement que l’ajout au panier et le paiement nécessitent son activation. Les `.reveal` de l’accueil sont visibles par défaut et ne dépendent plus d’un observateur pour apparaître. Voir [docs/catalog-no-js-report.md](docs/catalog-no-js-report.md).
+
+## Navigation et merchandising — lot 8
+
+Le CTA principal du hero mène au catalogue ; « En savoir plus » garde sa destination de marque. Le carrousel Signature affiche l’image et l’alt dédiés de `SignatureSelection`, sans les remplacer par une variante produit. Les cartes catalogue/favoris présentent le nom de catégorie administré avec repli lisible.
+
+La page `/boutique/favoris/`, accessible dans la navigation, relit `wishlist_v1` sur ce navigateur et résout huit produits publiés à la fois par la route GET de favoris. Elle conserve les favoris indisponibles avec possibilité de retrait, ne supprime rien sur panne réseau et ne crée aucun profil serveur. Les données locales se limitent aux identifiants produit. Sans JavaScript, un message renvoie au catalogue.
+
+Les sections produit sans données sont masquées ; matière et description ne s’affichent que si elles sont renseignées. Les titres sont neutres pour convenir aux accessoires. « Acheter maintenant » et « Ajouter au panier » sont explicitement libellés, la barre mobile conservant la même action d’achat. Voir [docs/navigation-merchandising-report.md](docs/navigation-merchandising-report.md) pour le contrat, les fichiers, les tests et la recette restante.

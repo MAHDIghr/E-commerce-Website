@@ -261,3 +261,5 @@ body.page-product .site-footer{padding-bottom:4.5rem}
     .sbar .button { max-width: 100%; }
     .buy__actions .cta { white-space: normal; }
 }
+/* Deux actions d'achat lisibles, sans réduire l'ajout au panier à une icône. */
+@media (max-width: 600px) { .buy__actions { flex-wrap: wrap; } .buy__actions .cta { flex-basis: 100%; } }

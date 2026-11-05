@@ -16,6 +16,7 @@
             <a href="{% url 'shop:catalog' %}" data-i18n="nav_bags">Sacs</a>
             {% if catalog_accessories_category %}<a href="{% url 'shop:catalog' %}?cat={{ catalog_accessories_category.slug|urlencode }}" data-i18n="nav_accessories">Accessoires</a>{% else %}<a href="{% url 'shop:catalog' %}" data-i18n="nav_accessories">Accessoires</a>{% endif %}
             {% if catalog_collection_category %}<a href="{% url 'shop:catalog' %}?cat={{ catalog_collection_category.slug|urlencode }}" data-i18n="nav_collections">Collection</a>{% else %}<a href="{% url 'shop:catalog' %}" data-i18n="nav_collections">Collection</a>{% endif %}
+            <a href="{% url 'shop:favorites' %}">Mes favoris</a>
             <a href="{% url 'pages:about' %}" data-i18n="nav_about">À propos</a>
         </nav>
 

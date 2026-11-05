@@ -77,6 +77,7 @@ def product_card_data(queryset):
             "variantName": variant.color_name,
             "name": product.display_name_for(variant),
             "cat": product.category.slug,
+            "category_label": product.category.name or product.category.slug.replace("-", " ").capitalize(),
             "price": float(offer.price),
             # Prix de référence : affichage uniquement s'il est renseigné et vérifié.
             "old": (

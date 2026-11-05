@@ -693,3 +693,24 @@ def cart_mutation(request):
     request.session.pop("checkout_attempt_key", None)
     request.session.modified = True
     return JsonResponse(_cart_payload(request))
+
+
+@require_GET
+def favorites(request):
+    """Résout une page de favoris locaux ; aucun profil ou favori enregistré côté serveur."""
+    if request.GET.get("format") != "cards":
+        return render(request, "shop/favorites.html")
+    from django.template.loader import render_to_string
+    slugs = list(dict.fromkeys(slug for slug in request.GET.getlist("slug") if len(slug) <= 200))[:8]
+    products = published_products().filter(slug__in=slugs).select_related("category").prefetch_related(
+        Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
+        Prefetch("media_items", queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk")),
+        Prefetch("reviews", queryset=Review.objects.filter(is_approved=True)),
+        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
+    )
+    cards = product_card_data(products)
+    cards.sort(key=lambda card: slugs.index(card["id"]))
+    html = "".join(render_to_string("shop/_product_card.html", {"card": card}, request=request) for card in cards)
+    response = JsonResponse({"html": html, "found": [card["id"] for card in cards]})
+    response["Cache-Control"] = "private, no-store"
+    return response

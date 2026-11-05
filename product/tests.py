@@ -142,8 +142,8 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'name="color"')
         self.assertContains(response, 'name="offer"')
         self.assertContains(response, 'class="button button-primary button-block cta js-buy"')
-        self.assertContains(response, 'class="button button-secondary cta-icon js-add"')
-        self.assertContains(response, 'id="cta-final">Acheter</button>')
+        self.assertContains(response, 'class="button button-secondary cta js-add"')
+        self.assertContains(response, 'id="cta-final">Acheter maintenant</button>')
         self.assertContains(response, 'class="button button-primary js-buy"')
 
         # Régression : querySelector renvoyait un seul élément et cassait les CTA au chargement.
