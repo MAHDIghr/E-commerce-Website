@@ -1128,3 +1128,9 @@ Les entrées WSGI/ASGI choisissent production par défaut ; le local doit demand
 ## Suivi et rétractation — lot 12 partiel
 
 Une rétractation ne dépend plus d'une justification détaillée. L'accusé durable précise déclaration, références, date et articles ; les messages utilisent de vrais sauts de ligne. Le suivi repose encore sur l'UUID public comme secret de capacité : la séparation en jeton invité révocable et la transition des anciens liens restent à implémenter. Voir [docs/tracking-withdrawal-report.md](docs/tracking-withdrawal-report.md). Aucune validation juridique annoncée.
+
+## Recette avant lancement — lot 13
+
+Verdict **NO-GO** : voir [docs/prelaunch-qa-report.md](docs/prelaunch-qa-report.md). La suite actuelle de 225 tests serveur passe ; le lancement navigateur échoue faute de Chromium. Aucune capture, session Stripe test réelle ou mesure Lighthouse/CWV n'est validée.
+
+La CI conserve les tests/migrations et propose un job navigateur manuel via workflow_dispatch/browser_qa. Le harnais `python manage.py test qa.browser_runner --settings=config.settings.development` utilise uniquement le serveur local et des fixtures de test ; il ne crée aucune session Stripe. Les preuves éventuelles sont conservées en artifact, sans déploiement. Les scénarios et blocs non exécutés restent explicitement ouverts.
