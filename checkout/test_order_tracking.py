@@ -131,3 +131,14 @@ class PublicOrderTrackingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Référence introuvable")
         self.assertNotContains(response, "Client Privé")
+
+    def test_withdrawal_requires_no_justification_and_duplicate_quantities_are_rejected(self):
+        url = reverse('checkout:return_request', args=[self.order.public_id])
+        data = {'reason_category':'withdrawal', f'line_{self.line.pk}':'1'}
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code,302)
+        declaration = ReturnRequest.objects.get(order=self.order)
+        self.assertIn('rétractation',declaration.reason)
+        response = self.client.post(url,data)
+        self.assertEqual(response.status_code,400)
+        self.assertEqual(ReturnRequest.objects.filter(order=self.order).count(),1)

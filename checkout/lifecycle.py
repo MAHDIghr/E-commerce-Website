@@ -143,7 +143,7 @@ def transition_order_commercial_status(order_id, new_status, *, actor=None, reas
         _queue_order_email(
             order, f"commercial_status_{new_status}",
             f"Mise à jour de votre commande {str(order.public_id)[:8]}",
-            f"Bonjour {order.full_name},\\n\\nL'état de votre commande est désormais : {order.get_commercial_status_display()}.\\nRéférence : {order.public_id}\\n{reason}\\n\\nMy Line Collection",
+            f"Bonjour {order.full_name},\n\nL'état de votre commande est désormais : {order.get_commercial_status_display()}.\nRéférence : {order.public_id}\n{reason}\n\nMy Line Collection",
         )
     return order
 
@@ -377,8 +377,10 @@ def create_return_request(order_id, *, reason_category, reason, lines, customer=
         raise LifecycleProblem("Le motif de retour n'est pas valide.")
     reason = (reason or "").strip()
     customer_note = (customer_note or "").strip()
-    if not reason:
-        raise LifecycleProblem("Le motif détaillé est obligatoire.")
+    if not reason and reason_category != "withdrawal":
+        raise LifecycleProblem("Le motif détaillé est obligatoire pour cette demande.")
+    if reason_category == "withdrawal" and not reason:
+        reason = "Je déclare exercer mon droit de rétractation pour les articles sélectionnés."
     if len(reason) > 2000:
         raise LifecycleProblem("Le motif détaillé ne peut pas dépasser 2 000 caractères.")
     if len(customer_note) > 2000:
@@ -415,10 +417,18 @@ def create_return_request(order_id, *, reason_category, reason, lines, customer=
     record_order_event(order, "return_requested", source=source,
                        actor=customer, metadata={"return_id": str(request.public_id)})
     from .services import _queue_order_email
+    from django.urls import reverse
+    import os
+    base_url = os.environ.get("SITE_BASE_URL", "").rstrip("/")
+    tracking_link = base_url + reverse("checkout:tracking", args=[order.public_id]) if base_url.startswith("https://") else ""
+    selected = "\n".join(f"- {line.order_line.product_name} : {line.quantity}" for line in request.lines.select_related("order_line"))
     _queue_order_email(
         order, f"return_requested_{request.public_id}",
-        f"Demande de retour reçue pour la commande {str(order.public_id)[:8]}",
-        f"Bonjour {order.full_name},\n\nNous avons reçu votre demande de retour. Elle sera examinée séparément de l'état de votre commande.\nRéférence de commande : {order.public_id}\nRéférence de demande : {request.public_id}\n\nMy Line Collection",
+        f"Demande reçue pour la commande {str(order.public_id)[:8]}",
+        f"Bonjour {order.full_name},\n\nVotre déclaration a été reçue. Cela ne signifie pas qu’un remboursement a été effectué.\n"
+        f"Commande : {order.public_id}\nDemande : {request.public_id}\nDate : {request.requested_at.isoformat()}\n"
+        f"Type : {request.get_reason_category_display()}\nDéclaration : {reason}\n{selected}\n"
+        f"Information complémentaire : {customer_note}\nSuivi : {tracking_link}\n\nMy Line Collection",
     )
     return request
 
@@ -558,7 +568,7 @@ def request_refund(order_id, *, amount, reason, actor=None, return_request=None,
             _queue_order_email(
                 order, f"refund_confirmed_{refund.pk}",
                 f"Remboursement confirmé pour la commande {str(order.public_id)[:8]}",
-                f"Bonjour {order.full_name},\\n\\nStripe a confirmé un remboursement de {refund.amount} {refund.currency.upper()}.\\nRéférence de commande : {order.public_id}\\n\\nMy Line Collection",
+                f"Bonjour {order.full_name},\n\nStripe a confirmé un remboursement de {refund.amount} {refund.currency.upper()}.\nRéférence de commande : {order.public_id}\n\nMy Line Collection",
             )
     return refund
 

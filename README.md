@@ -1124,3 +1124,7 @@ Le partage des fiches utilise leur titre, description, image réelle absolue et 
 ## Points d'entrée et protections — lot 11 partiel
 
 Les entrées WSGI/ASGI choisissent production par défaut ; le local doit demander development explicitement. La production requiert un cache partagé et son driver fourni par l'hébergeur. Quotas et en-têtes sont documentés dans [docs/entry-security-report.md](docs/entry-security-report.md). L'expiration autonome des réservations reste à implémenter ; aucune sécurité de production n'est annoncée sans validation du cache, de la base, du proxy et du CDN.
+
+## Suivi et rétractation — lot 12 partiel
+
+Une rétractation ne dépend plus d'une justification détaillée. L'accusé durable précise déclaration, références, date et articles ; les messages utilisent de vrais sauts de ligne. Le suivi repose encore sur l'UUID public comme secret de capacité : la séparation en jeton invité révocable et la transition des anciens liens restent à implémenter. Voir [docs/tracking-withdrawal-report.md](docs/tracking-withdrawal-report.md). Aucune validation juridique annoncée.
