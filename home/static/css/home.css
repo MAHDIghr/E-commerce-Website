@@ -688,7 +688,7 @@
     transform: translateX(-50%); width: max-content; max-width: 170%;
     display: flex; flex-direction: column; align-items: center;
     gap: .2rem; padding: .25rem .5rem;
-    border-radius: var(--radius-sm); background: var(--color-surface);
+    border-radius: var(--radius-sm); background: transparent;
     color: var(--color-ink); text-align: center;
     font-size: clamp(.75rem, 1.5vw, 1rem);
 }
@@ -1311,3 +1311,27 @@ body.community-modal-open { overflow: hidden; }
 
 /* Animation facultative : ne masque jamais le contenu, même si le script échoue. */
 .reveal.reveal-ready { transition: transform 800ms ease; }
+
+/* Bandeau d'accueil compact : palette champagne/cuivre, conditions conservées. */
+.promo-bar {
+    --promo-height: 38px;
+    background: linear-gradient(110deg, #ead5b6, #fbf0dc 48%, #dfbc8d);
+    color: #382619;
+    border-bottom: 1px solid #cba674;
+    box-shadow: inset 0 1px 0 #ffffff80;
+}
+.promo-bar__item { font-size: .875rem; letter-spacing: .015em; padding-inline: 1.4rem; opacity: 1; }
+.promo-bar__item[data-i18n="promo_2"] {
+    padding: .2rem .85rem; margin-inline: .65rem;
+    border: 1px solid #b88b53; border-radius: 999px;
+    background: #fff8e9; color: #57371e; font-weight: 600;
+}
+@media (max-width: 600px) {
+    .promo-bar__item { padding-inline: 1rem; }
+    .promo-bar__track { animation-duration: 48s; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .promo-bar__track { position: static; height: 100%; width: 100%; overflow-x: auto; animation: none; }
+    .promo-bar__group { min-height: 100%; }
+    .promo-bar__group[aria-hidden="true"] { display: none; }
+}
