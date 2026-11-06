@@ -98,11 +98,10 @@
       </fieldset>
 
       <div class="buy__actions" aria-label="Actions d'achat">
-        <noscript><p>Vous pouvez consulter cette fiche sans JavaScript. Pour ajouter une offre au panier et poursuivre le paiement, activez JavaScript puis rechargez cette page.</p><style>.js-buy,.js-add{display:none!important}</style></noscript>
-        <button type="button" class="button button-primary button-block cta js-buy" id="cta">Acheter maintenant</button>
-        <button type="button" class="button button-secondary cta js-add" id="cta-add" aria-label="Ajouter au panier" title="Ajouter au panier">
+        <button type="button" class="button button-primary button-block cta js-buy" id="cta">Acheter</button>
+        <button type="button" class="button button-secondary cta-icon js-add" id="cta-add" aria-label="Ajouter au panier" title="Ajouter au panier">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>
-          <span>Ajouter au panier</span>
+          <span class="visually-hidden">Ajouter au panier</span>
         </button>
       </div>
       {% include "partials/_commercial_information.html" %}
@@ -110,44 +109,41 @@
   </div>
 </div>
 
-{% if product.benefits %}<section class="p-sec p-sec--alt"><div class="p-wrap">
-  <h2 class="p-rv">Pourquoi choisir ce produit</h2>
+<section class="p-sec p-sec--alt"><div class="p-wrap">
+  <h2 class="p-rv">Pourquoi ce sac</h2>
   <ul class="grid grid--4">
     {% for b in product.benefits %}<li class="tile p-rv"><h3>{{ b.t }}</h3><p>{{ b.d }}</p></li>{% endfor %}
   </ul>
-</div></section>{% endif %}
+</div></section>
 
-{% if product.material or product.description %}<section class="p-sec"><div class="p-wrap"><h2>À propos du produit</h2>{% if product.material %}<p>Matière : {{ product.material }}</p>{% endif %}{% if product.description %}{{ product.description|linebreaks }}{% endif %}</div></section>{% endif %}
-{% if product.fits or product.has_dimensions %}<section class="p-sec"><div class="p-wrap">
-  <h2 class="p-rv">Contenu et dimensions</h2>
-  {% if product.fits %}<ul class="fits p-rv">
+<section class="p-sec"><div class="p-wrap">
+  <h2 class="p-rv">Ce qui rentre dedans</h2>
+  <ul class="fits p-rv">
     {% for name, ok in product.fits %}<li class="{% if ok %}is-ok{% else %}is-no{% endif %}">{{ name }}<span class="visually-hidden">{% if ok %} : rentre{% else %} : ne rentre pas{% endif %}</span></li>{% endfor %}
   </ul>
-  {% endif %}{% if product.has_dimensions %}<div class="dim p-rv">
-    {% if product.dims.w and product.dims.h %}<div class="dim__box" style="aspect-ratio: {{ product.dims.w }} / {{ product.dims.h }}"><span class="dim__w">{{ product.dims.w }} cm</span><span class="dim__h">{{ product.dims.h }} cm</span></div>{% endif %}
+  <div class="dim p-rv">
+    <div class="dim__box"{% if product.dims.w and product.dims.h %} style="aspect-ratio: {{ product.dims.w }} / {{ product.dims.h }}"{% endif %}><span class="dim__w">{% if product.dims.w %}{{ product.dims.w }} cm{% else %}—{% endif %}</span><span class="dim__h">{% if product.dims.h %}{{ product.dims.h }} cm{% else %}—{% endif %}</span></div>
     <dl>
-      {% if product.dims.w %}<div><dt>Largeur</dt><dd>{{ product.dims.w }} cm</dd></div>{% endif %}
-      {% if product.dims.h %}<div><dt>Hauteur</dt><dd>{{ product.dims.h }} cm</dd></div>{% endif %}
-      {% if product.dims.d %}<div><dt>Profondeur</dt><dd>{{ product.dims.d }} cm</dd></div>{% endif %}
-      {% if product.dims.weight != '—' %}<div><dt>Poids</dt><dd>{{ product.dims.weight }}</dd></div>{% endif %}
-      {% if product.dims.volume != '—' %}<div><dt>Capacité</dt><dd>{{ product.dims.volume }}</dd></div>{% endif %}
+      <div><dt>Largeur</dt><dd>{% if product.dims.w %}{{ product.dims.w }} cm{% else %}—{% endif %}</dd></div><div><dt>Hauteur</dt><dd>{% if product.dims.h %}{{ product.dims.h }} cm{% else %}—{% endif %}</dd></div>
+      <div><dt>Profondeur</dt><dd>{% if product.dims.d %}{{ product.dims.d }} cm{% else %}—{% endif %}</dd></div><div><dt>Poids</dt><dd>{{ product.dims.weight }}</dd></div>
+      <div><dt>Capacité</dt><dd>{{ product.dims.volume }}</dd></div>
     </dl>
-  </div>{% endif %}
-</div></section>{% endif %}
+  </div>
+</div></section>
 
-{% if product.craft %}<section class="p-sec p-sec--alt"><div class="p-wrap">
+<section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Les détails de fabrication</h2>
   <ul class="strip craft-strip" tabindex="0" aria-label="Détails de fabrication — faites glisser horizontalement pour parcourir les cartes">
     {% for c in product.craft %}<li class="craft-strip__card">{% if c.img %}<img src="{{ c.img }}" alt="{{ c.alt|default:c.t }}" width="600" height="750" loading="lazy" decoding="async">{% endif %}<div class="craft-strip__copy"><h3>{{ c.t }}</h3><p>{{ c.d }}</p></div></li>{% endfor %}
   </ul>
-</div></section>{% endif %}
+</div></section>
 
-{% if product.lifestyle %}<section class="p-sec"><div class="p-wrap">
-  <h2 class="p-rv">{{ product.usage_section_title|default:"Usages du produit" }}</h2>
-  <ul class="strip" tabindex="0" aria-label="Usages du produit — faites glisser horizontalement pour parcourir les images">
+<section class="p-sec"><div class="p-wrap">
+  <h2 class="p-rv">{{ product.usage_section_title|default:"Un sac, cinq journées" }}</h2>
+  <ul class="strip" tabindex="0" aria-label="Les cinq journées — faites glisser horizontalement pour parcourir les images">
     {% for item in product.lifestyle %}<li><img src="{{ item.img }}" alt="{{ item.alt|default:item.title }}" width="500" height="625" loading="lazy" decoding="async"><span>{{ item.title }}</span></li>{% endfor %}
   </ul>
-</div></section>{% endif %}
+</div></section>
 
 <section class="p-sec p-sec--alt" id="avis"><div class="p-wrap">
   <h2 class="p-rv">Avis clients</h2>
@@ -170,10 +166,10 @@
   </aside>
 </div></section>
 
-{% if product.faq %}<section class="p-sec"><div class="p-wrap p-wrap--narrow">
+<section class="p-sec"><div class="p-wrap p-wrap--narrow">
   <h2 class="p-rv">Questions fréquentes</h2>
   {% for q, a in product.faq %}<details class="faq" name="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
-</div></section>{% endif %}
+</div></section>
 
 {% if product.related %}<section class="p-sec p-sec--alt"><div class="p-wrap">
   <h2 class="p-rv">Vous aimerez aussi</h2>
@@ -185,14 +181,14 @@
 <section class="final"><div class="p-wrap">
   <h2>Prêt à l'adopter ?</h2>
   <p><a href="{% url 'pages:returns' %}">Consulter les modalités de retour et de rétractation</a></p>
-  <button type="button" class="button button-primary js-buy" id="cta-final">Acheter maintenant</button>
+  <button type="button" class="button button-primary js-buy" id="cta-final">Acheter</button>
 </div></section>
 {% endblock %}
 
 {% block after_main %}
 <div class="sbar" id="sbar" aria-label="Achat rapide" inert>
   <p><strong id="sbar-price">{{ product.selected.price_label }}</strong><span id="sbar-offer">{{ product.selected.title }}</span></p>
-  <button type="button" class="button button-primary js-buy">Acheter maintenant</button>
+  <button type="button" class="button button-primary js-buy">Acheter</button>
 </div>
 <dialog class="lb" id="lb" aria-label="Galerie en plein écran">
   <p class="lb__n"></p>

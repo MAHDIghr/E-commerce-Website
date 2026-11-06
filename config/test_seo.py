@@ -37,7 +37,7 @@ class SeoTests(TestCase):
         self.assertIn('noindex',response['X-Robots-Tag'])
 
     def test_private_pages_noindex_are_not_blocked_before_crawl(self):
-        response=self.client.get(reverse('shop:favorites'))
+        response=self.client.get(reverse('shop:cart_page'))
         self.assertIn('noindex',response['X-Robots-Tag'])
         robots=self.client.get('/robots.txt').content.decode()
         self.assertNotIn('Disallow: /boutique/',robots)

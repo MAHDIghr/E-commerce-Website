@@ -4,10 +4,9 @@ Le navigateur ne fournit que des identifiants et des quantités. Prix, variantes
 offres, publication et disponibilité sont toujours vérifiés côté serveur.
 """
 import json
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
-from django.db.models import Q, Prefetch, F
-from django.core.paginator import Paginator
+from django.db.models import Q, Prefetch
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -16,7 +15,7 @@ from django.views.decorators.http import require_GET, require_POST
 from product.models import (
     Category, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant, Review,
 )
-from product.selectors import product_card_data, published_products, catalog_queryset, catalog_color_variants
+from product.selectors import product_card_data, published_products
 from config.commercial import FREE_SHIPPING_THRESHOLD, shipping_message
 
 
@@ -56,48 +55,25 @@ def catalog(request):
         Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
     ).order_by("-published_at", "-created_at", "name")
 
-    products = catalog_queryset(products)
-    cats = [part for value in request.GET.getlist("cat") for part in value.split(",") if part]
-    colors = [part for value in request.GET.getlist("color") for part in value.split(",") if part]
-    if cats:
-        products = products.filter(category__slug__in=cats)
-    if colors:
-        products = products.filter(variants__in=catalog_color_variants().filter(color_slug__in=colors))
-    def amount(name):
-        try:
-            value = Decimal(request.GET.get(name, ""))
-            return value if value.is_finite() and 0 <= value <= Decimal("9999999999") else None
-        except InvalidOperation:
-            return None
-    minimum, maximum = amount("min"), amount("max")
-    if minimum is not None:
-        products = products.filter(card_price__gte=minimum)
-    if maximum is not None:
-        products = products.filter(card_price__lte=maximum)
-    if request.GET.get("sale") == "1":
-        products = products.filter(card_reference__gt=F("card_price"), card_badge="essential")
-    if request.GET.get("low") == "1":
-        products = products.filter(card_stock__gte=1, card_stock__lte=5)
-    sort = request.GET.get("sort", "pop")
-    ordering = {"pop": ("-published_at", "-created_at", "pk"), "new": ("-is_new", "-published_at", "pk"),
-                "asc": ("card_price", "pk"), "desc": ("-card_price", "pk"), "best": ("-card_rating", "pk")}
-    if sort not in ordering:
-        sort = "pop"
-    page = Paginator(products.order_by(*ordering[sort]).distinct(), 8).get_page(request.GET.get("page"))
-    cards = product_card_data(page.object_list)
-    color_options = catalog_color_variants().exclude(color_slug="").values("color_slug", "color_name").distinct().order_by("color_slug")
-    def page_url(number):
-        params = request.GET.copy(); params["page"] = number
-        return "?" + params.urlencode()
+    color_map = {}
+    for product in products:
+        for variant in product.public_variants:
+            if variant.color_slug and variant.color_code:
+                color_map.setdefault(
+                    variant.color_slug,
+                    {"hex": variant.color_code, "name": variant.color_name or variant.color_slug},
+                )
+
+    catalog_data = {
+        "products": product_card_data(products),
+        "categories": [{"slug": category.slug, "name": category.name} for category in categories],
+        "colors": color_map,
+        "query": query,
+    }
     return render(request, "catalog.html", {
-        "categories": categories, "cards": cards, "catalog_data": {"products": cards},
-        "search_query": query, "page_obj": page, "selected_cats": cats, "selected_colors": colors,
-        "color_options": color_options, "minimum": minimum, "maximum": maximum, "sort": sort,
-        "sale": request.GET.get("sale") == "1", "low": request.GET.get("low") == "1",
-        "preserved_params": [(key, value) for key in request.GET for value in request.GET.getlist(key)
-                             if key not in {"q", "cat", "color", "min", "max", "sale", "low", "sort", "page"}],
-        "previous_url": page_url(page.previous_page_number()) if page.has_previous() else "",
-        "next_url": page_url(page.next_page_number()) if page.has_next() else "",
+        "categories": categories,
+        "catalog_data": catalog_data,
+        "search_query": query,
     })
 
 
@@ -693,24 +669,3 @@ def cart_mutation(request):
     request.session.pop("checkout_attempt_key", None)
     request.session.modified = True
     return JsonResponse(_cart_payload(request))
-
-
-@require_GET
-def favorites(request):
-    """Résout une page de favoris locaux ; aucun profil ou favori enregistré côté serveur."""
-    if request.GET.get("format") != "cards":
-        return render(request, "shop/favorites.html")
-    from django.template.loader import render_to_string
-    slugs = list(dict.fromkeys(slug for slug in request.GET.getlist("slug") if len(slug) <= 200))[:8]
-    products = published_products().filter(slug__in=slugs).select_related("category").prefetch_related(
-        Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("position", "pk")),
-        Prefetch("media_items", queryset=ProductMedia.objects.order_by("-is_primary", "position", "pk")),
-        Prefetch("reviews", queryset=Review.objects.filter(is_approved=True)),
-        Prefetch("offers", queryset=ProductOffer.objects.filter(is_active=True).prefetch_related("items")),
-    )
-    cards = product_card_data(products)
-    cards.sort(key=lambda card: slugs.index(card["id"]))
-    html = "".join(render_to_string("shop/_product_card.html", {"card": card}, request=request) for card in cards)
-    response = JsonResponse({"html": html, "found": [card["id"] for card in cards]})
-    response["Cache-Control"] = "private, no-store"
-    return response

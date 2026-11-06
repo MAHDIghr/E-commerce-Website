@@ -77,7 +77,6 @@ def product_card_data(queryset):
             "variantName": variant.color_name,
             "name": product.display_name_for(variant),
             "cat": product.category.slug,
-            "category_label": product.category.name or product.category.slug.replace("-", " ").capitalize(),
             "price": float(offer.price),
             # Prix de référence : affichage uniquement s'il est renseigné et vérifié.
             "old": (
@@ -97,38 +96,3 @@ def product_card_data(queryset):
             "img": variant.image_src or ((media.image.url if media and media.image else media.source_url) if media else ""),
         })
     return products
-
-
-def catalog_queryset(queryset):
-    """Champs de tri/filtre correspondant à l'offre et à la variante des cartes."""
-    from django.db.models import OuterRef, Subquery, Case, When, Value, IntegerField, Count, Avg
-    from .models import ProductOffer, ProductVariant
-    offers = ProductOffer.objects.filter(product_id=OuterRef("pk"), is_active=True).annotate(
-        main_count=Count("items", filter=Q(items__use_selected_variant=True)),
-        priority=Case(When(badge="essential", then=Value(0)), When(is_featured=True, then=Value(1)), default=Value(2), output_field=IntegerField()),
-    ).filter(main_count=1, items__use_selected_variant=True, items__product_id=F("product_id"),
-             items__variant__isnull=True, items__quantity__gt=0).order_by("priority", "position", "pk")
-    variants = ProductVariant.objects.filter(product_id=OuterRef("pk"), is_active=True).annotate(
-        illustrated=Case(When(Q(image__gt="") | Q(image_url__gt=""), then=Value(0)), default=Value(1), output_field=IntegerField()),
-        sold_out=Case(When(stock_quantity__gt=0, then=Value(0)), default=Value(1), output_field=IntegerField()),
-    ).order_by("illustrated", "sold_out", "position", "pk")
-    return queryset.annotate(
-        card_price=Subquery(offers.values("price")[:1]),
-        card_reference=Subquery(offers.values("reference_price")[:1]),
-        card_badge=Subquery(offers.values("badge")[:1]),
-        card_variant=Subquery(variants.values("pk")[:1]),
-        card_stock=Subquery(variants.values("stock_quantity")[:1]),
-        card_rating=Avg("reviews__rating", filter=Q(reviews__is_approved=True)),
-    ).filter(card_price__isnull=False)
-
-
-def catalog_color_variants():
-    """Même ensemble public de couleurs que Product.public_variants, sans charger le catalogue."""
-    from django.db.models import OuterRef, Subquery, Exists, Case, When, Value, IntegerField
-    from .models import ProductVariant
-    siblings = ProductVariant.objects.filter(product_id=OuterRef("product_id"), is_active=True)
-    first = siblings.annotate(sold_out=Case(When(stock_quantity__gt=0, then=Value(0)), default=Value(1), output_field=IntegerField())).order_by("sold_out", "position", "pk")
-    return ProductVariant.objects.filter(is_active=True, product__in=published_products()).annotate(
-        has_illustrated=Exists(siblings.filter(Q(image__gt="") | Q(image_url__gt=""))),
-        fallback_pk=Subquery(first.values("pk")[:1]),
-    ).filter(Q(image__gt="") | Q(image_url__gt="") | Q(has_illustrated=False, pk=F("fallback_pk")))

@@ -1093,27 +1093,11 @@ La migration `product.0009` met à jour uniquement l’aide du champ livraison, 
 
 Voir [docs/shipping-payment-report.md](docs/shipping-payment-report.md) pour les décisions, le diff, les commandes exécutées et les vérifications restant à faire, notamment la matrice et Stripe en préproduction.
 
-## Lisibilité mobile — lot 5
-
-Les anciens styles de réassurance à 6–9 px ont été supprimés. Le bloc commercial partagé reste à 1 rem ; les informations utiles des offres et du checkout utilisent au moins .875 rem sur téléphone. L’en-tête conserve langue, recherche, panier et menu sur deux rangées sous 600 px. Les barres d’achat produit/catalogue passent dans le flux sous 600 px pour ne pas couvrir le formulaire avec le clavier. Voir [docs/mobile-readability-report.md](docs/mobile-readability-report.md) pour les contrôles exécutés et la recette visuelle restante.
 
 ## Clavier et surcouches — lot 6
 
 `static/js/overlays.js`, chargé avant les scripts de page, gère une seule modale personnalisée active : confinement du focus, Échap, arrière-plan inert et restauration du déclencheur. Recherche, panier, filtres mobiles, bienvenue et communauté l’utilisent. Les dialogs natifs de choix d’offre et lightbox conservent leur fonctionnement. La bienvenue s’ouvre désormais uniquement sur demande explicite et son lien mène au catalogue. Le menu reste une navigation non modale. Voir [docs/keyboard-overlays-report.md](docs/keyboard-overlays-report.md).
 
-## Catalogue utilisable sans JavaScript — lot 7
-
-Le catalogue rend ses cartes avec `shop/_product_card.html` dès la réponse Django. Les filtres `q`, `cat`, `color`, `min`, `max`, `sale`, `low` et `sort` utilisent un formulaire GET ; `page` navigue par huit produits. Les prix d’offre, variantes publiques et tris sont sélectionnés en base avant pagination. Les paramètres supplémentaires sont conservés dans le formulaire et les liens de page. Le JSON de compatibilité se limite à la page courante ; le navigateur ne reconstruit plus la grille.
-
-Les favoris et l’ajout rapide sont activés seulement lorsque leurs gestionnaires JavaScript sont disponibles. Les liens de fiche restent utilisables ; sans JavaScript la fiche indique explicitement que l’ajout au panier et le paiement nécessitent son activation. Les `.reveal` de l’accueil sont visibles par défaut et ne dépendent plus d’un observateur pour apparaître. Voir [docs/catalog-no-js-report.md](docs/catalog-no-js-report.md).
-
-## Navigation et merchandising — lot 8
-
-Le CTA principal du hero mène au catalogue ; « En savoir plus » garde sa destination de marque. Le carrousel Signature affiche l’image et l’alt dédiés de `SignatureSelection`, sans les remplacer par une variante produit. Les cartes catalogue/favoris présentent le nom de catégorie administré avec repli lisible.
-
-La page `/boutique/favoris/`, accessible dans la navigation, relit `wishlist_v1` sur ce navigateur et résout huit produits publiés à la fois par la route GET de favoris. Elle conserve les favoris indisponibles avec possibilité de retrait, ne supprime rien sur panne réseau et ne crée aucun profil serveur. Les données locales se limitent aux identifiants produit. Sans JavaScript, un message renvoie au catalogue.
-
-Les sections produit sans données sont masquées ; matière et description ne s’affichent que si elles sont renseignées. Les titres sont neutres pour convenir aux accessoires. « Acheter maintenant » et « Ajouter au panier » sont explicitement libellés, la barre mobile conservant la même action d’achat. Voir [docs/navigation-merchandising-report.md](docs/navigation-merchandising-report.md) pour le contrat, les fichiers, les tests et la recette restante.
 
 ## Langue, SEO et partage — lot 10 (livraison partielle)
 

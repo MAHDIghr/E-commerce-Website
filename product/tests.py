@@ -142,8 +142,8 @@ class CatalogViewTests(TestCase):
         self.assertContains(response, 'name="color"')
         self.assertContains(response, 'name="offer"')
         self.assertContains(response, 'class="button button-primary button-block cta js-buy"')
-        self.assertContains(response, 'class="button button-secondary cta js-add"')
-        self.assertContains(response, 'id="cta-final">Acheter maintenant</button>')
+        self.assertContains(response, 'class="button button-secondary cta-icon js-add"')
+        self.assertContains(response, 'id="cta-final">Acheter</button>')
         self.assertContains(response, 'class="button button-primary js-buy"')
 
         # Régression : querySelector renvoyait un seul élément et cassait les CTA au chargement.
@@ -443,9 +443,9 @@ class CatalogViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            reverse("product:detail", kwargs={"slug": self.product.slug}),
+            reverse("product:detail", kwargs={"slug": "__product_slug__"}),
         )
-        # Les liens des cartes sont présents dans le HTML initial.
+        # Les liens des cartes sont créés côté navigateur à partir de ces données.
         self.assertContains(response, '"id": "cabas-camel"')
 
     def test_home_new_products_are_filtered_by_is_new(self):

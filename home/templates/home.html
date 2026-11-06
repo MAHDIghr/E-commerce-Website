@@ -62,7 +62,7 @@
                 </p>
 
                 <div class="hero-actions hero-anim" data-anim="4">
-                    <a href="{% url 'shop:catalog' %}" class="button button-primary button-glow" data-i18n="hero_cta_primary">
+                    <a href="#selection" class="button button-primary button-glow" data-i18n="hero_cta_primary">
                         Découvrir la collection
                     </a>
                     <a href="{% url 'shop:catalog' %}{% if handbags_category %}?cat={{ handbags_category.slug|urlencode }}{% endif %}" class="button button-ghost" data-i18n="hero_cta_secondary">
@@ -114,8 +114,8 @@
                             href="{% url 'product:detail' slug=selection.product.slug %}"
                         >
                             <img
-                                src="{{ selection.image.url }}"
-                                alt="{{ selection.alt_text }}"
+                                src="{% if variant.image_src %}{{ variant.image_src }}{% elif media.image %}{{ media.image.url }}{% else %}{{ media.source_url }}{% endif %}"
+                                alt="{% if variant.image_src %}{{ variant.image_alt }}{% else %}{{ media.alt_text|default:selection.product.name }}{% endif %}"
                                 loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
                                 decoding="async"
                                 draggable="false"
