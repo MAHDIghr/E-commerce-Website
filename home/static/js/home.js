@@ -54,6 +54,20 @@ const homeWishlist = new Set(
         .filter((slug) => typeof slug === "string" && /^[a-z0-9-]{1,180}$/i.test(slug))
 );
 
+function refreshHomeWishlist() {
+    const saved = readStorage(HOME_WISHLIST_KEY, [...homeWishlist]);
+    if (!Array.isArray(saved)) return;
+    homeWishlist.clear();
+    saved.filter(slug => typeof slug === "string" && /^[a-z0-9-]{1,180}$/i.test(slug)).forEach(slug => homeWishlist.add(slug));
+    document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").forEach(button => {
+        const active = homeWishlist.has(button.closest(".product-card").dataset.productSlug);
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+    });
+}
+window.addEventListener("pageshow", refreshHomeWishlist);
+window.addEventListener("storage", event => { if (!event.key || event.key === HOME_WISHLIST_KEY) refreshHomeWishlist(); });
+
 document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").forEach((button) => {
     const card = button.closest(".product-card");
     const slug = card?.dataset.productSlug || "";
@@ -67,6 +81,7 @@ document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").
         event.stopPropagation();
         if (!validSlug) return;
 
+        refreshHomeWishlist();
         const isActive = !homeWishlist.has(slug);
         if (isActive) homeWishlist.add(slug);
         else homeWishlist.delete(slug);

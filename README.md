@@ -779,7 +779,7 @@ Le parcours du catalogue est le suivant :
 1. **Accueil — `/`** : `home.views.home` charge les catégories actives et les produits marqués comme nouveautés. Les données commerciales proviennent des modèles Django, pas d'un tableau de produits de démonstration ajouté dans la vue.
 2. **Catégorie — lien vers `/boutique/?cat=<slug>`** : les cartes de catégories de l'accueil transmettent le slug réel enregistré en base.
 3. **Boutique — `/boutique/`** : `shop.views.catalog` charge les catégories et les produits publiables, puis sérialise les champs strictement nécessaires à l'interface dans `catalog_data`.
-4. **Cartes du catalogue — `/produit/<slug>/`** : le JavaScript du catalogue construit les liens à partir du préfixe généré par Django (`data-product-url`) et du slug de produit reçu du serveur.
+4. **Cartes du catalogue — `/produit/<slug>/`** : le partial `shop/_cards.html` construit les liens via les routes Django. Le JavaScript conserve ces cartes à l’initialisation et utilise le même partial pour les mises à jour.
 5. **Fiche produit** : `product.views.detail` recherche le produit par slug via le sélecteur des produits publiés. Un produit absent, inactif ou non publiable ne doit pas être rendu comme une fiche publique.
 
 Les noms d'URL Django (`home:home`, `shop:catalog`, `product:detail`) sont préférables aux chemins codés en dur, car ils gardent les liens cohérents si les routes évoluent.
@@ -1122,3 +1122,19 @@ La CI conserve les tests/migrations et propose un job navigateur manuel via work
 ## Mesure interne après stabilisation — lot 14
 
 `python manage.py conversion_report --start <ISO-avec-fuseau> --end <ISO-avec-fuseau> --settings=config.settings.development` produit uniquement des agrégats internes issus des premières confirmations Stripe existantes, sans exporter identifiant ou contact. Période début inclus/fin exclue, devises séparées, demandes de retour et remboursements distincts. Aucune collecte navigateur ni prestataire analytics ajouté ; conversion par appareil/visiteur et abandons restent indisponibles. Les événements, dénominateurs et décisions de consentement/conservation sont décrits dans [docs/conversion-measurement-report.md](docs/conversion-measurement-report.md). Le NO-GO reste actif ; aucune expérimentation commerciale déployée.
+
+
+### Catalogue : robustesse sans refonte (6 novembre 2026)
+
+Les filtres/tri utilisent les paramètres GET existants et `page` conserve le nombre
+de tranches de huit affichées par « Voir plus ». Le chargement initial ne transmet
+pas tout le catalogue en JSON. Les mises à jour utilisent le même HTML Django,
+avec annulation des réponses obsolètes et historique de navigation. Les styles,
+images et textes visibles restent ceux de la présentation précédente.
+
+Sans JavaScript : cartes et liens de fiches, catégories, raccourcis de prix,
+réinitialisation et « Voir plus » fonctionnent par GET. Le tiroir mobile reste
+tributaire du JavaScript ; les autres champs sont soumis avec le formulaire
+existant, sans nouveau bouton. Aucun nouvel écran de favoris n'a été ajouté.
+Voir [le rapport et les commandes de vérification](docs/catalog-functional-review.md)
+pour les limites, notamment l'absence de recette graphique dans cet environnement.

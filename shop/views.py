@@ -9,6 +9,9 @@ from decimal import Decimal
 from django.db.models import Q, Prefetch
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.views.decorators.vary import vary_on_headers
+from .catalog import selection
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
@@ -45,6 +48,7 @@ def _search_queryset(queryset, query):
 
 
 @require_GET
+@vary_on_headers("X-Catalog-Update")
 def catalog(request):
     categories = list(Category.objects.filter(is_active=True).order_by("position", "name"))
     query = " ".join(request.GET.get("q", "").split())[:100]
@@ -64,17 +68,22 @@ def catalog(request):
                     {"hex": variant.color_code, "name": variant.color_name or variant.color_slug},
                 )
 
+    selected = selection(product_card_data(products), request.GET, categories, color_map)
     catalog_data = {
-        "products": product_card_data(products),
+        "products": selected["cards"],
         "categories": [{"slug": category.slug, "name": category.name} for category in categories],
         "colors": color_map,
         "query": query,
+        "total": selected["total"],
+        "page": selected["page"],
     }
-    return render(request, "catalog.html", {
-        "categories": categories,
-        "catalog_data": catalog_data,
-        "search_query": query,
-    })
+    context = {"categories": categories, "catalog_data": catalog_data,
+               "search_query": query, "price_presets": [("0", "50"), ("50", "100"), ("100", "")], **selected}
+    if request.headers.get("X-Catalog-Update") == "1":
+        return JsonResponse({"html": render_to_string("shop/_cards.html", context, request=request),
+                             "total": selected["total"], "page": selected["page"],
+                             "visible": len(selected["cards"]), "has_more": selected["has_more"]})
+    return render(request, "catalog.html", context)
 
 
 @ensure_csrf_cookie
