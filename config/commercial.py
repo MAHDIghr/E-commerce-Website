@@ -38,25 +38,8 @@ def configured_countries():
     return [(code, label) for code, label in COUNTRY_CHOICES if code in codes]
 
 
-def local_test_checkout():
-    """Bypass commercial strictement local, clés de test et mode live interdit."""
-    from urllib.parse import urlparse
-    try:
-        host = urlparse(os.environ.get("SITE_BASE_URL", "")).hostname
-    except ValueError:
-        return False
-    return bool(settings.DEBUG and getattr(settings, "LOCAL_TEST_CHECKOUT", False)
-                and os.environ.get("STRIPE_SECRET_KEY", "").strip().startswith("sk_test_")
-                and os.environ.get("STRIPE_LIVE_MODE", "False").lower().strip() not in {"1", "true", "yes", "on"}
-                and host in {"localhost", "127.0.0.1", "::1"})
-
-
-def checkout_sales_ready():
-    return public_information()["sales_ready"] or local_test_checkout()
-
-
 def shipping_countries():
-    return configured_countries() if checkout_sales_ready() else []
+    return configured_countries() if public_information()["sales_ready"] else []
 
 
 def shipping_choices(subtotal, *, offer_free=False):
@@ -161,7 +144,7 @@ def public_information():
 
 def shipping_message(*, offer_free=False):
     if not public_information()["sales_ready"]:
-        return "Mode test Stripe local — aucune vente réelle. Informations commerciales non validées." if local_test_checkout() else SALES_UNAVAILABLE
+        return SALES_UNAVAILABLE
     if offer_free:
         return "Cette offre inclut la livraison standard gratuite pour tout le panier. Express payant."
     return (f"Livraison standard offerte dès {_amount(FREE_SHIPPING_THRESHOLD)} € de sous-total après remise "
@@ -195,8 +178,7 @@ def commercial_context(request):
         }
     information = public_information()
     return {"commercial": {
-        "sales_ready": checkout_sales_ready(),
-        "local_test_checkout": local_test_checkout(),
+        "sales_ready": information["sales_ready"],
         "sales_unavailable": SALES_UNAVAILABLE,
         "shipping_message": shipping_message(),
         "contact_email": information["contact_email"],

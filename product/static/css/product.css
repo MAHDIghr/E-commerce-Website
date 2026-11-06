@@ -252,11 +252,10 @@ body.page-product .site-footer{padding-bottom:4.5rem}
 .swatches { flex-wrap: wrap; }
 .offer__card { grid-template-columns: auto minmax(0,1fr) minmax(0,auto); }
 @media (max-width: 600px) {
-    .offer__card { grid-template-columns: 20px minmax(0,1fr) minmax(0,auto); gap: .5rem; padding: .8rem .65rem; min-height: 76px; }
-    .offer__price { grid-column: auto; justify-items: end; max-width: 8rem; min-width: 0; }
-    .offer__price strong { font-size: 1rem; }
+    .offer__card { grid-template-columns: 22px minmax(0,1fr); }
+    .offer__price { grid-column: 2; justify-items: start; }
     .offer__body, .offer__price del, .offer__badge, .trust, .sbar span { font-size: .875rem; line-height: 1.5; }
-    .offer__badge { position: absolute; top: -.55rem; right: .65rem; margin: 0; line-height: 1.25; }
+    .offer__badge { position: static; display: inline-block; margin-bottom: .35rem; }
     .sbar { position: static; transform: none; flex-wrap: wrap; padding-bottom: max(1rem,env(safe-area-inset-bottom,0px)); }
     .sbar p, .sbar .button { min-width: 0; overflow-wrap: anywhere; }
     .sbar .button { max-width: 100%; }

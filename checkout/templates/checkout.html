@@ -14,7 +14,6 @@
     <a class="checkout-back" href="{% url 'shop:cart_page' %}">← Retour au panier</a>
     <ol class="checkout-steps" aria-label="Étapes de commande"><li class="is-current">1 <span>Livraison</span></li><li>2 <span>Paiement sécurisé</span></li><li>3 <span>Confirmation</span></li></ol>
   </div>
-  {% if commercial.local_test_checkout %}<p class="checkout-alert" role="status">Mode test Stripe local : aucune vente réelle. Les informations commerciales ne sont pas validées. Utilisez uniquement des données et moyens de paiement de test.</p>{% endif %}
   {% include "partials/_commercial_information.html" %}
   {% if not stripe_configured %}<p id="payment-unavailable" class="checkout-alert" role="status">Paiement temporairement indisponible. Vous ne pouvez pas payer pour le moment.</p>{% endif %}
   {% if cart_error %}<div class="checkout-alert" role="alert">{{ cart_error }}</div>{% endif %}

@@ -10,7 +10,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
-from config.commercial import CURRENCY, public_information, checkout_sales_ready, SALES_UNAVAILABLE, PAYMENT_UNAVAILABLE, shipping_choices
+from config.commercial import CURRENCY, public_information, SALES_UNAVAILABLE, PAYMENT_UNAVAILABLE, shipping_choices
 
 from product.models import ProductVariant
 from shop.views import _cart_key_parts, _cart_state
@@ -39,7 +39,7 @@ def stripe_configured():
         base = urlparse(os.environ.get("SITE_BASE_URL", "").strip())
     except ValueError:
         return False
-    return bool(not (settings.DEBUG and live) and key.startswith("sk_live_" if live else "sk_test_")
+    return bool(key.startswith("sk_live_" if live else "sk_test_")
                 and os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip()
                 and base.netloc and base.scheme in ("http", "https")
                 and (settings.DEBUG or base.scheme == "https"))
@@ -130,7 +130,7 @@ def _snapshot_components(details):
 
 def create_order_and_reserve(request, form, checkout_key):
     """Crée l'instantané et réserve les stocks avec mises à jour conditionnelles atomiques."""
-    if not checkout_sales_ready():
+    if not public_information()["sales_ready"]:
         raise CheckoutProblem(SALES_UNAVAILABLE)
     with transaction.atomic():
         existing = Order.objects.select_for_update().filter(checkout_key=checkout_key).first()
@@ -223,7 +223,7 @@ def release_reserved_stock(order):
 
 def create_stripe_session(order, request=None):
     """Crée une session hébergée depuis l'instantané immuable de la commande."""
-    if not checkout_sales_ready():
+    if not public_information()["sales_ready"]:
         raise CheckoutProblem(SALES_UNAVAILABLE)
     if not stripe_configured():
         raise CheckoutProblem(PAYMENT_UNAVAILABLE)

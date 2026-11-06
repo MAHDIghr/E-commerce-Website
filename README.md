@@ -1138,9 +1138,3 @@ La CI conserve les tests/migrations et propose un job navigateur manuel via work
 ## Mesure interne après stabilisation — lot 14
 
 `python manage.py conversion_report --start <ISO-avec-fuseau> --end <ISO-avec-fuseau> --settings=config.settings.development` produit uniquement des agrégats internes issus des premières confirmations Stripe existantes, sans exporter identifiant ou contact. Période début inclus/fin exclue, devises séparées, demandes de retour et remboursements distincts. Aucune collecte navigateur ni prestataire analytics ajouté ; conversion par appareil/visiteur et abandons restent indisponibles. Les événements, dénominateurs et décisions de consentement/conservation sont décrits dans [docs/conversion-measurement-report.md](docs/conversion-measurement-report.md). Le NO-GO reste actif ; aucune expérimentation commerciale déployée.
-
-## Ajustements visuels et paiement local de test
-
-Le fond des légendes Signature est transparent ; les offres retrouvent trois colonnes compactes sous 600 px ; le bandeau promo d’accueil utilise une palette champagne/cuivre sur 38 px avec conditions conservées et réduction du mouvement respectée.
-
-En profil development, `LOCAL_TEST_CHECKOUT` est activé par défaut et peut être désactivé avec `false`. Le contournement du blocage commercial exige DEBUG=True, une clé Stripe `sk_test_`, STRIPE_LIVE_MODE=False et une SITE_BASE_URL dont l’hôte est localhost, 127.0.0.1 ou ::1. La configuration Stripe/webhook habituelle reste requise. Les informations juridiques ne sont pas déclarées approuvées ; un avertissement test est affiché. Les clés live sont refusées en DEBUG. Production conserve son blocage commercial. Voir [docs/local-test-visual-report.md](docs/local-test-visual-report.md).

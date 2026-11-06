@@ -27,6 +27,3 @@ ALLOWED_HOSTS = [
 
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-# Autorisation locale explicite : ne remplace pas la validation commerciale publique.
-LOCAL_TEST_CHECKOUT = os.environ.get("LOCAL_TEST_CHECKOUT", "true").lower() in {"1", "true", "yes", "on"}
