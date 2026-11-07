@@ -1138,3 +1138,12 @@ tributaire du JavaScript ; les autres champs sont soumis avec le formulaire
 existant, sans nouveau bouton. Aucun nouvel écran de favoris n'a été ajouté.
 Voir [le rapport et les commandes de vérification](docs/catalog-functional-review.md)
 pour les limites, notamment l'absence de recette graphique dans cet environnement.
+
+### Tester Stripe Checkout en local
+
+Avec `config.settings.development`, le tunnel de test peut être utilisé avant
+la validation des informations commerciales. Il exige une clé `sk_test_`,
+`STRIPE_LIVE_MODE=false`, le secret du webhook Stripe de test et une
+`SITE_BASE_URL` locale (par exemple `http://127.0.0.1:8000`).
+Le réglage `LOCAL_TEST_CHECKOUT` est activé par défaut dans ce profil.
+Utiliser `LOCAL_TEST_CHECKOUT=false` pour rétablir le blocage en local.

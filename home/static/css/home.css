@@ -1,12 +1,37 @@
 /* home.css — styles spécifiques à la page d'accueil. Les styles communs sont dans base.css */
 
-.flash-campaign { background: var(--color-ink); color: #fff; }
+.flash-campaign {
+    background: linear-gradient(110deg, #f3e3ce, #fcf3e6 55%, #edd1ae);
+    color: #422a21;
+    border-bottom: 1px solid #dbb993;
+}
 .flash-campaign[hidden] { display: none; }
-.flash-campaign__inner { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; padding-block: .8rem; }
-.flash-campaign p { margin: 0; font-size: .875rem; line-height: 1.5; }
-.flash-campaign__timer { display: inline-block; margin-inline-start: .5rem; font-variant-numeric: tabular-nums; font-weight: 600; }
-.flash-campaign a { display: inline-flex; align-items: center; min-height: 44px; color: #fff; text-decoration: underline; font-size: .875rem; }
-.flash-campaign a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.flash-campaign__inner {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: .2rem 1rem; padding-block: .35rem;
+}
+.flash-campaign p { margin: 0; font-size: .875rem; line-height: 1.45; }
+.flash-campaign p:first-child { flex: 1 1 22rem; }
+.flash-campaign strong {
+    padding: .12em .45em; border-radius: .35rem;
+    background: #f0d1ab; color: #542c20; overflow-wrap: anywhere;
+}
+.flash-campaign__timer {
+    display: inline-block; margin-inline-start: .4rem;
+    font-variant-numeric: tabular-nums; font-weight: 600;
+}
+.flash-campaign a {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding-inline: .9rem; border-radius: 999px;
+    background: #753e30; color: #fff8ed; font-size: .875rem; font-weight: 600;
+    text-decoration: none;
+}
+.flash-campaign a:hover { background: #5b2e23; }
+.flash-campaign a:focus-visible { outline: 2px solid #5b2e23; outline-offset: 3px; }
+@media (max-width: 600px) {
+    .flash-campaign__inner { gap: .2rem .65rem; }
+    .flash-campaign p:nth-child(2) { flex: 1 1 9rem; }
+}
 
 /* ==========================================================================
    HERO — effet wow
@@ -688,7 +713,7 @@
     transform: translateX(-50%); width: max-content; max-width: 170%;
     display: flex; flex-direction: column; align-items: center;
     gap: .2rem; padding: .25rem .5rem;
-    border-radius: var(--radius-sm); background: var(--color-surface);
+    border-radius: var(--radius-sm); background: transparent;
     color: var(--color-ink); text-align: center;
     font-size: clamp(.75rem, 1.5vw, 1rem);
 }

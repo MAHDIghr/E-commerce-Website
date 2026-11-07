@@ -6,7 +6,7 @@ import uuid
 from decimal import Decimal
 import stripe
 from django.contrib import messages
-from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES, public_information, SALES_UNAVAILABLE, PAYMENT_UNAVAILABLE
+from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES, checkout_sales_ready, SALES_UNAVAILABLE, PAYMENT_UNAVAILABLE
 from django.db import transaction
 from django.core.cache import cache
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, JsonResponse
@@ -117,7 +117,7 @@ def checkout(request):
     if request.method == "POST" and not editing:
         if not form.is_valid():
             pass
-        elif not public_information()["sales_ready"]:
+        elif not checkout_sales_ready():
             form.add_error(None, SALES_UNAVAILABLE)
         elif cart_error:
             form.add_error(None, cart_error)
@@ -202,7 +202,7 @@ def checkout(request):
             "summary_html": render_to_string("checkout/_summary.html", context, request=request),
             "options": options, "quote_valid": quote_valid,
             "errors": quote_form.errors.get_json_data(), "cart_error": cart_error,
-            "can_pay": quote_valid and public_information()["sales_ready"] and stripe_configured(),
+            "can_pay": quote_valid and checkout_sales_ready() and stripe_configured(),
             "promo_error": promo_error,
         })
     else:
