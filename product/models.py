@@ -445,7 +445,7 @@ class ProductOffer(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="offers", verbose_name="Produit principal")
     title = models.CharField("Titre", max_length=120)
     badge = models.CharField("Badge", max_length=20, choices=BADGE_CHOICES, default=BADGE_ESSENTIAL)
-    display_delivery_label = models.CharField("Type de livraison", max_length=10, choices=DELIVERY_CHOICES, default=DELIVERY_PAID, help_text="Ce choix décrit l'offre et ne calcule pas les frais de livraison.")
+    display_delivery_label = models.CharField("Type de livraison", max_length=10, choices=DELIVERY_CHOICES, default=DELIVERY_PAID, help_text="Gratuite : offre la livraison standard de tout le panier, même sous le seuil et après remise. Express payant.")
     price = models.DecimalField("Prix de l'offre (€)", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
     reference_price = models.DecimalField(
         "Prix de référence (€)", max_digits=10, decimal_places=2,

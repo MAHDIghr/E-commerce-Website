@@ -67,6 +67,7 @@
 
     function closeModal() {
         if (!backdrop?.classList.contains("is-open")) return;
+        ShopOverlays.close(backdrop);
         backdrop.classList.remove("is-open");
         backdrop.setAttribute("aria-hidden", "true");
         document.body.classList.remove("community-modal-open");
@@ -82,6 +83,7 @@
     }
 
     function openModal(item) {
+        if (ShopOverlays.busy()) return;
         if (!backdrop || !mediaHost) return;
         const source = item.dataset.videoSrc;
         if (!source) return;
@@ -105,6 +107,7 @@
         if (captionHost) captionHost.textContent = isStory
             ? "Découvrez les coulisses et les nouveautés de notre communauté."
             : "Une inspiration vidéo de la communauté.";
+        if (!ShopOverlays.open(backdrop, {focus: closeButton, close: closeModal})) return;
         backdrop.classList.add("is-open");
         backdrop.setAttribute("aria-hidden", "false");
         document.body.classList.add("community-modal-open");
@@ -154,22 +157,6 @@
     backdrop?.addEventListener("click", (event) => {
         if (event.target === backdrop) closeModal();
     });
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") closeModal();
-        if (event.key === "Tab" && backdrop?.classList.contains("is-open") && modal) {
-            const focusables = Array.from(modal.querySelectorAll("button, video[controls], [tabindex]:not([tabindex='-1'])"))
-                .filter((element) => !element.disabled);
-            if (!focusables.length) return;
-            const first = focusables[0];
-            const last = focusables[focusables.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
-                event.preventDefault();
-                last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault();
-                first.focus();
-            }
-        }
-    });
+    if (backdrop) backdrop.inert = true;
     document.addEventListener("visibilitychange", syncPreviewPlayback);
 })();

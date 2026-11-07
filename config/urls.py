@@ -34,3 +34,6 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler404 = "config.seo.not_found"
+handler500 = "config.seo.server_error"

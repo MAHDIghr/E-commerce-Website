@@ -73,6 +73,11 @@ if (menuToggle && mainNavigation) {
         menuToggle.setAttribute("aria-expanded", String(isOpen));
     });
 
+    const menuMedia = window.matchMedia("(max-width: 900px)");
+    function resetMenu() { mainNavigation.classList.remove("is-open"); menuToggle.setAttribute("aria-expanded", "false"); }
+    menuMedia.addEventListener("change", resetMenu);
+    menuToggle.addEventListener("keydown", event => { if (event.key === "Escape" && mainNavigation.classList.contains("is-open")) { event.preventDefault(); resetMenu(); menuToggle.focus(); } });
+    mainNavigation.addEventListener("keydown", event => { if (event.key === "Escape" && mainNavigation.classList.contains("is-open")) { event.stopPropagation(); resetMenu(); menuToggle.focus(); } });
     mainNavigation.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => {
             mainNavigation.classList.remove("is-open");
@@ -93,6 +98,7 @@ const searchInput = document.querySelector("#search-input");
 
 function openSearch() {
     if (!searchOverlay) return;
+    if (!ShopOverlays.open(searchOverlay, {focus: searchInput, trigger: searchTrigger, close: () => searchOverlay.classList.remove("is-open")})) return;
     searchOverlay.classList.add("is-open");
     searchOverlay.setAttribute("aria-hidden", "false");
     window.requestAnimationFrame(() => searchInput && searchInput.focus());
@@ -100,10 +106,12 @@ function openSearch() {
 
 function closeSearch() {
     if (!searchOverlay) return;
+    if (!ShopOverlays.close(searchOverlay)) return;
     searchOverlay.classList.remove("is-open");
     searchOverlay.setAttribute("aria-hidden", "true");
 }
 
+if (searchOverlay) searchOverlay.inert = true;
 if (searchTrigger) searchTrigger.addEventListener("click", openSearch);
 if (searchClose) searchClose.addEventListener("click", closeSearch);
 if (searchOverlay) {
@@ -307,15 +315,16 @@ function buildCartItemNode(item) {
 }
 function updateShippingProgress() {
     if (!shippingFill || !shippingText) return;
-    const subtotal = Number(cartSnapshot.subtotal || 0);
+    const subtotal = Number(cartSnapshot.shipping_subtotal || 0);
     const threshold = Number(cartSnapshot.free_shipping_threshold || FREE_SHIPPING_THRESHOLD);
-    const progress = threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0;
+    const progress = cartSnapshot.free_shipping_reached ? 100 : (threshold > 0 ? Math.min(subtotal / threshold, 1) * 100 : 0);
     shippingFill.style.width = progress + "%";
     shippingFill.setAttribute("aria-valuemax", String(threshold));
-    shippingFill.setAttribute("aria-valuenow", String(Math.min(subtotal, threshold)));
-    shippingText.textContent = threshold > 0 && subtotal >= threshold
-        ? "Seuil atteint avant remise ; livraison confirmée à la commande."
-        : "Plus que " + formatPrice(Math.max(threshold - subtotal, 0)) + " avant remise pour la livraison offerte";
+    shippingFill.setAttribute("aria-valuenow", String(cartSnapshot.free_shipping_reached ? threshold : Math.min(subtotal, threshold)));
+    shippingText.textContent = !commercialConfig.sales_ready ? commercialConfig.sales_unavailable
+        : cartSnapshot.free_shipping_reached
+            ? "Livraison standard offerte pour ce panier. Express payant ; destination à confirmer."
+            : "Plus que " + formatPrice(cartSnapshot.amount_to_free_shipping || 0) + " après remise pour la livraison standard offerte. Express payant.";
 }
 function renderCartDrawer() {
     if (!cartItemsContainer) return;
@@ -347,6 +356,7 @@ function applyCartPayload(payload) {
 async function refreshCartUI() { try { applyCartPayload(await cartRequest(cartApiUrl)); } catch (e) { showCartStatus(e.message || "Le panier est momentanément indisponible.", true); } }
 function mutateCart(payload) {
     /* Sérialise les mutations pour éviter les pertes d'état lors de clics rapprochés. */
+    document.dispatchEvent(new CustomEvent("cart:changing"));
     const operation = cartMutationQueue.then(async () => {
         await cartReady;
         showCartStatus("");
@@ -358,7 +368,7 @@ function mutateCart(payload) {
     return operation.catch((error) => {
         showCartStatus(error.message || "Le panier n'a pas pu être mis à jour.", true);
         throw error;
-    });
+    }).finally(() => document.dispatchEvent(new CustomEvent("cart:settled")));
 }
 async function addToCart(product, options = {}) {
     try {
@@ -651,11 +661,13 @@ if (cartDrawer) {
     });
 }
 
-let lastCartTrigger = null;
 function openCart() {
     if (!cartDrawer) return;
-    const active = document.activeElement;
-    if (active instanceof HTMLElement && active.matches('[data-action="open-cart"], .js-add')) lastCartTrigger = active;
+    if (!ShopOverlays.open(cartDrawer, {focus: cartClose, close: () => {
+        cartDrawer.classList.remove("is-open");
+        cartBackdrop?.classList.remove("is-open");
+        document.body.classList.remove("cart-open");
+    }})) return;
     cartDrawer.inert = false;
     cartDrawer.classList.add("is-open");
     if (cartBackdrop) cartBackdrop.classList.add("is-open");
@@ -665,12 +677,12 @@ function openCart() {
 }
 function closeCart() {
     if (!cartDrawer) return;
+    if (!ShopOverlays.close(cartDrawer)) return;
     cartDrawer.classList.remove("is-open");
     if (cartBackdrop) cartBackdrop.classList.remove("is-open");
     cartDrawer.setAttribute("aria-hidden", "true");
     cartDrawer.inert = true;
     document.body.classList.remove("cart-open");
-    if (lastCartTrigger && lastCartTrigger.isConnected) lastCartTrigger.focus();
 }
 function bumpCartIcon() { cartActionButtons.forEach((b) => { b.classList.remove("is-bumping"); void b.offsetWidth; b.classList.add("is-bumping"); }); }
 cartActionButtons.forEach((button) => button.addEventListener("click", openCart));
@@ -684,7 +696,7 @@ if (cartCheckoutButton) cartCheckoutButton.addEventListener("click", () => {
     }
     window.location.assign(cartCheckoutUrl);
 });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeCart(); closeSearch(); } });
+
 /* CTA fiche produit : délégation globale pour rester fonctionnel même si une
    interaction secondaire de product.js échoue pendant son initialisation. */
 document.addEventListener("click", async (event) => {
@@ -806,9 +818,9 @@ const translations = {
         hero_cta_primary: "Découvrir la collection",
         hero_cta_secondary: "Voir les sacs",
         trust_ship: "",
-        trust_return: "Retours gratuits sous 30 jours",
-        trust_secure: "Paiement 100% sécurisé",
-        trust_support: "Service client 7j/7",
+        trust_return: "Retours et rétractation",
+        trust_secure: "Paiement via Stripe",
+        trust_support: "Contact",
         categories_eyebrow: "Explorer",
         categories_title: "Nos catégories",
         categories_desc: "Une sélection pensée pour chaque usage, du quotidien aux grandes occasions.",
@@ -828,14 +840,14 @@ const translations = {
         promo_3: "Nouvelle collection disponible dès maintenant",
         banner_eyebrow: "Savoir-faire",
         banner_title: "Des pièces choisies\navec exigence.",
-        banner_desc: "Cuirs sélectionnés, finitions soignées : chaque sac est pensé pour durer et s'accorder avec votre quotidien.",
+        banner_desc: "Découvrez les sacs et accessoires de notre collection. Consultez chaque fiche pour les caractéristiques du produit.",
         banner_cta: "En savoir plus",
         recent_eyebrow: "Votre historique",
         recent_title: "Vus récemment",
         testimonials_eyebrow: "Avis clients",
         testimonials_title: "Elles nous font confiance",
         instagram_eyebrow: "Communauté",
-        instagram_title: "Suivez-nous @maboutique",
+        instagram_title: "La collection en images",
         newsletter_eyebrow: "Newsletter",
         newsletter_title: "Restez informée",
         newsletter_desc: "Inscrivez-vous pour recevoir nos nouveautés, nos offres exclusives et nos conseils styling.",
@@ -859,9 +871,9 @@ const translations = {
         welcome_cta: "Découvrir la collection",
         welcome_copy: "Copier le code",
         perk_ship: "",
-        perk_ret: "Retours gratuits 30 jours",
+        perk_ret: "Retours et rétractation",
         perk_pay: "Paiement sécurisé",
-        perk_help: "Service client 7j/7",
+        perk_help: "Contact",
         footer_news_title: "",
         footer_news_desc: "Rejoignez la newsletter : nouveautés, offres privées et conseils style.",
         footer_news_ok: "Vérifiez votre boîte de réception pour confirmer votre inscription.",
@@ -890,9 +902,9 @@ const translations = {
         hero_cta_primary: "Discover the collection",
         hero_cta_secondary: "Shop bags",
         trust_ship: "",
-        trust_return: "Free returns within 30 days",
-        trust_secure: "100% secure payment",
-        trust_support: "Customer support 7/7",
+        trust_return: "Returns and withdrawal",
+        trust_secure: "Payment via Stripe",
+        trust_support: "Contact",
         categories_eyebrow: "Explore",
         categories_title: "Our categories",
         categories_desc: "A selection designed for every occasion, from everyday to evening.",
@@ -912,14 +924,14 @@ const translations = {
         promo_3: "New collection available now",
         banner_eyebrow: "Craftsmanship",
         banner_title: "Pieces chosen\nwith care.",
-        banner_desc: "Selected leathers, careful finishes: every bag is designed to last and to fit seamlessly into your everyday life.",
+        banner_desc: "Explore our bags and accessories. See each product page for its specifications.",
         banner_cta: "Learn more",
         recent_eyebrow: "Your history",
         recent_title: "Recently viewed",
         testimonials_eyebrow: "Reviews",
         testimonials_title: "Loved by our customers",
         instagram_eyebrow: "Community",
-        instagram_title: "Follow us @maboutique",
+        instagram_title: "Collection in pictures",
         newsletter_eyebrow: "Newsletter",
         newsletter_title: "Stay in the loop",
         newsletter_desc: "Sign up to receive new arrivals, exclusive offers and styling tips.",
@@ -943,9 +955,9 @@ const translations = {
         welcome_cta: "Discover the collection",
         welcome_copy: "Copy code",
         perk_ship: "",
-        perk_ret: "Free returns, 30 days",
+        perk_ret: "Returns and withdrawal",
         perk_pay: "Secure payment",
-        perk_help: "Customer support 7/7",
+        perk_help: "Contact",
         footer_news_title: "",
         footer_news_desc: "Sign up for updates, offers and styling tips.",
         footer_news_ok: "Check your inbox to confirm your subscription.",
@@ -961,9 +973,11 @@ const shippingThresholdLabel = formatPrice(FREE_SHIPPING_THRESHOLD);
 const welcome = commercialConfig.welcome;
 for (const [language, dict] of Object.entries(translations)) {
     const english = language === "en";
-    const shippingText = english ? `Free shipping from ${shippingThresholdLabel}` : `Livraison offerte dès ${shippingThresholdLabel}`;
+    const shippingText = commercialConfig.sales_ready
+        ? (english ? `Free standard shipping from ${shippingThresholdLabel} after discounts or with an eligible offer. Express shipping costs extra.` : commercialConfig.shipping_message)
+        : commercialConfig.sales_unavailable;
     dict.trust_ship = dict.perk_ship = shippingText;
-    dict.promo_1 = english ? `${shippingText} of purchases` : `${shippingText} d'achat`;
+    dict.promo_1 = shippingText;
     if (welcome) {
         const promoText = english
             ? `${welcome.percent}% off with code ${welcome.code} from ${formatPrice(Number(welcome.minimum))}`
@@ -1006,23 +1020,11 @@ function applyLanguage(lang) {
     document.dispatchEvent(new CustomEvent("languagechange", { detail: { lang } }));
 }
 
-function detectDefaultLanguage() {
-    const stored = readStorage(LANG_KEY, null);
-    if (stored === "fr" || stored === "en") return stored;
-    return navigator.language && navigator.language.toLowerCase().startsWith("en") ? "en" : "fr";
-}
-
-let currentLang = detectDefaultLanguage();
-applyLanguage(currentLang);
-
+// Le français est la langue serveur actuelle. Ne jamais produire une page mixte
+// selon le navigateur ou une ancienne préférence locale.
+let currentLang = document.documentElement.lang === "en" ? "en" : "fr";
 const langSwitch = document.querySelector("#lang-switch");
-if (langSwitch) {
-    langSwitch.addEventListener("click", () => {
-        currentLang = currentLang === "fr" ? "en" : "fr";
-        writeStorage(LANG_KEY, currentLang);
-        applyLanguage(currentLang);
-    });
-}
+if (langSwitch) langSwitch.addEventListener("click", () => { window.location.assign("/en/"); });
 
 
 /* ==========================================================================

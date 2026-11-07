@@ -19,10 +19,10 @@
         </button>
     </div>
 
-    <div class="shipping-progress" aria-label="Progression vers la livraison offerte">
+    {% if commercial.sales_ready %}<div class="shipping-progress" aria-label="Progression vers la livraison offerte">
         <div class="shipping-progress__label">
             <span class="shipping-progress__icon" aria-hidden="true">✦</span>
-            <span id="shipping-text">Plus que {{ commercial.free_shipping_threshold|floatformat:2 }} € pour la livraison offerte</span>
+            <span id="shipping-text">{{ commercial.shipping_message }}</span>
         </div>
         <div class="shipping-progress__track">
             <div class="shipping-progress__fill" id="shipping-fill" role="progressbar"
@@ -30,6 +30,8 @@
         </div>
     </div>
 
+    {% endif %}
+    {% include "partials/_commercial_information.html" %}
     <p id="cart-status" class="cart-status" role="status" aria-live="polite" hidden></p>
 
     <div class="cart-drawer__empty" id="cart-empty" hidden>

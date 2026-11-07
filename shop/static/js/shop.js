@@ -11,22 +11,14 @@
     const grid = document.getElementById("product-grid");
     if (!grid) return;
 
-    /* Modèle d’URL produit généré par Django ; le slug est remplacé au moment de créer chaque carte. */
-    const PRODUCT_URL_TEMPLATE = grid.dataset.productUrl || "#";
-    const productUrl = (slug) => PRODUCT_URL_TEMPLATE.replace("__product_slug__", encodeURIComponent(slug));
-
     /* Données rendues par Django via json_script. */
     const catalogDataNode = document.getElementById("catalog-data");
     const commercial = JSON.parse(document.querySelector("#commercial-config").textContent);
-    const shippingThreshold = Number(commercial.free_shipping_threshold);
     const catalogData = catalogDataNode ? JSON.parse(catalogDataNode.textContent) : { products: [], categories: [], colors: {} };
-    const PRODUCTS = Array.isArray(catalogData.products) ? catalogData.products : [];
     const CATEGORIES = Array.isArray(catalogData.categories) ? catalogData.categories : [];
     const COLORS = Object.fromEntries(Object.entries(catalogData.colors || {}).map(([slug, details]) => [slug, details.hex]));
     const COLOR_NAMES = Object.fromEntries(Object.entries(catalogData.colors || {}).map(([slug, details]) => [slug, details.name || slug]));
     const categoryLabel = (slug) => CATEGORIES.find((category) => category.slug === slug)?.name || t()["cat_" + slug] || slug;
-    const PAGE_SIZE = 8;
-    const LOW_STOCK = 5;
     const WISH_KEY = "wishlist_v1";
 
     /* ---------- Textes FR / EN ---------- */
@@ -45,10 +37,10 @@
             newTag: "Nouveau",
             add: (n) => `Ajouter ${n} au panier`, wish: "Ajouter aux favoris", reviews: "avis",
             clear: "Tout effacer", remove: "Retirer le filtre", sale: "Promo", lowstock: "Stock ≤ 5",
-            ra_ship: "", ra_ret: "Retours gratuits 30 jours",
-            ra_ret_s: "Sans condition", ra_pay: "Paiement sécurisé", ra_pay_s: "SSL & 3D Secure",
+            ra_ship: "", ra_ret: "Retours et rétractation",
+            ra_ret_s: "Consultez les modalités", ra_pay: "Paiement sécurisé", ra_pay_s: "Stripe Checkout",
             item: (n) => (n > 1 ? "articles" : "article"),
-            shipLeft: (r) => `Plus que ${r} avant remise pour la livraison offerte`, shipOk: "Seuil atteint avant remise ; confirmation à la commande",
+            shipInfo: "Livraison confirmée au checkout",
         },
         en: {
             bc_home: "Home", bc_shop: "Shop", title: "Our shop",
@@ -64,16 +56,15 @@
             newTag: "New",
             add: (n) => `Add ${n} to cart`, wish: "Add to wishlist", reviews: "reviews",
             clear: "Clear all", remove: "Remove filter", sale: "Sale", lowstock: "Stock ≤ 5",
-            ra_ship: "", ra_ret: "Free returns, 30 days",
-            ra_ret_s: "No questions asked", ra_pay: "Secure payment", ra_pay_s: "SSL & 3D Secure",
+            ra_ship: "", ra_ret: "Returns and withdrawal",
+            ra_ret_s: "See the conditions", ra_pay: "Secure payment", ra_pay_s: "Stripe Checkout",
             item: (n) => (n > 1 ? "items" : "item"),
-            shipLeft: (r) => `${r} before discounts for free shipping`, shipOk: "Threshold reached before discounts; confirmed at checkout",
+            shipInfo: "Delivery confirmed at checkout",
         },
     };
-    T.fr.ra_ship = `Livraison offerte dès ${formatPrice(shippingThreshold)}`;
-    T.en.ra_ship = `Free shipping from ${formatPrice(shippingThreshold)}`;
-    T.fr.subtitle = `Sacs et accessoires en cuir, choisis pour durer. ${T.fr.ra_ship}, retours gratuits sous 30 jours.`;
-    T.en.subtitle = `Leather bags and accessories, chosen to last. ${T.en.ra_ship}, free returns within 30 days.`;
+    T.fr.ra_ship = T.en.ra_ship = commercial.shipping_message;
+    T.fr.subtitle = "Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.";
+    T.en.subtitle = "Explore our bags and accessories. See each product page for its specifications.";
     let lang = document.documentElement.lang === "en" ? "en" : "fr";
     const t = () => T[lang];
 
@@ -85,18 +76,21 @@
 
     function readUrl() {
         const p = new URLSearchParams(window.location.search);
-        (p.get("cat") || "").split(",").filter((c) => CATS.includes(c)).forEach((c) => state.cats.add(c));
-        (p.get("color") || "").split(",").filter((c) => COLORS[c]).forEach((c) => state.colors.add(c));
+        state.cats.clear(); state.colors.clear();
+        p.getAll("cat").flatMap(v => v.split(",")).filter((c) => CATS.includes(c)).forEach((c) => state.cats.add(c));
+        p.getAll("color").flatMap(v => v.split(",")).filter((c) => COLORS[c]).forEach((c) => state.colors.add(c));
         const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) && n >= 0 && n <= 5000 ? n : null; };
         state.min = num(p.get("min"));
         state.max = num(p.get("max"));
         state.sale = p.get("sale") === "1";
         state.low = p.get("low") === "1";
         state.sort = SORTS.includes(p.get("sort")) ? p.get("sort") : "pop";
+        state.page = Math.max(1, Number.parseInt(p.get("page"), 10) || 1);
     }
 
-    function writeUrl() {
-        const p = new URLSearchParams();
+    function stateUrl() {
+        const p = new URLSearchParams(window.location.search);
+        ["cat", "color", "min", "max", "sale", "low", "sort", "page"].forEach(key => p.delete(key));
         const currentQuery = new URLSearchParams(window.location.search).get("q");
         if (currentQuery) p.set("q", currentQuery);
         if (state.cats.size) p.set("cat", [...state.cats].join(","));
@@ -106,31 +100,9 @@
         if (state.sale) p.set("sale", "1");
         if (state.low) p.set("low", "1");
         if (state.sort !== "pop") p.set("sort", state.sort);
+        if (state.page > 1) p.set("page", state.page);
         const qs = p.toString();
-        window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-    }
-
-    /* ---------- Filtrage et tri ---------- */
-    function matches(product) {
-        if (state.cats.size && !state.cats.has(product.cat)) return false;
-        if (state.colors.size && !product.colors.some((c) => state.colors.has(c))) return false;
-        if (state.min !== null && product.price < state.min) return false;
-        if (state.max !== null && product.price > state.max) return false;
-        if (state.sale && !product.old) return false;
-        if (state.low && (product.stock <= 0 || product.stock > LOW_STOCK)) return false;
-        return true;
-    }
-
-    function sorted(list) {
-        const copy = [...list];
-        const by = {
-            pop: (a, b) => b.pop - a.pop,
-            new: (a, b) => Number(b.isNew) - Number(a.isNew) || b.pop - a.pop,
-            best: (a, b) => b.rating - a.rating || b.reviews - a.reviews,
-            asc: (a, b) => a.price - b.price,
-            desc: (a, b) => b.price - a.price,
-        };
-        return copy.sort(by[state.sort]);
+        return window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
     }
 
     /* ---------- Helpers DOM (textContent uniquement : pas d'injection HTML) ---------- */
@@ -156,7 +128,6 @@
         return svg;
     }
 
-    const HEART = "M12 21s-7-4.5-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.7.7 4.5 2.2C10.8 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.5 12 21 12 21z";
     const PLUS = "M12 5v14M5 12h14";
     const CHECK = "M5 12.5l4.5 4.5L19 7.5";
     const CLOSE = "M6 6l12 12M6 18L18 6";
@@ -167,105 +138,51 @@
             .filter((id) => typeof id === "string" && /^[a-z0-9-]{1,180}$/i.test(id))
     );
 
+    function refreshWishlist() {
+        const saved = readStorage(WISH_KEY, [...wishlist]);
+        if (!Array.isArray(saved)) return;
+        wishlist.clear(); saved.filter(id => typeof id === "string" && /^[a-z0-9-]{1,180}$/i.test(id)).forEach(id => wishlist.add(id));
+        grid.querySelectorAll(".pcard").forEach(card => card.querySelector(".pcard__wish").setAttribute("aria-pressed", String(wishlist.has(card.dataset.productSlug))));
+    }
+    window.addEventListener("pageshow", refreshWishlist);
+    window.addEventListener("storage", event => { if (!event.key || event.key === WISH_KEY) refreshWishlist(); });
+
     /* ---------- Carte produit ---------- */
-    function buildCard(p, index) {
-        const card = el("article", "pcard");
-        card.dataset.productSlug = p.id;
-        card.dataset.variantId = String(p.variantId);
-        const grid = document.querySelector("#product-grid");
-        card.dataset.offersUrl = (grid && grid.dataset.offersUrl || "").replace("__product_slug__", encodeURIComponent(p.id));
-        card.style.setProperty("--i", String(Math.min(index, 8)));
-
-        const media = el("a", "pcard__media");
-        media.href = productUrl(p.id);
-        media.setAttribute("aria-label", p.name);
-
-        const img = document.createElement("img");
-        img.src = p.img; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
-        img.width = 700; img.height = 875;
-        media.appendChild(img);
-
-        const tags = el("div", "pcard__tags");
-        // Un ancien prix ne doit être fourni que s'il est vérifié et supérieur au prix actuel.
-        if (p.old && p.old > p.price) tags.appendChild(el("span", "tag tag--sale", `-${Math.round((1 - p.price / p.old) * 100)}%`));
-        else if (p.isNew) tags.appendChild(el("span", "tag", t().newTag));
-        if (p.stock > 0 && p.stock <= LOW_STOCK) tags.appendChild(el("span", "tag tag--stock", `Stock : ${p.stock}`));
-        media.appendChild(tags);
-
-        const wish = el("button", "pcard__wish");
-        wish.type = "button";
-        wish.setAttribute("aria-label", t().wish);
-        wish.setAttribute("aria-pressed", String(wishlist.has(p.id)));
-        wish.appendChild(svgIcon([HEART]));
-        wish.addEventListener("click", () => {
-            const on = !wishlist.has(p.id);
-            on ? wishlist.add(p.id) : wishlist.delete(p.id);
-            wish.setAttribute("aria-pressed", String(on));
-            writeStorage(WISH_KEY, [...wishlist]);
+    function bindCards() {
+        grid.querySelectorAll(".pcard").forEach(card => {
+            if (card.dataset.bound) return;
+            card.dataset.bound = "true";
+            const slug = card.dataset.productSlug;
+            const wish = card.querySelector(".pcard__wish");
+            wish.setAttribute("aria-pressed", String(wishlist.has(slug)));
+            wish.addEventListener("click", () => {
+                // Read the latest persisted selection, including changes in another tab.
+                const saved = readStorage(WISH_KEY, [...wishlist]);
+                if (Array.isArray(saved)) {
+                    wishlist.clear(); saved.filter(id => typeof id === "string" && /^[a-z0-9-]{1,180}$/i.test(id)).forEach(id => wishlist.add(id));
+                }
+                const on = !wishlist.has(slug);
+                on ? wishlist.add(slug) : wishlist.delete(slug);
+                wish.setAttribute("aria-pressed", String(on));
+                writeStorage(WISH_KEY, [...wishlist]);
+            });
+            const add = card.querySelector(".pcard__add");
+            const unavailable = add.disabled;
+            add.addEventListener("click", async () => {
+                if (add.disabled) return;
+                add.disabled = true;
+                try {
+                    const added = await addProductFromCard(add);
+                    if (added) {
+                        add.classList.add("is-added"); add.replaceChildren(svgIcon([CHECK]));
+                        window.setTimeout(() => {
+                            add.classList.remove("is-added"); add.replaceChildren(svgIcon([PLUS]));
+                            add.disabled = unavailable;
+                        }, 1200);
+                    } else add.disabled = unavailable;
+                } catch (_) { add.disabled = unavailable; }
+            });
         });
-
-        const add = el("button", "pcard__add");
-        add.type = "button";
-        add.disabled = p.stock <= 0;
-        add.setAttribute("aria-label", p.stock <= 0 ? t().unavailable : t().add(p.name));
-        add.appendChild(svgIcon([PLUS]));
-        add.addEventListener("click", async () => {
-            if (add.disabled) return;
-            add.disabled = true;
-            const added = await addProductFromCard(add);
-            if (added) {
-                add.classList.add("is-added");
-                add.replaceChildren(svgIcon([CHECK]));
-                window.setTimeout(() => {
-                    add.classList.remove("is-added");
-                    add.replaceChildren(svgIcon([PLUS]));
-                    add.disabled = p.stock <= 0;
-                }, 1200);
-            } else {
-                add.disabled = p.stock <= 0;
-            }
-        });
-
-        const mediaWrap = el("div");
-        mediaWrap.style.position = "relative";
-        mediaWrap.append(media, wish, add);
-
-        const body = el("div", "pcard__body");
-        body.appendChild(el("p", "pcard__cat", t()[`cat_${p.cat}`]));
-
-        const h3 = el("h3", "pcard__name");
-        const link = el("a", "", p.name);
-        link.href = productUrl(p.id);
-        h3.appendChild(link);
-        body.appendChild(h3);
-
-        if (p.reviews > 0) {
-            const rating = el("p", "rating");
-            const full = Math.round(p.rating);
-            rating.appendChild(el("span", "rating__stars", "★".repeat(full) + "☆".repeat(5 - full)));
-            rating.appendChild(el("span", "", `${p.rating.toFixed(1)} (${p.reviews})`));
-            rating.setAttribute("aria-label", `${p.rating} / 5, ${p.reviews} ${t().reviews}`);
-            body.appendChild(rating);
-        }
-
-        const price = el("p", "price");
-        price.appendChild(el("span", "", formatPrice(p.price)));
-        if (p.old && p.old > p.price) {
-            price.appendChild(el("del", "", formatPrice(p.old)));
-        }
-        body.appendChild(price);
-
-        const sw = el("ul", "swatches");
-        sw.setAttribute("aria-hidden", "true");
-        p.colors.forEach((c) => {
-            const li = el("li", "swatch");
-            li.style.backgroundColor = COLORS[c];
-            sw.appendChild(li);
-        });
-        body.appendChild(sw);
-
-        card.append(mediaWrap, body);
-        return card;
     }
 
     /* ---------- Rendu ---------- */
@@ -278,42 +195,64 @@
         return state.cats.size + state.colors.size + (state.min !== null || state.max !== null ? 1 : 0) + (state.sale ? 1 : 0) + (state.low ? 1 : 0);
     }
 
-    function render({ keepPage = false } = {}) {
-        if (!keepPage) state.page = 1;
-        const all = sorted(PRODUCTS.filter(matches));
-        const visible = all.slice(0, state.page * PAGE_SIZE);
-
-        grid.classList.remove("is-ready");
-        grid.replaceChildren(...visible.map(buildCard));
-        void grid.offsetWidth;
-        grid.classList.add("is-ready");
-        grid.setAttribute("aria-busy", "false");
-
-        countEl.textContent = t().results(all.length);
-        $("filters-count").textContent = String(all.length);
-        emptyEl.hidden = all.length !== 0;
-
-        moreWrap.hidden = all.length <= visible.length;
-        $("more-progress").textContent = t().shown(visible.length, all.length);
-        $("more-fill").style.width = `${all.length ? (visible.length / all.length) * 100 : 0}%`;
-
+    let requestRevision = 0;
+    let pendingRequest;
+    function updateResults(total, visible, hasMore) {
+        countEl.textContent = t().results(total);
+        $("filters-count").textContent = String(total);
+        emptyEl.hidden = total !== 0;
+        moreWrap.hidden = !hasMore;
+        $("more-progress").textContent = t().shown(visible, total);
+        $("more-fill").style.width = `${total ? (visible / total) * 100 : 0}%`;
+        $("load-more").value = String(state.page + 1);
         const n = activeFilterCount();
-        const badge = $("filters-badge");
-        badge.hidden = n === 0;
-        badge.textContent = String(n);
-
-        renderPills();
-        renderChips();
-        writeUrl();
+        const badge = $("filters-badge"); badge.hidden = n === 0; badge.textContent = String(n);
+        renderPills(); renderChips();
+    }
+    async function render({ keepPage = false, history = true } = {}) {
+        if (!keepPage) state.page = 1;
+        const url = stateUrl();
+        const revision = ++requestRevision;
+        pendingRequest?.abort(); pendingRequest = new AbortController();
+        grid.setAttribute("aria-busy", "true");
+        $("load-more").disabled = true;
+        try {
+            const response = await fetch(url, {headers: {"X-Catalog-Update": "1"}, signal: pendingRequest.signal});
+            if (!response.ok) throw new Error("catalog");
+            const data = await response.json();
+            if (revision !== requestRevision) return;
+            if (typeof data.html !== "string" || !Number.isInteger(data.total)) throw new Error("catalog");
+            const template = document.createElement("template");
+            template.innerHTML = data.html; // Same-origin Django template; all product fields are escaped.
+            grid.classList.remove("is-ready");
+            grid.replaceChildren(template.content); bindCards();
+            void grid.offsetWidth; grid.classList.add("is-ready");
+            state.page = data.page;
+            updateResults(data.total, data.visible, data.has_more);
+            if (history && stateUrl() !== location.pathname + location.search + location.hash) {
+                window.history.pushState(null, "", stateUrl());
+            }
+        } catch (error) {
+            if (revision === requestRevision && error.name !== "AbortError") {
+                // Standard GET fallback keeps the selected state and uses the same server cards.
+                window.location.assign(url);
+            }
+        } finally {
+            if (revision === requestRevision) {
+                grid.setAttribute("aria-busy", "false"); $("load-more").disabled = false;
+            }
+        }
     }
 
     function renderPills() {
         const list = $("category-pills");
+        const focused = list.contains(document.activeElement) ? document.activeElement.dataset.category : null;
         list.replaceChildren();
         const make = (label, value) => {
             const li = document.createElement("li");
             const b = el("button", "", label);
             b.type = "button";
+            b.dataset.category = value || "";
             const active = value === null ? state.cats.size === 0 : state.cats.size === 1 && state.cats.has(value);
             b.setAttribute("aria-pressed", String(active));
             b.addEventListener("click", () => {
@@ -327,6 +266,7 @@
         };
         make(t().all, null);
         CATEGORIES.forEach((category) => make(category.name, category.slug));
+        if (focused !== null) [...list.querySelectorAll("button")].find(b => b.dataset.category === focused)?.focus({preventScroll: true});
     }
 
     function chip(label, onRemove) {
@@ -360,21 +300,6 @@
     }
 
     /* ---------- Formulaire de filtres ---------- */
-    function buildColorFilters() {
-        const box = $("color-filters");
-        box.replaceChildren();
-        Object.keys(COLORS).forEach((name) => {
-            const label = el("label", "swatch-opt");
-            const input = document.createElement("input");
-            input.type = "checkbox"; input.value = name; input.name = "color";
-            input.setAttribute("aria-label", COLOR_NAMES[name] || name);
-            const dot = el("span");
-            dot.style.backgroundColor = COLORS[name];
-            label.append(input, dot);
-            box.appendChild(label);
-        });
-    }
-
     function buildSortOptions() {
         const select = $("sort");
         select.replaceChildren();
@@ -396,7 +321,8 @@
         $("sort").value = state.sort;
     }
 
-    function resetAll() {
+    function resetAll(event) {
+        event?.preventDefault();
         state.cats.clear(); state.colors.clear();
         state.min = null; state.max = null; state.sale = false; state.low = false;
         syncInputs();
@@ -424,7 +350,8 @@
     });
 
     document.querySelectorAll(".price-quick button").forEach((btn) => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", event => {
+            event.preventDefault();
             const [min, max] = btn.dataset.price.split("-");
             state.min = min === "" ? null : Number(min);
             state.max = max === "" ? null : Number(max);
@@ -435,38 +362,44 @@
 
     $("filters-reset").addEventListener("click", resetAll);
     $("empty-reset").addEventListener("click", resetAll);
-    $("load-more").addEventListener("click", () => { state.page += 1; render({ keepPage: true }); });
+    $("load-more").addEventListener("click", event => { event.preventDefault(); state.page += 1; render({ keepPage: true }); });
+    $("catalog-form").addEventListener("submit", event => { event.preventDefault(); });
+    window.addEventListener("popstate", () => { readUrl(); syncInputs(); render({keepPage: true, history: false}); });
 
     /* ---------- Tiroir de filtres (mobile) ---------- */
     const drawer = $("filters");
     const backdrop = $("filters-backdrop");
     const mobileMQ = window.matchMedia("(max-width: 959px)");
-    let lastFocus = null;
 
     function openFilters() {
-        lastFocus = document.activeElement;
+        if (!mobileMQ.matches || !ShopOverlays.open(drawer, {close: () => {
+            drawer.classList.remove("is-open"); backdrop.classList.remove("is-open");
+            document.querySelectorAll('[data-action="open-filters"]').forEach(b => b.setAttribute("aria-expanded", "false"));
+        }})) return;
         drawer.classList.add("is-open"); backdrop.classList.add("is-open");
         drawer.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
+        document.querySelectorAll('[data-action="open-filters"]').forEach(b => b.setAttribute("aria-expanded", "true"));
         const first = drawer.querySelector("input, button");
         if (first) first.focus();
     }
     function closeFilters() {
+        ShopOverlays.close(drawer);
         drawer.classList.remove("is-open"); backdrop.classList.remove("is-open");
+        drawer.inert = mobileMQ.matches;
         drawer.setAttribute("aria-hidden", String(mobileMQ.matches));
-        document.body.style.overflow = "";
-        if (lastFocus && mobileMQ.matches) lastFocus.focus();
     }
     document.querySelectorAll('[data-action="open-filters"]').forEach((b) => b.addEventListener("click", openFilters));
     document.querySelectorAll('[data-action="close-filters"]').forEach((b) => b.addEventListener("click", closeFilters));
     backdrop.addEventListener("click", closeFilters);
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drawer.classList.contains("is-open")) closeFilters(); });
-    mobileMQ.addEventListener("change", () => { drawer.setAttribute("aria-hidden", String(mobileMQ.matches)); if (!mobileMQ.matches) closeFilters(); });
+
+    mobileMQ.addEventListener("change", () => { drawer.setAttribute("aria-hidden", String(mobileMQ.matches)); closeFilters(); });
     drawer.setAttribute("aria-hidden", String(mobileMQ.matches));
+    drawer.inert = mobileMQ.matches;
+    function filterRole() { if (mobileMQ.matches) { drawer.setAttribute("role", "dialog"); drawer.setAttribute("aria-modal", "true"); drawer.setAttribute("aria-label", "Filtres"); } else { drawer.removeAttribute("role"); drawer.removeAttribute("aria-modal"); drawer.inert = false; } }
+    mobileMQ.addEventListener("change", filterRole); filterRole();
 
     /* ---------- Barre panier collante (mobile) ---------- */
     const bar = $("cart-bar");
-    const FREE_SHIPPING = shippingThreshold;
 
     function updateCartBar() {
         const cart = getCart();
@@ -478,7 +411,9 @@
         $("cart-bar-count").textContent = String(count);
         $("cart-bar-label").textContent = t().item(count);
         $("cart-bar-total").textContent = formatPrice(total);
-        $("cart-bar-ship").textContent = total >= FREE_SHIPPING ? t().shipOk : t().shipLeft(formatPrice(FREE_SHIPPING - total));
+        $("cart-bar-ship").textContent = commercial.sales_ready
+            ? t().shipInfo
+            : commercial.sales_unavailable;
     }
     bar.querySelector("button").addEventListener("click", openCart);
     document.addEventListener("cart:updated", updateCartBar);
@@ -491,25 +426,17 @@
             if (typeof v === "string") node.textContent = v;
         });
         buildSortOptions();
-        render({ keepPage: true });
         updateCartBar();
     }
     document.addEventListener("languagechange", applyShopLang);
 
-    /* ---------- Initialisation : squelettes puis produits ---------- */
-    function showSkeletons() {
-        grid.replaceChildren(...Array.from({ length: 4 }, () => {
-            const s = el("div");
-            s.append(el("div", "skel skel--img"), el("div", "skel skel--line"), el("div", "skel skel--line s"));
-            return s;
-        }));
-    }
-
+    /* Attach behavior to the existing server cards without replacing them. */
     readUrl();
-    buildColorFilters();
+    state.page = catalogData.page;
     buildSortOptions();
     syncInputs();
-    showSkeletons();
-    window.requestAnimationFrame(() => { applyShopLang(); });
+    bindCards();
+    updateResults(catalogData.total, grid.children.length, !moreWrap.hidden);
+    window.requestAnimationFrame(() => { grid.classList.add("is-ready"); applyShopLang(); });
 
 })();

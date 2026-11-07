@@ -36,6 +36,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.security.EntryProtectionMiddleware",
+    "config.seo.PublicIndexingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,6 +58,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "config.seo.metadata",
                 "product.context_processors.active_catalog_categories",
                 "config.commercial.commercial_context",
                 "django.contrib.auth.context_processors.auth",
@@ -164,3 +167,7 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
 CSRF_COOKIE_SAMESITE = "Lax"
+
+# Contenus et approbation explicite de l’exploitant (voir docs/commercial-information-review.md).
+# Le paiement reste fermé si le dossier est absent, incomplet ou non approuvé.
+COMMERCIAL_INFORMATION = {}

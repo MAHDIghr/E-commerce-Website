@@ -16,6 +16,7 @@
     <h1>Votre panier</h1>
     <p>Vérifiez votre sélection avant de passer à la livraison et au paiement sécurisé.</p>
   </header>
+  {% include "partials/_commercial_information.html" %}
   <p id="cart-page-status" class="cart-page-status" role="status" aria-live="polite" hidden></p>
   <div id="cart-page-empty" class="cart-page-empty" {% if cart.items %}hidden{% endif %}>
     <h2>Votre panier est vide</h2>

@@ -200,3 +200,12 @@ LOGGING = {
 #
 # Ne jamais utiliser DEBUG=True en production.
 # =============================================================================
+
+# Backend partagé explicitement fourni ; jamais de compteur mémoire par worker en production.
+if not ALLOWED_HOSTS or any(host.startswith('.') or '*' in host or '/' in host for host in ALLOWED_HOSTS):
+    raise RuntimeError("DJANGO_ALLOWED_HOSTS doit contenir des domaines exacts sans joker.")
+_cache_backend = get_required_env("DJANGO_SHARED_CACHE_BACKEND")
+if _cache_backend not in ("django.core.cache.backends.redis.RedisCache", "django.core.cache.backends.memcached.PyMemcacheCache"):
+    raise RuntimeError("Configurer un backend partagé RedisCache ou PyMemcacheCache avec incr atomique.")
+CACHES = {"default": {"BACKEND": _cache_backend, "LOCATION": get_required_env("DJANGO_SHARED_CACHE_LOCATION")}}
+ENTRY_LIMITS_ENABLED = True

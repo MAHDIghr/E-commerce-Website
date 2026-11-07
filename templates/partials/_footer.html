@@ -3,37 +3,7 @@
 
     <!-- Réassurance : lève les derniers freins avant l'achat -->
     <div class="footer-perks">
-        <ul class="container footer-perks__list">
-            <li>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="1" y="7" width="15" height="10" rx="1"></rect>
-                    <path d="M16 10h3l3 3v4h-6z"></path>
-                    <circle cx="6" cy="20" r="1.5"></circle>
-                    <circle cx="17.5" cy="20" r="1.5"></circle>
-                </svg>
-                <span data-i18n="perk_ship">Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} €</span>
-            </li>
-            <li>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
-                    <polyline points="3 4 3 9 8 9"></polyline>
-                </svg>
-                <span><a href="{% url 'pages:returns' %}">Retours et rétractation</a></span>
-            </li>
-            <li>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="3" y="10" width="18" height="11" rx="2"></rect>
-                    <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
-                </svg>
-                <span data-i18n="perk_pay">Paiement sécurisé</span>
-            </li>
-            <li>
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20l1-5.4A8.5 8.5 0 1 1 21 11.5z"></path>
-                </svg>
-                <span><a href="{% url 'pages:contact' %}">Contacter le service client</a></span>
-            </li>
-        </ul>
+        <div class="container">{% include "partials/_commercial_information.html" %}</div>
     </div>
 
     <div class="container footer-main">
@@ -64,9 +34,7 @@
             </a>
             <p data-i18n="footer_tagline">Sacs et accessoires pensés pour l'élégance au quotidien.</p>
             <address class="footer-contact">
-                <span>[À COMPLÉTER : adresse postale]</span>
-                <span>[À COMPLÉTER : adresse e-mail]</span>
-                <span>[À COMPLÉTER : téléphone]</span>
+                {% if commercial.contact_email %}<a href="mailto:{{ commercial.contact_email }}">{{ commercial.contact_email }}</a>{% endif %}
                 <a href="{% url 'pages:contact' %}">Coordonnées et contact</a>
             </address>
        </div>
@@ -118,9 +86,7 @@
 
     <div class="footer-bottom">
         <div class="container footer-bottom__inner">
-            <ul class="footer-payments" aria-label="Moyens de paiement">
-                <li>Visa</li><li>Mastercard</li><li>PayPal</li>
-            </ul>
+            <p>Paiement sur la page hébergée de Stripe</p>
             <ul class="footer-legal">
                 <li><a href="{% url 'pages:legal' %}" data-i18n="footer_legal_mentions">Mentions légales</a></li>
                 <li><a href="{% url 'pages:privacy' %}" data-i18n="footer_privacy">Politique de confidentialité</a></li>

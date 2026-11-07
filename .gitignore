@@ -63,3 +63,5 @@ htmlcov/
 Thumbs.db
 # superuser
 superUser.txt
+# Pre-launch QA evidence (may contain fixture checkout fields)
+qa-output/

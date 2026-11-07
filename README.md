@@ -259,7 +259,7 @@ Les contraintes et validations Django sont des protections utiles, mais il faut 
 
 Une offre possède un prix affiché et des éléments associés. Le produit principal peut utiliser la variante choisie sur la fiche ; les autres éléments utilisent une variante fixe. Les validations du modèle contrôlent la cohérence de ces références.
 
-Le libellé de livraison d'une offre est éditorial : il ne calcule pas les frais de livraison réels. Le checkout recalcule les montants et frais de livraison côté serveur ; les paiements ne sont considérés comme confirmés qu'après réception d'un webhook Stripe signé.
+Une offre marquée « Livraison gratuite » accorde la livraison standard gratuite à tout le panier, même sous le seuil après remise ; l’express reste payant. Le checkout recalcule les montants et frais de livraison côté serveur ; les paiements ne sont considérés comme confirmés qu'après réception d'un webhook Stripe signé.
 
 ### Avis
 
@@ -779,7 +779,7 @@ Le parcours du catalogue est le suivant :
 1. **Accueil — `/`** : `home.views.home` charge les catégories actives et les produits marqués comme nouveautés. Les données commerciales proviennent des modèles Django, pas d'un tableau de produits de démonstration ajouté dans la vue.
 2. **Catégorie — lien vers `/boutique/?cat=<slug>`** : les cartes de catégories de l'accueil transmettent le slug réel enregistré en base.
 3. **Boutique — `/boutique/`** : `shop.views.catalog` charge les catégories et les produits publiables, puis sérialise les champs strictement nécessaires à l'interface dans `catalog_data`.
-4. **Cartes du catalogue — `/produit/<slug>/`** : le JavaScript du catalogue construit les liens à partir du préfixe généré par Django (`data-product-url`) et du slug de produit reçu du serveur.
+4. **Cartes du catalogue — `/produit/<slug>/`** : le partial `shop/_cards.html` construit les liens via les routes Django. Le JavaScript conserve ces cartes à l’initialisation et utilise le même partial pour les mises à jour.
 5. **Fiche produit** : `product.views.detail` recherche le produit par slug via le sélecteur des produits publiés. Un produit absent, inactif ou non publiable ne doit pas être rendu comme une fiche publique.
 
 Les noms d'URL Django (`home:home`, `shop:catalog`, `product:detail`) sont préférables aux chemins codés en dur, car ils gardent les liens cohérents si les routes évoluent.
@@ -889,7 +889,7 @@ En production, il faut aussi confirmer que l'administration et le site utilisent
 - Chaque produit doit disposer d'au moins une offre active contenant une ligne qui référence le produit principal avec **« Utiliser la variante choisie sur la fiche »** activé et sans variante fixe.
 - Trois badges au maximum sont proposés : **Essentiel**, **Medium**, **Premium**.
 - Le titre affiché et l'ordre sont dérivés du badge ; l'ordre est fixe : Essentiel, Medium, Premium. Il n'est pas saisi manuellement. Le prix appartient uniquement à l'offre, jamais à la variante de couleur.
-- Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. Cette mention décrit l'offre ; elle ne calcule pas encore les frais réels de livraison au checkout.
+- Le type de livraison est une liste fermée : **Livraison payante** ou **Livraison gratuite**. La gratuité d’une offre s’applique à la livraison standard de tout le panier, y compris sous le seuil après remise ; l’express reste payant.
 - Une offre peut inclure d'autres produits. Chaque ligne doit sélectionner le produit et, pour un produit complémentaire, une variante appartenant à ce produit.
 - Un produit sans offre active valide est exclu du catalogue public. La fiche produit ne doit pas remplacer une offre invalide par un prix de variante présenté comme une offre commerciale.
 
@@ -1066,3 +1066,84 @@ Ouvrir http://127.0.0.1:8000/gestion/connexion/, puis se connecter avec le compt
 ### Évolutions prévues, hors périmètre de cette version
 
 Les graphiques, les statistiques de ventes, les marges, les exports, les journaux d'activité et un éditeur visuel complet de composition des offres sont des évolutions distinctes. Aucun chiffre de vente fictif n'est affiché dans cette première version.
+
+## Informations commerciales et ouverture du paiement
+
+Les informations avant vente utilisent un composant partagé et la configuration Django `COMMERCIAL_INFORMATION` ; le dossier de validation et le contrat détaillé sont dans [docs/commercial-information-review.md](docs/commercial-information-review.md). Les anciennes trames ne sont plus servies au public. Sans contenu complet approuvé et confirmation des règles de livraison configurées, les nouvelles prises de commande sont bloquées côté serveur ; le suivi et les webhooks des commandes existantes restent actifs. Les promesses non confirmées de retours gratuits, de disponibilité 7j/7 et de matière commune ont été retirées.
+
+## Contrat des promotions au checkout
+
+Le contexte du template utilise `promo` pour l’objet appliqué ; `promo_code` dans le POST et `checkout_promo_code` en session restent des chaînes. Le serveur calcule remise, sous-total remisé, frais et total ; le code appliqué reste affiché et retirable. Les résultats sont annoncés dans un statut accessible, avec des refus distincts pour code invalide, expiré ou non applicable. Voir [docs/promo-contract-report.md](docs/promo-contract-report.md) pour les fichiers modifiés, les tests réellement exécutés, les limites de recette visuelle et les commandes locales. La conservation des coordonnées et l’invalidation des devis sont décrites dans la section suivante.
+
+
+## Préservation du checkout et actualisation des devis
+
+Le checkout actualise son résumé par POST CSRF vers la même vue avec `X-Checkout-Update: 1`. Le formulaire de coordonnées reste dans le DOM ; les données ne sont pas copiées dans localStorage, sessionStorage ou un brouillon de session. Le fallback sans JavaScript réaffiche les champs soumis avec une action promo. Les modifications de destination, de promo ou de panier invalident immédiatement options et totaux ; une erreur réseau conserve la saisie et permet une reprise. Les prix restent calculés et revalidés côté serveur.
+
+Voir [docs/checkout-preservation-report.md](docs/checkout-preservation-report.md) pour le contrat, les fichiers modifiés, les tests exécutés et les vérifications navigateur restantes. Tests serveur : `python manage.py test checkout.test_preservation --settings=config.settings.development`. Les simulations DOM utilisent uniquement une installation temporaire de jsdom pour les tests, documentée dans ce rapport ; aucune dépendance de production ajoutée.
+
+
+## Livraison par offre et disponibilité du paiement
+
+`config.commercial.shipping_choices` fournit la grille utilisée par le formulaire, les deux devis et la commande. Le mode interne `free` signifie standard offert. Le champ existant `ProductOffer.display_delivery_label=free`, relu en base depuis les lignes validées, suffit à offrir le standard du panier mixte entier. Le tarif express configuré reste proposé au-dessus du seuil et avec une offre gratuite. Aucun prix de boutique n’a été modifié.
+
+La liste candidate `CHECKOUT_SHIPPING_COUNTRIES` (FR, BE, LU, DE, ES, IT, NL, PT par défaut) n’est proposée qu’après validation de `COMMERCIAL_INFORMATION` et de son empreinte `shipping_configuration()`. CH/GB ne sont pas activés par défaut. Les exclusions configurées par pays dans `CHECKOUT_EXCLUDED_POSTAL_PREFIXES` sont contrôlées dans les devis, le formulaire et le service de commande. Les délais ne sont affichés que s’ils sont approuvés avec `CHECKOUT_DELIVERY_CONDITIONS`. La matrice réelle n’est pas encore validée : ventes fermées, aucune destination de livraison proposée. Les tarifs actuels restent une grille commune candidate, pas une validation métier implicite.
+
+La migration `product.0009` met à jour uniquement l’aide du champ livraison, sans modifier les valeurs des offres. Revoir les offres existantes marquées gratuites avant réouverture : ce choix a désormais un effet financier. Sans configuration de paiement cohérente, l’avis « Paiement temporairement indisponible » précède les coordonnées et le bouton est désactivé, même sans JavaScript. La présence d’une configuration ne prouve pas la disponibilité distante de Stripe.
+
+Voir [docs/shipping-payment-report.md](docs/shipping-payment-report.md) pour les décisions, le diff, les commandes exécutées et les vérifications restant à faire, notamment la matrice et Stripe en préproduction.
+
+
+## Clavier et surcouches — lot 6
+
+`static/js/overlays.js`, chargé avant les scripts de page, gère une seule modale personnalisée active : confinement du focus, Échap, arrière-plan inert et restauration du déclencheur. Recherche, panier, filtres mobiles, bienvenue et communauté l’utilisent. Les dialogs natifs de choix d’offre et lightbox conservent leur fonctionnement. La bienvenue s’ouvre désormais uniquement sur demande explicite et son lien mène au catalogue. Le menu reste une navigation non modale. Voir [docs/keyboard-overlays-report.md](docs/keyboard-overlays-report.md).
+
+
+## Langue, SEO et partage — lot 10 (livraison partielle)
+
+Le français reste la langue publique par défaut. La bascule automatique selon le navigateur ou une ancienne préférence locale a été supprimée pour éviter le mélange FR/EN. **La version anglaise complète demandée n’est pas livrée** : le bouton EN est désactivé, `/en/` annonce cette indisponibilité en anglais avec un statut 503/noindex. Aucun hreflang anglais n’annonce une version inexistante. Le routage multilingue complet, les traductions serveur et les contenus anglais validés restent à réaliser avant activation ; ce n’est pas un site bilingue terminé.
+
+Le partage des fiches utilise leur titre, description, image réelle absolue et prix catalogue ; les données structurées préservées vérifient aussi les composants de l’offre pour la disponibilité. Le canonical du catalogue conserve la pagination/recherche. Les pages privées et erreurs reçoivent X-Robots-Tag noindex ; robots autorise leur exploration pour laisser lire cet en-tête. L’autorisation d’accès reste indépendante. Favicon SVG dérivé du logo existant et pages 404/500 autonomes ajoutés. Voir [docs/language-seo-report.md](docs/language-seo-report.md).
+
+## Points d'entrée et protections — lot 11 partiel
+
+Les entrées WSGI/ASGI choisissent production par défaut ; le local doit demander development explicitement. La production requiert un cache partagé et son driver fourni par l'hébergeur. Quotas et en-têtes sont documentés dans [docs/entry-security-report.md](docs/entry-security-report.md). L'expiration autonome des réservations reste à implémenter ; aucune sécurité de production n'est annoncée sans validation du cache, de la base, du proxy et du CDN.
+
+## Suivi et rétractation — lot 12 partiel
+
+Une rétractation ne dépend plus d'une justification détaillée. L'accusé durable précise déclaration, références, date et articles ; les messages utilisent de vrais sauts de ligne. Le suivi repose encore sur l'UUID public comme secret de capacité : la séparation en jeton invité révocable et la transition des anciens liens restent à implémenter. Voir [docs/tracking-withdrawal-report.md](docs/tracking-withdrawal-report.md). Aucune validation juridique annoncée.
+
+## Recette avant lancement — lot 13
+
+Verdict **NO-GO** : voir [docs/prelaunch-qa-report.md](docs/prelaunch-qa-report.md). La suite actuelle de 225 tests serveur passe ; le lancement navigateur échoue faute de Chromium. Aucune capture, session Stripe test réelle ou mesure Lighthouse/CWV n'est validée.
+
+La CI conserve les tests/migrations et propose un job navigateur manuel via workflow_dispatch/browser_qa. Le harnais `python manage.py test qa.browser_runner --settings=config.settings.development` utilise uniquement le serveur local et des fixtures de test ; il ne crée aucune session Stripe. Les preuves éventuelles sont conservées en artifact, sans déploiement. Les scénarios et blocs non exécutés restent explicitement ouverts.
+
+## Mesure interne après stabilisation — lot 14
+
+`python manage.py conversion_report --start <ISO-avec-fuseau> --end <ISO-avec-fuseau> --settings=config.settings.development` produit uniquement des agrégats internes issus des premières confirmations Stripe existantes, sans exporter identifiant ou contact. Période début inclus/fin exclue, devises séparées, demandes de retour et remboursements distincts. Aucune collecte navigateur ni prestataire analytics ajouté ; conversion par appareil/visiteur et abandons restent indisponibles. Les événements, dénominateurs et décisions de consentement/conservation sont décrits dans [docs/conversion-measurement-report.md](docs/conversion-measurement-report.md). Le NO-GO reste actif ; aucune expérimentation commerciale déployée.
+
+
+### Catalogue : robustesse sans refonte (6 novembre 2026)
+
+Les filtres/tri utilisent les paramètres GET existants et `page` conserve le nombre
+de tranches de huit affichées par « Voir plus ». Le chargement initial ne transmet
+pas tout le catalogue en JSON. Les mises à jour utilisent le même HTML Django,
+avec annulation des réponses obsolètes et historique de navigation. Les styles,
+images et textes visibles restent ceux de la présentation précédente.
+
+Sans JavaScript : cartes et liens de fiches, catégories, raccourcis de prix,
+réinitialisation et « Voir plus » fonctionnent par GET. Le tiroir mobile reste
+tributaire du JavaScript ; les autres champs sont soumis avec le formulaire
+existant, sans nouveau bouton. Aucun nouvel écran de favoris n'a été ajouté.
+Voir [le rapport et les commandes de vérification](docs/catalog-functional-review.md)
+pour les limites, notamment l'absence de recette graphique dans cet environnement.
+
+### Tester Stripe Checkout en local
+
+Avec `config.settings.development`, le tunnel de test peut être utilisé avant
+la validation des informations commerciales. Il exige une clé `sk_test_`,
+`STRIPE_LIVE_MODE=false`, le secret du webhook Stripe de test et une
+`SITE_BASE_URL` locale (par exemple `http://127.0.0.1:8000`).
+Le réglage `LOCAL_TEST_CHECKOUT` est activé par défaut dans ce profil.
+Utiliser `LOCAL_TEST_CHECKOUT=false` pour rétablir le blocage en local.

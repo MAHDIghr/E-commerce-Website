@@ -54,6 +54,20 @@ const homeWishlist = new Set(
         .filter((slug) => typeof slug === "string" && /^[a-z0-9-]{1,180}$/i.test(slug))
 );
 
+function refreshHomeWishlist() {
+    const saved = readStorage(HOME_WISHLIST_KEY, [...homeWishlist]);
+    if (!Array.isArray(saved)) return;
+    homeWishlist.clear();
+    saved.filter(slug => typeof slug === "string" && /^[a-z0-9-]{1,180}$/i.test(slug)).forEach(slug => homeWishlist.add(slug));
+    document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").forEach(button => {
+        const active = homeWishlist.has(button.closest(".product-card").dataset.productSlug);
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+    });
+}
+window.addEventListener("pageshow", refreshHomeWishlist);
+window.addEventListener("storage", event => { if (!event.key || event.key === HOME_WISHLIST_KEY) refreshHomeWishlist(); });
+
 document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").forEach((button) => {
     const card = button.closest(".product-card");
     const slug = card?.dataset.productSlug || "";
@@ -67,6 +81,7 @@ document.querySelectorAll(".product-card[data-product-slug] .product-wishlist").
         event.stopPropagation();
         if (!validSlug) return;
 
+        refreshHomeWishlist();
         const isActive = !homeWishlist.has(slug);
         if (isActive) homeWishlist.add(slug);
         else homeWishlist.delete(slug);
@@ -322,23 +337,24 @@ renderRecentlyViewed();
     const codeEl = backdrop.querySelector("#welcome-code");
 
     const DISMISS_KEY = "welcome_modal_dismissed_until";
-    const dismissedUntil = parseInt(readStorage(DISMISS_KEY, 0), 10);
 
-    if (dismissedUntil && dismissedUntil > Date.now()) return;
+    backdrop.inert = true;
 
     function openModal() {
+        if (!ShopOverlays.open(backdrop, {focus: closeButton, close: () => { backdrop.classList.remove("is-open"); writeStorage(DISMISS_KEY, Date.now() + 7 * 86400000); }})) return;
         backdrop.classList.add("is-open");
         backdrop.setAttribute("aria-hidden", "false");
     }
 
     function closeModal(daysBeforeShowingAgain) {
+        if (!ShopOverlays.close(backdrop)) return;
         backdrop.classList.remove("is-open");
         backdrop.setAttribute("aria-hidden", "true");
         const until = Date.now() + daysBeforeShowingAgain * 24 * 60 * 60 * 1000;
         writeStorage(DISMISS_KEY, until);
     }
 
-    window.setTimeout(openModal, 4000);
+    document.querySelector('[data-action="open-welcome"]')?.addEventListener("click", openModal);
 
     if (closeButton) closeButton.addEventListener("click", () => closeModal(7));
     backdrop.addEventListener("click", (event) => {

@@ -21,13 +21,14 @@ class PublicInformationPagesTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "My Line Collection")
 
-    def test_legal_pages_are_marked_as_drafts_and_not_indexable(self):
+    def test_unavailable_legal_pages_are_not_indexable(self):
         for name in ("legal", "privacy", "terms"):
             with self.subTest(page=name):
                 response = self.client.get(reverse(f"pages:{name}"))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'name="robots" content="noindex, nofollow"')
-                self.assertContains(response, "Page à finaliser")
+                self.assertContains(response, "Ces informations ne sont pas disponibles actuellement.")
+                self.assertNotContains(response, "[À COMPLÉTER")
 
     def test_sitemap_is_xml_and_contains_catalog(self):
         response = self.client.get(reverse("sitemap"))

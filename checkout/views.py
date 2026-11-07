@@ -6,19 +6,20 @@ import uuid
 from decimal import Decimal
 import stripe
 from django.contrib import messages
-from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES
+from config.commercial import FREE_SHIPPING_THRESHOLD, SHIPPING_PRICES, checkout_sales_ready, SALES_UNAVAILABLE, PAYMENT_UNAVAILABLE
 from django.db import transaction
 from django.core.cache import cache
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from shop.views import CART_SESSION_KEY, _cart_state
-from .forms import CheckoutForm, COUNTRIES
+from .forms import CheckoutForm, ShippingQuoteForm
 from .models import Order, PaymentAttempt, OrderNotification
-from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price, stripe_configured, validated_cart
+from .services import CheckoutProblem, RetryableWebhookError, apply_promo_code, create_order_and_reserve, create_stripe_session, process_stripe_event, release_reserved_stock, shipping_price, stripe_configured, validated_cart, cart_has_free_shipping
 from .lifecycle import LifecycleProblem, create_return_request, queue_notification, deliver_notification
 
 logger = logging.getLogger(__name__)
@@ -37,53 +38,91 @@ def _increment_rate_limit(key, timeout):
 @ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def checkout(request):
-    if not _cart_state(request):
+    async_update = request.method == "POST" and request.headers.get("X-Checkout-Update") == "1"
+    preserve_fields = request.POST.get("checkout_fields_present") == "1"
+    editing = async_update or (preserve_fields and request.POST.get("promo_action") in {"apply", "remove"})
+    promo_notice, promo_error = "", ""
+    if not _cart_state(request) and not async_update:
         messages.info(request, "Votre panier est vide. Choisissez un article pour commencer votre commande.")
         return redirect("shop:catalog")
     cart_items, subtotal, cart_error = [], None, ""
+    offer_free = False
     try:
         lines, _, subtotal = validated_cart(request)
+        offer_free = cart_has_free_shipping(lines)
         cart_items = [{**details, "quantity": quantity} for details, quantity in lines]
     except CheckoutProblem as exc:
         cart_error = str(exc)
 
     if request.method == "POST" and request.POST.get("promo_action") in {"apply", "remove"}:
         action = request.POST.get("promo_action")
+        request.session.pop("checkout_promo_notice", None)
+        request.session.pop("checkout_promo_error", None)
         if action == "remove":
             request.session.pop("checkout_promo_code", None)
             request.session.pop("checkout_attempt_key", None)
-            request.session["checkout_promo_notice"] = "Code promo retiré."
+            promo_notice = "Code promo retiré."
         elif cart_error:
-            request.session["checkout_promo_notice"] = cart_error
+            promo_error = cart_error
         else:
             try:
                 promo, _discount = apply_promo_code(request.POST.get("promo_code", ""), subtotal)
+                if promo is None:
+                    raise CheckoutProblem("Saisissez un code promo.")
                 request.session["checkout_promo_code"] = promo.code
                 request.session.pop("checkout_attempt_key", None)
-                request.session["checkout_promo_notice"] = f"Code {promo.code} appliqué. La remise sera recalculée avant le paiement."
+                promo_notice = f"Code {promo.code} appliqué. La remise sera recalculée avant le paiement."
             except CheckoutProblem as exc:
-                request.session["checkout_promo_notice"] = str(exc)
-        return redirect("checkout:checkout")
+                promo_error = str(exc)
+        if not editing:
+            request.session["checkout_promo_notice"] = promo_notice
+            request.session["checkout_promo_error"] = promo_error
+            return redirect("checkout:checkout")
 
-    promo_notice = request.session.pop("checkout_promo_notice", "")
-    promo, promo_discount, promo_error = None, Decimal("0.00"), ""
+    if not async_update and not editing:
+        promo_notice = request.session.pop("checkout_promo_notice", "")
+        promo_error = request.session.pop("checkout_promo_error", "")
+    promo, promo_discount = None, Decimal("0.00")
     if subtotal is not None and request.session.get("checkout_promo_code"):
         try:
             promo, promo_discount = apply_promo_code(request.session["checkout_promo_code"], subtotal)
         except CheckoutProblem as exc:
             promo_error = str(exc)
-            request.session.pop("checkout_promo_code", None)
+            promo_notice = ""
+            if not async_update:
+                request.session.pop("checkout_promo_code", None)
+                request.session.pop("checkout_attempt_key", None)
     discounted_subtotal = max(Decimal("0.00"), subtotal - promo_discount) if subtotal is not None else None
-    form = CheckoutForm(request.POST or None, subtotal=discounted_subtotal)
-    initial_method = "free" if discounted_subtotal is not None and discounted_subtotal >= FREE_SHIPPING_THRESHOLD else "standard"
-    estimated_total = discounted_subtotal + shipping_price(initial_method, discounted_subtotal) if discounted_subtotal is not None else None
-    if request.method == "POST":
+    if editing:
+        # Valeurs limitées aux champs du formulaire, uniquement pour cette réponse.
+        # Aucun brouillon de coordonnées dans la session, les URL ou les journaux.
+        initial = {}
+        if preserve_fields:
+            for name, field in CheckoutForm.base_fields.items():
+                if name in {"billing_same_as_shipping", "accept_terms"}:
+                    initial[name] = request.POST.get(name) in {"on", "true", "1", "yes"}
+                else:
+                    initial[name] = request.POST.get(name, "")
+        if async_update:
+            initial["shipping_method"] = request.POST.get("shipping_method", "")
+        form = CheckoutForm(initial=initial, subtotal=discounted_subtotal, offer_free=offer_free)
+    else:
+        form = CheckoutForm(request.POST or None, subtotal=discounted_subtotal, offer_free=offer_free)
+    initial_method = form.fields["shipping_method"].initial
+    selected_method = form["shipping_method"].value()
+    if selected_method not in dict(form.fields["shipping_method"].choices):
+        selected_method = initial_method
+    estimated_shipping = shipping_price(selected_method, discounted_subtotal, offer_free=offer_free) if discounted_subtotal is not None else None
+    estimated_total = discounted_subtotal + estimated_shipping if discounted_subtotal is not None else None
+    if request.method == "POST" and not editing:
         if not form.is_valid():
             pass
+        elif not checkout_sales_ready():
+            form.add_error(None, SALES_UNAVAILABLE)
         elif cart_error:
             form.add_error(None, cart_error)
         elif not stripe_configured():
-            form.add_error(None, "Le paiement Stripe n’est pas configuré. Aucun paiement ne sera simulé et aucune commande ne sera marquée comme payée.")
+            form.add_error(None, PAYMENT_UNAVAILABLE)
         else:
             raw_key = request.session.get("checkout_attempt_key")
             try:
@@ -136,37 +175,60 @@ def checkout(request):
             except stripe.error.StripeError:
                 logger.warning("Stripe retrieval failed during checkout retry")
                 form.add_error(None, "Impossible de reprendre cette session de paiement. Réessayez dans quelques instants.")
-    return render(request, "checkout.html", {
+    context = {
         "form": form, "cart_items": cart_items, "subtotal": subtotal,
-        "promo_code": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
+        "promo": promo, "promo_discount": promo_discount, "discounted_subtotal": discounted_subtotal,
         "promo_notice": promo_notice, "promo_error": promo_error,
-        "estimated_total": estimated_total,
+        "estimated_total": estimated_total, "estimated_shipping": estimated_shipping,
         "free_shipping_threshold": str(FREE_SHIPPING_THRESHOLD),
         "standard_shipping": str(SHIPPING_PRICES["standard"]),
         "express_shipping": str(SHIPPING_PRICES["express"]),
         "stripe_configured": stripe_configured(), "cart_error": cart_error,
-        "free_shipping": discounted_subtotal is not None and discounted_subtotal >= FREE_SHIPPING_THRESHOLD,
-    })
+        "free_shipping": initial_method == "free",
+        "shipping_pending": preserve_fields and not ShippingQuoteForm(request.POST).is_valid(),
+    }
+    if async_update:
+        # Cette validation ne dépend ni du nom, ni des autres coordonnées.
+        quote_form = ShippingQuoteForm(request.POST)
+        quote_valid = quote_form.is_valid() and not cart_error and bool(cart_items)
+        options = []
+        if quote_valid:
+            for method, label in form.fields["shipping_method"].choices:
+                amount = shipping_price(method, discounted_subtotal, offer_free=offer_free)
+                options.append({"method": method, "label": label, "amount": f"{amount:.2f}",
+                                "total": f"{discounted_subtotal + amount:.2f}"})
+        context["shipping_pending"] = not quote_valid
+        response = JsonResponse({
+            "summary_html": render_to_string("checkout/_summary.html", context, request=request),
+            "options": options, "quote_valid": quote_valid,
+            "errors": quote_form.errors.get_json_data(), "cart_error": cart_error,
+            "can_pay": quote_valid and checkout_sales_ready() and stripe_configured(),
+            "promo_error": promo_error,
+        })
+    else:
+        response = render(request, "checkout.html", context)
+    response["Cache-Control"] = "private, no-store"
+    return response
 
 
 @require_GET
 def shipping_quote(request):
     """Tarifs indicatifs issus du panier et des règles serveur, jamais du sous-total client."""
-    country = request.GET.get("country", "")[:3]
-    postal_code = request.GET.get("postal_code", "").strip()[:21]
-    if country not in dict(COUNTRIES) or not postal_code or len(postal_code) > 20:
-        return JsonResponse({"error": "Renseignez un pays et un code postal valides."}, status=400)
+    destination = ShippingQuoteForm(request.GET)
+    if not destination.is_valid():
+        return JsonResponse({"error": " ".join(str(error) for errors in destination.errors.values() for error in errors)}, status=400)
     try:
-        _, _, subtotal = validated_cart(request)
+        lines, _, subtotal = validated_cart(request)
         promo_code = request.session.get("checkout_promo_code", "")
         _, discount = apply_promo_code(promo_code, subtotal)
     except CheckoutProblem as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     discounted = max(Decimal("0.00"), subtotal - discount)
-    form = CheckoutForm(subtotal=discounted)
+    offer_free = cart_has_free_shipping(lines)
+    form = CheckoutForm(subtotal=discounted, offer_free=offer_free)
     options = []
     for method, label in form.fields["shipping_method"].choices:
-        fee = shipping_price(method, discounted)
+        fee = shipping_price(method, discounted, offer_free=offer_free)
         options.append({
             "method": method, "label": label, "amount": f"{fee:.2f}",
             "total": f"{discounted + fee:.2f}",

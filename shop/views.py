@@ -9,6 +9,9 @@ from decimal import Decimal
 from django.db.models import Q, Prefetch
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.views.decorators.vary import vary_on_headers
+from .catalog import selection
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
@@ -16,7 +19,7 @@ from product.models import (
     Category, ProductMedia, ProductOffer, ProductOfferItem, ProductVariant, Review,
 )
 from product.selectors import product_card_data, published_products
-from config.commercial import FREE_SHIPPING_THRESHOLD
+from config.commercial import FREE_SHIPPING_THRESHOLD, shipping_message
 
 
 CART_SESSION_KEY = "shop_cart_v1"
@@ -45,6 +48,7 @@ def _search_queryset(queryset, query):
 
 
 @require_GET
+@vary_on_headers("X-Catalog-Update")
 def catalog(request):
     categories = list(Category.objects.filter(is_active=True).order_by("position", "name"))
     query = " ".join(request.GET.get("q", "").split())[:100]
@@ -64,17 +68,22 @@ def catalog(request):
                     {"hex": variant.color_code, "name": variant.color_name or variant.color_slug},
                 )
 
+    selected = selection(product_card_data(products), request.GET, categories, color_map)
     catalog_data = {
-        "products": product_card_data(products),
+        "products": selected["cards"],
         "categories": [{"slug": category.slug, "name": category.name} for category in categories],
         "colors": color_map,
         "query": query,
+        "total": selected["total"],
+        "page": selected["page"],
     }
-    return render(request, "catalog.html", {
-        "categories": categories,
-        "catalog_data": catalog_data,
-        "search_query": query,
-    })
+    context = {"categories": categories, "catalog_data": catalog_data,
+               "search_query": query, "price_presets": [("0", "50"), ("50", "100"), ("100", "")], **selected}
+    if request.headers.get("X-Catalog-Update") == "1":
+        return JsonResponse({"html": render_to_string("shop/_cards.html", context, request=request),
+                             "total": selected["total"], "page": selected["page"],
+                             "visible": len(selected["cards"]), "has_more": selected["has_more"]})
+    return render(request, "catalog.html", context)
 
 
 @ensure_csrf_cookie
@@ -371,6 +380,7 @@ def _line_details(variant_id, offer_id, quantity, selected_item_ids=None):
         "product_slug": variant.product.slug,
         "variant_id": variant.pk,
         "offer_id": offer.pk,
+        "offer_free_shipping": offer.display_delivery_label == ProductOffer.DELIVERY_FREE,
         "name": title,
         "variant_name": variant.color_name,
         "image": image,
@@ -468,7 +478,7 @@ def offer_options(request, slug):
             "id": offer.pk,
             "title": offer.title,
             "badge": offer.get_badge_display(),
-            "delivery_label": offer.get_display_delivery_label_display(),
+            "delivery_label": shipping_message(offer_free=offer.display_delivery_label == ProductOffer.DELIVERY_FREE),
             "featured": offer.is_featured,
             "price": f"{offer.price:.2f}",
             "reference_total": f"{offer.reference_price:.2f}" if offer.reference_price else f"{offer.price:.2f}",
@@ -546,13 +556,23 @@ def _cart_payload(request):
 
     subtotal = sum((Decimal(item["line_total"]) for item in items), Decimal("0.00"))
     count = sum(item["quantity"] for item in items)
+    from checkout.services import apply_promo_code, CheckoutProblem
+    discount = Decimal("0.00")
+    try:
+        _, discount = apply_promo_code(request.session.get("checkout_promo_code", ""), subtotal)
+    except CheckoutProblem:
+        pass  # Un code invalide n'accorde aucune remise ; le checkout en explique la raison.
+    shipping_subtotal = max(Decimal("0.00"), subtotal - discount)
+    offer_free = any(item["offer_free_shipping"] for item in items if item["available"])
     return {
         "items": items,
         "count": count,
         "subtotal": f"{subtotal:.2f}",
         "free_shipping_threshold": f"{FREE_SHIPPING_THRESHOLD:.2f}",
-        "amount_to_free_shipping": f"{max(FREE_SHIPPING_THRESHOLD - subtotal, Decimal('0.00')):.2f}",
-        "free_shipping_reached": subtotal >= FREE_SHIPPING_THRESHOLD,
+        "amount_to_free_shipping": f"{Decimal('0.00') if offer_free else max(FREE_SHIPPING_THRESHOLD - shipping_subtotal, Decimal('0.00')):.2f}",
+        "free_shipping_reached": offer_free or shipping_subtotal >= FREE_SHIPPING_THRESHOLD,
+        "shipping_subtotal": f"{shipping_subtotal:.2f}",
+        "offer_free_shipping": offer_free,
     }
 
 

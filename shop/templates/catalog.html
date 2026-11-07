@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static l10n %}
 
-{% block title %}Boutique | My Line Collection — Sacs & Accessoires{% endblock %}
-{% block meta_description %}Tous nos sacs à main, sacs bandoulière, portefeuilles et accessoires. Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} €, retours gratuits sous 30 jours.{% endblock %}
+{% block title %}{{ seo.title }}{% endblock %}
+{% block meta_description %}{{ seo.description }}{% endblock %}
 {% block body_class %}page-shop{% endblock %}
 
 {% block extra_css %}
@@ -10,6 +10,13 @@
 {% endblock %}
 
 {% block content %}
+<form id="catalog-form" method="get" hidden>
+{% for key, values in request.GET.lists %}{% if key != 'cat' and key != 'color' and key != 'min' and key != 'max' and key != 'sale' and key != 'low' and key != 'sort' and key != 'page' %}{% for value in values %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}{% endif %}{% endfor %}
+</form>
+<form id="catalog-category-form" method="get" hidden>{% for key, values in request.GET.lists %}{% if key != 'cat' and key != 'page' %}{% for value in values %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}{% endif %}{% endfor %}</form>
+
+<form id="catalog-reset-form" method="get" hidden>{% for key, values in request.GET.lists %}{% if key != 'cat' and key != 'color' and key != 'min' and key != 'max' and key != 'sale' and key != 'low' and key != 'page' %}{% for value in values %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}{% endif %}{% endfor %}</form>
+{% for preset in price_presets %}<form id="catalog-price-{{ forloop.counter }}" method="get" hidden>{% for key, values in request.GET.lists %}{% if key != 'min' and key != 'max' and key != 'page' %}{% for value in values %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}{% endif %}{% endfor %}<input type="hidden" name="min" value="{{ preset.0 }}"><input type="hidden" name="max" value="{{ preset.1 }}"></form>{% endfor %}
 
 <section class="shop-head">
     <div class="container">
@@ -21,9 +28,9 @@
         </nav>
         <h1 data-shop-i18n="title">Notre boutique</h1>
         {% if search_query %}<p class="shop-search-summary">Résultats pour <strong>« {{ search_query }} »</strong> <a href="{% url 'shop:catalog' %}">Effacer la recherche</a></p>{% endif %}
-        <p class="shop-head__desc" data-shop-i18n="subtitle">Sacs et accessoires en cuir, choisis pour durer. Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} €, retours gratuits sous 30 jours.</p>
+        <p class="shop-head__desc" data-shop-i18n="subtitle">Découvrez nos sacs et accessoires et consultez les caractéristiques de chaque produit.</p>
 
-        <ul class="category-pills" id="category-pills" aria-label="Catégories"></ul>
+        <ul class="category-pills" id="category-pills" aria-label="Catégories"><li><button type="submit" form="catalog-category-form" name="cat" value="" aria-pressed="{% if not selected_cats %}true{% else %}false{% endif %}">Tout voir</button></li>{% for category in categories %}<li><button type="submit" form="catalog-category-form" name="cat" value="{{ category.slug }}" aria-pressed="{% if category.slug in selected_cats and selected_cats|length == 1 %}true{% else %}false{% endif %}">{{ category.name }}</button></li>{% endfor %}</ul>
     </div>
 </section>
 
@@ -31,7 +38,7 @@
 
     <!-- ===== Filtres : colonne sur desktop, tiroir sur mobile ===== -->
     <div class="filters-backdrop" id="filters-backdrop"></div>
-    <aside class="filters" id="filters" aria-label="Filtres" aria-hidden="true">
+    <aside class="filters" id="filters" aria-label="Filtres" aria-hidden="false">
         <div class="filters__header">
             <h2 data-shop-i18n="filters">Filtres</h2>
             <button type="button" class="icon-btn" data-action="close-filters" aria-label="Fermer les filtres">
@@ -43,7 +50,7 @@
             <fieldset class="filter-group">
                 <legend data-shop-i18n="f_category">Catégorie</legend>
 {% for category in categories %}
-                <label class="check"><input type="checkbox" name="cat" value="{{ category.slug }}"><span>{{ category.name }}</span></label>
+                <label class="check"><input type="checkbox" name="cat" form="catalog-form" value="{{ category.slug }}"{% if category.slug in selected_cats %} checked{% endif %}><span>{{ category.name }}</span></label>
                 {% empty %}
                 <p>Aucune catégorie disponible.</p>
                 {% endfor %}
@@ -52,33 +59,33 @@
             <fieldset class="filter-group">
                 <legend data-shop-i18n="f_price">Prix (€)</legend>
                 <div class="price-range">
-                    <input type="number" id="price-min" inputmode="numeric" min="0" max="500" placeholder="Min" aria-label="Prix minimum">
+                    <input type="number" id="price-min" name="min" form="catalog-form" value="{{ minimum|unlocalize|default_if_none:'' }}" inputmode="numeric" min="0" max="500" placeholder="Min" aria-label="Prix minimum">
                     <span aria-hidden="true">–</span>
-                    <input type="number" id="price-max" inputmode="numeric" min="0" max="500" placeholder="Max" aria-label="Prix maximum">
+                    <input type="number" id="price-max" name="max" form="catalog-form" value="{{ maximum|unlocalize|default_if_none:'' }}" inputmode="numeric" min="0" max="500" placeholder="Max" aria-label="Prix maximum">
                 </div>
                 <div class="price-quick">
-                    <button type="button" data-price="0-50">&lt; 50 €</button>
-                    <button type="button" data-price="50-100">50–100 €</button>
-                    <button type="button" data-price="100-">&gt; 100 €</button>
+                    <button type="submit" form="catalog-price-1" data-price="0-50">&lt; 50 €</button>
+                    <button type="submit" form="catalog-price-2" data-price="50-100">50–100 €</button>
+                    <button type="submit" form="catalog-price-3" data-price="100-">&gt; 100 €</button>
                 </div>
             </fieldset>
 
             <fieldset class="filter-group">
                 <legend data-shop-i18n="f_color">Couleur</legend>
-                <div class="swatch-list" id="color-filters"></div>
+                <div class="swatch-list" id="color-filters">{% for slug, color in catalog_data.colors.items %}<label class="swatch-opt"><input type="checkbox" value="{{ slug }}" name="color" form="catalog-form" aria-label="{{ color.name }}"{% if slug in selected_colors %} checked{% endif %}><span style="background-color: {{ color.hex }};"></span></label>{% endfor %}</div>
             </fieldset>
 
             <fieldset class="filter-group">
                 <legend data-shop-i18n="f_more">Autres</legend>
-                <label class="check"><input type="checkbox" id="filter-sale"><span data-shop-i18n="f_sale">En promotion</span></label>
-                <label class="check"><input type="checkbox" id="filter-stock"><span data-shop-i18n="f_lowstock">Stock ≤ 5</span></label>
+                <label class="check"><input type="checkbox" id="filter-sale" name="sale" value="1" form="catalog-form"{% if sale %} checked{% endif %}><span data-shop-i18n="f_sale">En promotion</span></label>
+                <label class="check"><input type="checkbox" id="filter-stock" name="low" value="1" form="catalog-form"{% if low %} checked{% endif %}><span data-shop-i18n="f_lowstock">Stock ≤ 5</span></label>
             </fieldset>
         </div>
 
         <div class="filters__footer">
-            <button type="button" class="button button-outline" id="filters-reset" data-shop-i18n="reset">Réinitialiser</button>
-            <button type="button" class="button button-primary" id="filters-apply" data-action="close-filters">
-                <span data-shop-i18n="show">Voir</span>&nbsp;<span id="filters-count">0</span>
+            <button type="submit" form="catalog-reset-form" class="button button-outline" id="filters-reset" data-shop-i18n="reset">Réinitialiser</button>
+            <button type="submit" form="catalog-form" class="button button-primary" id="filters-apply" data-action="close-filters">
+                <span data-shop-i18n="show">Voir</span>&nbsp;<span id="filters-count">{{ total }}</span>
             </button>
         </div>
     </aside>
@@ -94,41 +101,37 @@
                 <span class="toolbar__badge" id="filters-badge" hidden>0</span>
             </button>
 
-            <p class="toolbar__count" id="results-count" role="status" aria-live="polite"></p>
+            <p class="toolbar__count" id="results-count" role="status" aria-live="polite">{{ total }} produit{% if total > 1 %}s{% endif %}</p>
 
             <label class="toolbar__sort">
                 <span class="visually-hidden" data-shop-i18n="sort_label">Trier par</span>
-                <select id="sort" name="sort"></select>
+                <select id="sort" name="sort" form="catalog-form">{% for value, label in sorts %}<option value="{{ value }}"{% if sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
             </label>
         </div>
 
         <div class="chips" id="active-chips" aria-label="Filtres actifs"></div>
 
-        <div class="pgrid" id="product-grid" aria-busy="true" data-product-url="{% url 'product:detail' slug='__product_slug__' %}" data-offers-url="{% url 'shop:offer_options' slug='__product_slug__' %}"></div>
+        <div class="pgrid" id="product-grid" aria-busy="false" data-product-url="{% url 'product:detail' slug='__product_slug__' %}" data-offers-url="{% url 'shop:offer_options' slug='__product_slug__' %}">{% include 'shop/_cards.html' %}</div>
         {{ catalog_data|json_script:"catalog-data" }}
 
-        <div class="empty" id="empty-state" hidden>
+        <div class="empty" id="empty-state"{% if total %} hidden{% endif %}>
             <svg class="icon" viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <h3 data-shop-i18n="empty_title">Aucun produit ne correspond</h3>
             <p data-shop-i18n="empty_text">Essayez d'élargir vos critères ou de retirer un filtre.</p>
-            <button type="button" class="button button-primary" id="empty-reset" data-shop-i18n="reset">Réinitialiser</button>
+            <button type="submit" form="catalog-reset-form" class="button button-primary" id="empty-reset" data-shop-i18n="reset">Réinitialiser</button>
         </div>
 
-        <div class="more" id="more-wrap" hidden>
-            <p class="more__progress" id="more-progress"></p>
-            <div class="more__bar"><span id="more-fill"></span></div>
-            <button type="button" class="button button-outline" id="load-more" data-shop-i18n="load_more">Voir plus de produits</button>
+        <div class="more" id="more-wrap"{% if not has_more %} hidden{% endif %}>
+            <p class="more__progress" id="more-progress">{{ cards|length }} sur {{ total }} produits affichés</p>
+            <div class="more__bar"><span id="more-fill" style="width: {{ progress|stringformat:'f' }}%;"></span></div>
+            <button type="submit" form="catalog-form" name="page" value="{{ next_page }}" class="button button-outline" id="load-more" data-shop-i18n="load_more">Voir plus de produits</button>
         </div>
     </section>
 </div>
 
 <!-- Réassurance -->
 <section class="reassure">
-    <div class="container reassure__inner">
-        <p><strong data-shop-i18n="ra_ship">Livraison offerte dès {{ commercial.free_shipping_threshold|floatformat:0 }} €</strong>{% if commercial.delivery_days.standard %}<span>Livraison standard : {{ commercial.delivery_days.standard }}</span>{% endif %}</p>
-        <p><strong data-shop-i18n="ra_ret">Retours gratuits 30 jours</strong><span data-shop-i18n="ra_ret_s">Sans condition</span></p>
-        <p><strong data-shop-i18n="ra_pay">Paiement sécurisé</strong><span data-shop-i18n="ra_pay_s">SSL &amp; 3D Secure</span></p>
-    </div>
+    <div class="container">{% include "partials/_commercial_information.html" %}</div>
 </section>
 
 {% endblock %}

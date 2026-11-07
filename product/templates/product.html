@@ -2,6 +2,17 @@
 {% load static %}
 {% block title %}{{ product.seo_title|default:product.name }} | My Line Collection{% endblock %}
 {% block meta_description %}{{ product.seo_description|default:product.tagline }}{% endblock %}
+{% block social_metadata %}
+<meta property="og:type" content="product">
+<meta property="og:title" content="{{ product.seo_title }}">
+<meta property="og:description" content="{{ product.seo_description }}">
+<meta property="og:url" content="{{ product.share_url }}">
+{% if product.share_image %}<meta property="og:image" content="{{ product.share_image }}"><meta name="twitter:image" content="{{ product.share_image }}">{% endif %}
+<meta property="og:locale" content="fr_FR">
+<meta property="product:price:amount" content="{{ product.catalog_price }}">
+<meta property="product:price:currency" content="EUR">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{{ product.seo_title }}">
+{% endblock %}
 {% block extra_head %}<script type="application/ld+json">{{ product.structured_data_json|safe }}</script>{% endblock %}
 {% block body_class %}page-product{% endblock %}
 {% block extra_css %}
@@ -93,9 +104,7 @@
           <span class="visually-hidden">Ajouter au panier</span>
         </button>
       </div>
-      <ul class="trust">
-        <li>Paiement sécurisé</li><li><a href="{% url 'pages:returns' %}">Retours et rétractation</a></li><li><a href="{% url 'pages:contact' %}">Service client</a></li><li><a href="{% url 'pages:delivery' %}">Conditions de livraison</a></li>
-      </ul>
+      {% include "partials/_commercial_information.html" %}
     </section>
   </div>
 </div>
@@ -171,7 +180,7 @@
 
 <section class="final"><div class="p-wrap">
   <h2>Prêt à l'adopter ?</h2>
-  <p>Retours gratuits sous 30 jours.</p>
+  <p><a href="{% url 'pages:returns' %}">Consulter les modalités de retour et de rétractation</a></p>
   <button type="button" class="button button-primary js-buy" id="cta-final">Acheter</button>
 </div></section>
 {% endblock %}
